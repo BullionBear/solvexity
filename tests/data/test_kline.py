@@ -2,7 +2,7 @@ import pytest
 import fakeredis
 import json
 from trading.data import get_key
-from trading.data.kline import query_kline  # Replace .your_module with the actual module name
+from trading.data.kline import query_kline, query_latest_kline
 
 # Fixture to set up and return a fake Redis instance
 @pytest.fixture
@@ -40,6 +40,7 @@ def test_query_kline(redis_client, sample_data, populate_redis):
     actual_result = [json.loads(item) for item in result]
     assert actual_result == expected_result
 
+
 def test_query_kline_no_data(redis_client, populate_redis):
     # Clear Redis data
     redis_client.delete(populate_redis)
@@ -55,4 +56,18 @@ def test_query_kline_no_data(redis_client, populate_redis):
 
     # Validate that result is an empty list
     assert result == []
+
+def test_query_latest_kline(redis_client, sample_data, populate_redis):
+    # Define parameters
+    symbol = "BNBBTC"
+    granular = "1m"
+
+    # Run the function
+    result = query_latest_kline(redis_client, symbol, granular)
+
+    # Validate result data
+    expected_result = sample_data[-1]  # Last item in sample data
+    actual_result = json.loads(result[0])
+    assert actual_result == expected_result
+
   

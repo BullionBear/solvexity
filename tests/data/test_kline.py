@@ -36,10 +36,7 @@ def test_query_kline(redis_client, sample_data, populate_redis):
     result = query_kline(redis_client, symbol, granular, start_time, end_time)
 
     # Validate result data
-    expected_result = sample_data  # Parsed JSON dictionaries
-    actual_result = [json.loads(item) for item in result]
-    assert actual_result == expected_result
-
+    assert result == sample_data
 
 def test_query_kline_no_data(redis_client, populate_redis):
     # Clear Redis data
@@ -61,13 +58,18 @@ def test_query_latest_kline(redis_client, sample_data, populate_redis):
     # Define parameters
     symbol = "BNBBTC"
     granular = "1m"
-
-    # Run the function
+    
+    # Test case with data available
     result = query_latest_kline(redis_client, symbol, granular)
+    assert result == sample_data[-1]  # Should return the latest kline data
 
-    # Validate result data
-    expected_result = sample_data[-1]  # Last item in sample data
-    actual_result = json.loads(result[0])
-    assert actual_result == expected_result
-
-  
+def test_query_latest_kline_no_data(redis_client):
+    # Define parameters
+    symbol = "BNBBTC"
+    granular = "1m"
+    
+    # Test case with no data
+    result = query_latest_kline(redis_client, symbol, granular)
+    
+    # Validate that result is an empty dictionary when no data exists
+    assert result == {}

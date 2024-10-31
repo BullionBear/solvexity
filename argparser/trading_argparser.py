@@ -1,6 +1,6 @@
 import argparse
-import utils.utils as utils
-import utils.logging as logging
+import helper.utils as utils
+import helper.logging as logging
 from binance.client import Client
 
 

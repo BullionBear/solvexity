@@ -1,5 +1,6 @@
 from .utils import get_key
 import redis
+import json
 
 def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int, end_time: int) -> list[dict]:
     """Get kline data from Redis
@@ -15,7 +16,7 @@ def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int,
     """
     key = get_key(symbol, granular)
     klines = redis.zrangebyscore(key, start_time, end_time)
-    return klines
+    return [json.loads(kline) for kline in klines]  # Deserialize each entry
 
 def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> dict:
     """Get the latest kline data from Redis
@@ -29,6 +30,4 @@ def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> dict:
     """
     key = get_key(symbol, granular)
     kline = redis.zrevrange(key, 0, 0)
-    return kline
-
- 
+    return json.loads(kline[0]) if kline else {}  # Deserialize the latest entry

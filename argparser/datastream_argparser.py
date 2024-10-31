@@ -4,8 +4,8 @@ import time
 import redis
 from binance import ThreadedWebsocketManager
 from binance.client import Client as BinanceClient
-import utils
-import utils.logging as logging
+import helper
+import helper.logging as logging
 from trading.data import get_key, query_kline, query_latest_kline
 
 logging.setup_logging()
@@ -41,7 +41,7 @@ def main(r: redis.Redis, data_config: dict):
             kline = msg['k']
             score = kline['t']
             latest_kline = query_latest_kline(r, symbol, granular)
-            if latest_kline['t'] == score:
+            if latest_kline.get('t', 0) == score:
                 with r.pipeline() as pipe:
                     pipe.zrem(key, json.dumps(latest_kline))
                     pipe.zadd(key, {json.dumps(kline): score})
@@ -54,14 +54,16 @@ def main(r: redis.Redis, data_config: dict):
             logger.error(f"Unknown message type: {msg}")
 
     twm.start_kline_socket(callback=handle_socket_message, symbol=symbol)
-    klines = query_kline(r, symbol, granular, 0, int(time.time() * 1000))
-    while not first_kline:
+    
+    while True:
         logger.info("Waiting for kline data...")
         time.sleep(1)
         klines = query_kline(r, symbol, granular, 0, int(time.time() * 1000))
+        if len(klines) > 0:
+            break
     first_kline = klines[0]
     logger.info(f"First kline data: {first_kline}")
-    ts_granular = utils.to_unixtime_interval(granular)
+    ts_granular = helper.to_unixtime_interval(granular)
     historical_klines = BinanceClient().get_klines(**{
         "symbol": symbol, 
         "interval": granular, 
@@ -77,7 +79,7 @@ def main(r: redis.Redis, data_config: dict):
 if __name__ == "__main__":
     args = parse_arguments()
     try:
-        config = utils.load_config(args.config)
+        config = helper.load_config(args.config)
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
         raise

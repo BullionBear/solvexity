@@ -1,0 +1,7 @@
+python-binance
+numpy
+pandas
+redis[hiredis]
+# unittest
+pytest
+fakeredis

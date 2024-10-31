@@ -1,6 +1,8 @@
 import argparse
 import utils.utils as utils
 import utils.logging as logging
+from binance.client import Client
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")
@@ -12,6 +14,8 @@ def parse_arguments():
     )
     return parser.parse_args()
 
+
+
 if __name__ == "__main__":
     logging.setup_logging()
     logger = logging.getLogger("trading")
@@ -22,4 +26,7 @@ if __name__ == "__main__":
         logger.error(f"Error loading configuration: {e}")
         raise
     logger.info("Configuration loaded successfully")
+    binance_client = Client(config["binance"]["api_key"], config["binance"]["api_secret"])
+    trades = binance_client.get_aggregate_trades(symbol='BNBBTC')
+    logger.info(f"Retrieved {len(trades)} trades")
 

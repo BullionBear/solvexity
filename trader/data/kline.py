@@ -1,8 +1,11 @@
-from .utils import get_key
+from typing import Optional
 import redis
 import json
+from .utils import get_key
+from .model import KLine
 
-def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int, end_time: int) -> list[dict]:
+
+def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int, end_time: int) -> list[KLine]:
     """Get kline data from Redis
 
     Args:
@@ -16,9 +19,9 @@ def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int,
     """
     key = get_key(symbol, granular)
     klines = redis.zrangebyscore(key, start_time, end_time)
-    return [json.loads(kline) for kline in klines]  # Deserialize each entry
+    return [KLine(**json.loads(kline)) for kline in klines]  # Deserialize each entry
 
-def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> dict:
+def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> Optional[KLine]:
     """Get the latest kline data from Redis
 
     Args:
@@ -30,4 +33,4 @@ def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> dict:
     """
     key = get_key(symbol, granular)
     kline = redis.zrevrange(key, 0, 0)
-    return json.loads(kline[0]) if kline else {}  # Deserialize the latest entry
+    return KLine(**json.loads(kline[0])) if kline else None  # Deserialize the latest entry

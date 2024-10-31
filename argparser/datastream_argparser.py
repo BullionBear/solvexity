@@ -54,6 +54,7 @@ def main(r: redis.Redis, data_config: dict):
                 with r.pipeline() as pipe:
                     pipe.zrem(key, json.dumps(latest_kline))
                     pipe.zadd(key, {json.dumps(kline): score})
+                    pipe.execute()
             else:
                 logger.info(f"New kline data received: {kline}")
                 r.zadd(key, {json.dumps(kline): score})

@@ -1,3 +1,4 @@
+import sys
 import argparse
 import json
 import time
@@ -37,30 +38,36 @@ def main(r: redis.Redis, data_config: dict):
     
     def handle_socket_message(msg: dict):
         if msg.get('e', '') == 'kline':
-            logger.info(f"Kline data: {msg}")
             kline = msg['k']
             score = kline['t']
             latest_kline = query_latest_kline(r, symbol, granular)
             if latest_kline.get('t', 0) == score:
+                logger.info(f"Received duplicate kline data: {kline}")
                 with r.pipeline() as pipe:
                     pipe.zrem(key, json.dumps(latest_kline))
                     pipe.zadd(key, {json.dumps(kline): score})
             else:
+                logger.info(f"New kline data received: {kline}")
                 r.zadd(key, {json.dumps(kline): score})
             if r.zcard(key) > MAX_SIZE:
                 # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
+                logger.info(f"Removing oldest kline data to keep only {MAX_SIZE} items")
                 r.zremrangebyrank(key, 0, -MAX_SIZE - 1)
         else:
             logger.error(f"Unknown message type: {msg}")
 
     twm.start_kline_socket(callback=handle_socket_message, symbol=symbol)
     
-    while True:
+    for i in range(10):
         logger.info("Waiting for kline data...")
         time.sleep(1)
         klines = query_kline(r, symbol, granular, 0, int(time.time() * 1000))
         if len(klines) > 0:
             break
+        if i == 9:
+            logger.error("No kline data received after 10 seconds. Exiting...")
+            twm.stop()
+            sys.exit(1)
     first_kline = klines[0]
     logger.info(f"First kline data: {first_kline}")
     ts_granular = helper.to_unixtime_interval(granular)

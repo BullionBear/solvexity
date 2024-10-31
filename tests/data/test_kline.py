@@ -1,8 +1,8 @@
 import pytest
 import fakeredis
 import json
-from trading.data import get_key
-from trading.data.kline import query_kline, query_latest_kline
+from trader.data import get_key
+from trader.data.kline import query_kline, query_latest_kline
 
 # Fixture to set up and return a fake Redis instance
 @pytest.fixture

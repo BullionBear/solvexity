@@ -2,17 +2,20 @@ import sys
 import argparse
 import json
 import time
+import signal
+import threading
 import redis
 from binance import ThreadedWebsocketManager
 from binance.client import Client as BinanceClient
 import helper
 import helper.logging as logging
-from trading.data import get_key, query_kline, query_latest_kline
+from trader.data import get_key, query_kline, query_latest_kline
 
 logging.setup_logging()
 logger = logging.getLogger("data")
 
 MAX_SIZE = 1024
+shutdown_event = threading.Event()  # Event for managing shutdown
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")
@@ -24,19 +27,24 @@ def parse_arguments():
     )
     return parser.parse_args()    
 
+def handle_shutdown(signum, frame):
+    """Signal handler for graceful shutdown."""
+    logger.info("Shutdown signal received, stopping...")
+    shutdown_event.set()  # Trigger shutdown event to stop main loop
 
 def main(r: redis.Redis, data_config: dict):
     symbol = data_config["symbol"]
     granular = data_config["granular"]
-    limit = data_config.get("limit", 1024)
+    limit = data_config["limit"]
     key = get_key(symbol, granular)
-    r.delete(key) # Clear existing data
+    r.delete(key)  # Clear existing data
 
     twm = ThreadedWebsocketManager(api_key="", api_secret="")
-    # start is required to initialise its internal loop
-    twm.start()
-    
+    twm.start()  # Start the WebSocket manager
+
     def handle_socket_message(msg: dict):
+        if shutdown_event.is_set():
+            return  # Stop processing if shutdown is triggered
         if msg.get('e', '') == 'kline':
             kline = msg['k']
             score = kline['t']
@@ -56,14 +64,16 @@ def main(r: redis.Redis, data_config: dict):
         else:
             logger.error(f"Unknown message type: {msg}")
 
+    # Register WebSocket stream for kline data
     twm.start_kline_socket(callback=handle_socket_message, symbol=symbol)
-    
-    for i in range(10):
+    i = 0
+    while not shutdown_event.is_set():
         logger.info("Waiting for kline data...")
         time.sleep(1)
         klines = query_kline(r, symbol, granular, 0, int(time.time() * 1000))
         if len(klines) > 0:
             break
+        i += 1
         if i == 9:
             logger.error("No kline data received after 10 seconds. Exiting...")
             twm.stop()
@@ -74,25 +84,31 @@ def main(r: redis.Redis, data_config: dict):
     historical_klines = BinanceClient().get_klines(**{
         "symbol": symbol, 
         "interval": granular, 
-        "startTime":first_kline['t'] - ts_granular * limit * 1000 - 1, 
+        "startTime": first_kline['t'] - ts_granular * limit * 1000 - 1, 
         "endTime": first_kline['t'] -1
-        })
+    })
     logger.info(f"{historical_klines=}")
-    twm.join()
 
-
-
+    # Wait for shutdown event to stop the WebSocket
+    shutdown_event.wait()
+    logger.info("Shutting down WebSocket manager...")
+    twm.stop()  # Stop the WebSocket manager
 
 if __name__ == "__main__":
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
+
     args = parse_arguments()
     try:
         config = helper.load_config(args.config)
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
         raise
-    logger.info(f"Start consuming {config["data"]["symbol"]} kline data")
+    logger.info(f"Start consuming {config['data']['symbol']} kline data")
+    
     redis_config = config["redis"]
     r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config["db"])
     data_config = config["data"]
+    
     main(r, data_config)
-

@@ -2,6 +2,7 @@ python-binance
 numpy
 pandas
 redis[hiredis]
+pydantic
 # unittest
 pytest
 fakeredis

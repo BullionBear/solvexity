@@ -1,6 +1,5 @@
 import sys
 import argparse
-import json
 import time
 import signal
 import threading
@@ -9,7 +8,7 @@ from binance import ThreadedWebsocketManager
 from binance.client import Client as BinanceClient
 import helper
 import helper.logging as logging
-from trader.data import get_key, query_kline, query_latest_kline
+from trader.data import get_key, query_kline, query_latest_kline, KLine
 
 logging.setup_logging()
 logger = logging.getLogger("data")
@@ -46,18 +45,18 @@ def main(r: redis.Redis, data_config: dict):
         if shutdown_event.is_set():
             return  # Stop processing if shutdown is triggered
         if msg.get('e', '') == 'kline':
-            kline = msg['k']
-            score = kline['t']
+            kline = KLine.from_ws(msg['k'])
+            score = kline.open_time
             latest_kline = query_latest_kline(r, symbol, granular)
-            if latest_kline.get('t', 0) == score:
+            if latest_kline is not None and latest_kline.open_time == score:
                 logger.info(f"Received duplicate kline data: {kline}")
                 with r.pipeline() as pipe:
-                    pipe.zrem(key, json.dumps(latest_kline))
-                    pipe.zadd(key, {json.dumps(kline): score})
+                    pipe.zrem(key, latest_kline.model_dump_json())
+                    pipe.zadd(key, {kline.model_dump_json(): score})
                     pipe.execute()
             else:
                 logger.info(f"New kline data received: {kline}")
-                r.zadd(key, {json.dumps(kline): score})
+                r.zadd(key, {kline.model_dump_json(): score})
             if r.zcard(key) > MAX_SIZE:
                 # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
                 logger.info(f"Removing oldest kline data to keep only {MAX_SIZE} items")
@@ -85,10 +84,14 @@ def main(r: redis.Redis, data_config: dict):
     historical_klines = BinanceClient().get_klines(**{
         "symbol": symbol, 
         "interval": granular, 
-        "startTime": first_kline['t'] - ts_granular * limit * 1000 - 1, 
-        "endTime": first_kline['t'] -1
+        "startTime": first_kline.open_time - ts_granular * limit * 1000 - 1, 
+        "endTime": first_kline.open_time -1
     })
-    logger.info(f"{historical_klines=}")
+    logger.info(f"Fetch {len(historical_klines)} historical klines")
+    for kline_rest in historical_klines:
+        kline = KLine.from_rest(kline_rest, granular)
+        score = kline.open_time
+        r.zadd(key, {kline.model_dump_json(): score})
 
     # Wait for shutdown event to stop the WebSocket
     shutdown_event.wait()

@@ -34,3 +34,21 @@ def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> Option
     key = get_key(symbol, granular)
     kline = redis.zrevrange(key, 0, 0)
     return KLine(**json.loads(kline[0])) if kline else None  # Deserialize the latest entry
+
+
+def batch_insert_klines(r: redis.Redis, key: str, historical_klines: list[KLine]):
+    """Batch insert pre-created KLine data into Redis.
+
+    Args:
+        r (redis.Redis): Redis client instance.
+        key (str): The Redis key for storing kline data.
+        historical_klines (List[KLine]): List of KLine model instances to insert.
+    """
+    # Open a pipeline
+    with r.pipeline() as pipe:
+        for kline in historical_klines:
+            score = kline.open_time  # Use open_time as the score
+            # Queue the insertion command with JSON serialization
+            pipe.zadd(key, {kline.model_dump_json(): score})
+        # Execute all commands at once
+        pipe.execute()

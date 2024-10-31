@@ -8,7 +8,10 @@ from binance import ThreadedWebsocketManager
 from binance.client import Client as BinanceClient
 import helper
 import helper.logging as logging
-from trader.data import get_key, query_kline, query_latest_kline, KLine
+from trader.data import (
+    get_key, query_kline, query_latest_kline, batch_insert_klines,
+    KLine
+)
 
 logging.setup_logging()
 logger = logging.getLogger("data")
@@ -88,10 +91,8 @@ def main(r: redis.Redis, data_config: dict):
         "endTime": first_kline.open_time -1
     })
     logger.info(f"Fetch {len(historical_klines)} historical klines")
-    for kline_rest in historical_klines:
-        kline = KLine.from_rest(kline_rest, granular)
-        score = kline.open_time
-        r.zadd(key, {kline.model_dump_json(): score})
+    klines = [KLine.from_rest(kline, granular) for kline in historical_klines]
+    batch_insert_klines(r, key, klines)
 
     # Wait for shutdown event to stop the WebSocket
     shutdown_event.wait()

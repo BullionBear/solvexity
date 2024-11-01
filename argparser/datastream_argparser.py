@@ -16,7 +16,7 @@ from trader.data import (
 logging.setup_logging()
 logger = logging.getLogger("data")
 
-MAX_SIZE = 1024
+MAX_SIZE = 128
 shutdown_event = threading.Event()  # Event for managing shutdown
 
 def parse_arguments():
@@ -38,6 +38,7 @@ def main(r: redis.Redis, data_config: dict):
     symbol = data_config["symbol"]
     granular = data_config["granular"]
     limit = data_config["limit"]
+    logger.info(f"Start consuming {symbol} kline data, granular: {granular}, limit: {limit}")
     key = get_key(symbol, granular)
     r.delete(key)  # Clear existing data
 
@@ -68,7 +69,7 @@ def main(r: redis.Redis, data_config: dict):
             logger.error(f"Unknown message type: {msg}")
 
     # Register WebSocket stream for kline data
-    twm.start_kline_socket(callback=handle_socket_message, symbol=symbol)
+    twm.start_kline_socket(callback=handle_socket_message, symbol=symbol, interval=granular)
     i = 0
     while not shutdown_event.is_set():
         logger.info("Waiting for kline data...")

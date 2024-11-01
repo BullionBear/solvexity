@@ -1,5 +1,6 @@
 python-binance
 numpy
+scipy
 pandas
 redis[hiredis]
 pydantic

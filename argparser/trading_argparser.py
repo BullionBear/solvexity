@@ -22,14 +22,18 @@ def parse_arguments():
 def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict):
     symbol = trading_config["symbol"]
     granular = trading_config["granular"]
+    limit = trading_config["limit"]
     if trading_config["family"] == "pythagoras":
-        tr = Pythagoras()
+        tr = Pythagoras(binance_client, trading_config)
     while True:
         # Get the latest kline data
         current_time = int(time.time() * 1000)
-        klines = query_kline(r, symbol, granular, current_time - helper.to_unixtime_interval(granular) * 90, current_time)
+        retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
+        klines = query_kline(r, symbol, granular, retro_time, current_time)
         logger.info(f"num of kline data: {len(klines)}")
-        logger.info(f"latest kline data: {klines[-1]}")
+        if klines:
+            logger.info(f"latest kline data: {klines[-1]}")
+            tr.invoke(klines)
         # Wait
         time.sleep(1)
 
@@ -46,7 +50,7 @@ if __name__ == "__main__":
     binance_config = config["binance"]
     binance_client = BinanceClient(binance_config["api_key"], binance_config["api_secret"])
     redis_config = config["redis"] 
-    r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config)
+    r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config["db"])
     trading_config = config["trading"]
 
     main(binance_client, r, trading_config)

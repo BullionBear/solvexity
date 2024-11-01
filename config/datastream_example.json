@@ -6,7 +6,7 @@
     },
     "data": {
         "symbol": "BTCUSDT",
-        "granular": "1m",
-        "limit": 10
+        "granular": "1d",
+        "limit": 90
     }
 }

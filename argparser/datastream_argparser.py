@@ -110,7 +110,7 @@ if __name__ == "__main__":
         config = helper.load_config(args.config)
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
-        raise
+        raise    
     logger.info(f"Start consuming {config['data']['symbol']} kline data")
     
     redis_config = config["redis"]

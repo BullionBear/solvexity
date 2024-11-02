@@ -41,7 +41,7 @@ LOGGING_CONFIG = {
             'class': 'logging.FileHandler',
             'level': 'INFO',
             'formatter': 'json',  # JSON format for file output
-            'filename': 'process.log',
+            'filename': './log/process.log',
             'mode': 'a',
         },
     },

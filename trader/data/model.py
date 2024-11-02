@@ -42,7 +42,7 @@ class KLine(BaseModel):
             interval=granular,
             open_time=data[0],
             close_time=data[6],
-            update_time=data[6],
+            event_time=data[6],
             open=float(data[1]),
             high=float(data[2]),
             low=float(data[3]),

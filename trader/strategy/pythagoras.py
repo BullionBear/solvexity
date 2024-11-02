@@ -46,7 +46,6 @@ class Pythagoras:
                 metadata['lot_size'] = _filter['stepSize'].rstrip('0')
             elif _filter['filterType'] == 'PRICE_FILTER':
                 metadata['lot_size'] = _filter['tickSize'].rstrip('0')
-
         return metadata    
     
     def get_balance(self):
@@ -70,7 +69,7 @@ class Pythagoras:
                                      )
             return
         if not self.is_updated(data[-1].event_time):
-            logger.error(f"Data is not updated: {data[-1].to_dict()}")
+            logger.error(f"Data is not updated")
             helper.send_notification(self.webhook_url, None, self.family, 
                                      on_error(self.family, id=self._id, error="Data is not updated")
                                      )
@@ -78,17 +77,16 @@ class Pythagoras:
         df = self.to_dataframe(data)
         df_analysis = self.analyze(df)
         if self.is_buy(df_analysis):
-            kline = data[-1]
             ask, _ = self.get_askbid()
             sz = Decimal(self.balance[self.base]) / Decimal(ask)
             self.market_buy(str(sz))
-        elif self.is_sell():
+        elif self.is_sell(df_analysis):
             self.market_sell(self.balance[self.base])
 
     def analyze(self, df: pd.DataFrame):
         df_analysis = df.copy()
-        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.trading_meta["fast_ma_period"]).mean()
-        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.trading_meta["slow_ma_period"]).mean()
+        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["fast_ma_period"]).mean()
+        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["slow_ma_period"]).mean()
         df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
         return df_analysis.dropna()
         
@@ -102,10 +100,13 @@ class Pythagoras:
         if self.is_hold(last_update['close'].values[0]):
             return False
         if last_update['slow_ma.diff'].values[0] < 0:
+            logger.info(f"Trend {last_update['slow_ma.diff'].values[0]} is going down, not buying")
             return False
         if last_update['fast_ma'].values[0] > last_update['slow_ma'].values[0]:
+            logger.info("Fast MA is above Slow MA, not buying")
             return False
         if last_update['close'].values[0] > last_update['fast_ma'].values[0]:
+            logger.info("Price is still high, not buying")
             return False
         df_condition = df[df['fast_ma'] > df['close']]
         if df_condition.empty:
@@ -125,6 +126,7 @@ class Pythagoras:
             logger.warning("Stop loss triggered")
             return True # stop loss
         if last_update['fast_ma'].values[0] < last_update['slow_ma'].values[0]:
+            logger.info("Fast MA is below slow MA, not selling")
             return False
         df_condition = df[df['fast_ma'] < df['close']]
         if df_condition.empty:
@@ -138,7 +140,7 @@ class Pythagoras:
 
     
     def is_hold(self, px: float):
-        if self.balance[self.quote] * px > self.balance[self.base]:
+        if float(self.balance[self.quote]) * px > float(self.balance[self.base]):
             return True
         return False
     
@@ -166,7 +168,7 @@ class Pythagoras:
             helper.send_notification(self.webhook_url, None, self.family, 
                                      on_order_sent(self.family, id=self._id, symbol=self.symbol, side="SELL", quantity=str(qty))
                                      )
-            self.client.order_market_buy(symbol=self.symbol, quantity=str(qty))
+            self.client.order_market_sell(symbol=self.symbol, quantity=str(qty))
         except Exception as e:
             logger.error(f"Failed to place market buy order: {e}")
             helper.send_notification(self.webhook_url, None, self.family, 

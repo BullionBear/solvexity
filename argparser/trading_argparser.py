@@ -38,6 +38,7 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
         raise ValueError(f"Unknown strategy family: {trading_config['family']}")
 
     with Strategy(binance_client, trading_config, webook_url) as strategy:
+        # while not shutdown_event.is_set():
         while not shutdown_event.is_set():
             # Get the latest kline data
             current_time = int(time.time() * 1000)
@@ -47,7 +48,10 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
             logger.info(f"num of kline data: {len(klines)}")
             if klines:
                 logger.info(f"latest kline data: {klines[-1]}")
-                strategy.invoke(klines)
+                try:
+                    strategy.invoke(klines)
+                except Exception as e:
+                    logger.error(f"Error invoking strategy: {e}")
             
             # Wait, but allow early exit if shutdown is signaled
             if shutdown_event.wait(1):
@@ -75,4 +79,7 @@ if __name__ == "__main__":
     trading_config = config["trading"]
     notification_config = config["notification"]
 
-    main(binance_client, r, trading_config, notification_config["webhook"])
+    try:
+        main(binance_client, r, trading_config, notification_config["webhook"])
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")

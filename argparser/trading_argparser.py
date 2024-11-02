@@ -32,6 +32,9 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
     symbol = trading_config["symbol"]
     granular = trading_config["granular"]
     limit = trading_config["limit"]
+
+    wait_time = 1  # Start with 1 second
+    max_wait_time = 10  # Cap the backoff at 10 seconds
     
     if trading_config["family"] == "pythagoras":
         Strategy = Pythagoras
@@ -41,7 +44,6 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
     with Strategy(binance_client, trading_config, webook_url) as strategy:
         # while not shutdown_event.is_set():
         while not shutdown_event.is_set():
-            # Get the latest kline data
             current_time = int(time.time() * 1000)
             retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
             klines = query_kline(r, symbol, granular, retro_time, current_time)
@@ -49,14 +51,19 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
             logger.info(f"num of kline data: {len(klines)}")
             if klines:
                 logger.info(f"latest kline data: {klines[-1]}")
+                
                 try:
                     strategy.invoke(klines)
+                    # If invoke succeeds, reset the backoff wait time
+                    wait_time = 1
                 except Exception as e:
                     full_traceback = traceback.format_exc()
                     logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
+                    # Increase wait time exponentially with a cap of 10 seconds
+                    wait_time = min(wait_time * 2, max_wait_time)
             
-            # Wait, but allow early exit if shutdown is signaled
-            if shutdown_event.wait(1):
+            # Wait with the current backoff time, and allow early exit if shutdown is signaled
+            if shutdown_event.wait(wait_time):
                 break
 
     logger.info("Trading process terminated gracefully.")

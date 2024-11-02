@@ -1,5 +1,7 @@
 import json
 import logging
+import random
+import string
 
 logger = logging.getLogger()
 
@@ -38,3 +40,9 @@ def to_unixtime_interval(interval_str: str) -> int:
     
     except (ValueError, IndexError):
         raise ValueError("Invalid interval format. Please use formats like '1s', '5m', '1h', '5d'.")
+    
+
+def generate_random_id(length=8):
+    characters = string.ascii_letters + string.digits
+    random_id = ''.join(random.choice(characters) for _ in range(length))
+    return random_id

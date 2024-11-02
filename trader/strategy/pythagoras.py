@@ -19,7 +19,7 @@ class Pythagoras:
         self.symbol = trading_config["symbol"]
         self.balance = self.get_balance()
         self.webhook_url = webhook_url
-        self.trading_meta = trading_config["meta"]
+        self.trading_metadata = trading_config["metadata"]
     
     def __enter__(self):
         helper.send_notification(self.webhook_url, None, self.family, on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.trading_metadata))

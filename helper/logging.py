@@ -15,6 +15,8 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
             "line": record.lineno,
             "module": record.module,
+            "process_id": record.process,  # Add process ID
+            "file_path": record.pathname,  # Add file path
         }
         return json.dumps(log_record)  # Convert the dictionary to a JSON string
 

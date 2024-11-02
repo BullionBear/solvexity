@@ -13,7 +13,7 @@
         "symbol": "BTCUSDT",
         "granular": "1m",
         "limit": 90,
-        "meta": {
+        "metadata": {
             "fast_ma_period": 10,
             "slow_ma_period": 30,
             "newton_differential_step": 3

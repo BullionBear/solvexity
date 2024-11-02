@@ -8,5 +8,8 @@
         "symbol": "BTCUSDT",
         "granular": "1d",
         "limit": 90
+    },
+    "notification": {
+        "webhook": "https://webhook.url/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
     }
 }

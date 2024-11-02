@@ -4,10 +4,11 @@ from .logging import getLogger
 logger = getLogger()
 
 
-def send_notification(webhook_url, content, username="Notification Bot"):
+def send_notification(webhook_url, content, username="Notification Bot", embed=None):
     data = {
         "content": content,
         "username": username,
+        "embeds": [embed] if embed else []
     }
 
     response = requests.post(webhook_url, json=data)

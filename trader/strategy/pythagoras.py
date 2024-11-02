@@ -53,7 +53,10 @@ class Pythagoras:
         balance = {}
         for asset in user_assets:
             balance[asset['asset']] = str(Decimal(asset['free']) + Decimal(asset['locked']))
-
+        if self.base not in balance:
+            balance[self.base] = '0'
+        if self.quote not in balance:
+            balance[self.quote] = '0'
         logger.info(f"Current balance: {balance}")
         return balance
     

@@ -11,6 +11,15 @@
     "trading": {
         "family": "pythagoras",
         "symbol": "BTCUSDT",
-        "granular": "1m"
+        "granular": "1m",
+        "limit": 90,
+        "meta": {
+            "fast_ma_period": 10,
+            "slow_ma_period": 30,
+            "newton_differential_step": 3
+        }
+    },
+    "notification": {
+        "webhook": "https://webhook.url/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
     }
 }

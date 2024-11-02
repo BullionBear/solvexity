@@ -69,7 +69,7 @@ class Pythagoras:
                                      on_error(self.family, id=self._id, error="No data to analyze in invoke method")
                                      )
             return
-        if not self.is_updated(data[-1].open_time):
+        if not self.is_updated(data[-1].event_time):
             logger.error(f"Data is not updated: {data[-1].to_dict()}")
             helper.send_notification(self.webhook_url, None, self.family, 
                                      on_error(self.family, id=self._id, error="Data is not updated")
@@ -143,7 +143,7 @@ class Pythagoras:
         return False
     
     @staticmethod
-    def is_updated(ts: int, recv_window: int = 10_000):
+    def is_updated(ts: int, recv_window: int = 10000):
         current_time = int(time.time() * 1000)
         return ts > current_time - recv_window
     

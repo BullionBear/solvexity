@@ -5,6 +5,7 @@ class KLine(BaseModel):
     interval: str
     open_time: int
     close_time: int
+    event_time: int
     open: float
     high: float
     low: float
@@ -17,11 +18,12 @@ class KLine(BaseModel):
     is_closed: bool
 
     @classmethod
-    def from_ws(cls, data: dict):
+    def from_ws(cls, data: dict, event_time: int):
         return cls(
             interval=data["i"],
             open_time=data["t"],
             close_time=data["T"],
+            event_time=event_time,
             open=float(data["o"]),
             high=float(data["h"]),
             low=float(data["l"]),
@@ -40,6 +42,7 @@ class KLine(BaseModel):
             interval=granular,
             open_time=data[0],
             close_time=data[6],
+            update_time=data[6],
             open=float(data[1]),
             high=float(data[2]),
             low=float(data[3]),

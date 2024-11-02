@@ -49,7 +49,7 @@ def main(r: redis.Redis, data_config: dict):
         if shutdown_event.is_set():
             return  # Stop processing if shutdown is triggered
         if msg.get('e', '') == 'kline':
-            kline = KLine.from_ws(msg['k'])
+            kline = KLine.from_ws(msg['k'] , msg['E'])
             score = kline.open_time
             latest_kline = query_latest_kline(r, symbol, granular)
             if latest_kline is not None and latest_kline.open_time == score:

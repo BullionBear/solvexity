@@ -5,6 +5,7 @@ import helper
 import helper.logging as logging
 import threading
 import signal
+import traceback
 from binance.client import Client as BinanceClient
 from trader.data import query_kline
 from trader.strategy import Pythagoras
@@ -51,7 +52,8 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
                 try:
                     strategy.invoke(klines)
                 except Exception as e:
-                    logger.error(f"Error invoking strategy: {e}")
+                    full_traceback = traceback.format_exc()
+                    logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
             # Wait, but allow early exit if shutdown is signaled
             if shutdown_event.wait(1):

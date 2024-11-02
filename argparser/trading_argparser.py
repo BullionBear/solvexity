@@ -19,12 +19,12 @@ def parse_arguments():
     )
     return parser.parse_args()
 
-def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict):
+def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, webook_url: str):
     symbol = trading_config["symbol"]
     granular = trading_config["granular"]
     limit = trading_config["limit"]
     if trading_config["family"] == "pythagoras":
-        tr = Pythagoras(binance_client, trading_config)
+        tr = Pythagoras(binance_client, trading_config, webook_url)
     while True:
         # Get the latest kline data
         current_time = int(time.time() * 1000)
@@ -52,6 +52,7 @@ if __name__ == "__main__":
     redis_config = config["redis"] 
     r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config["db"])
     trading_config = config["trading"]
+    notification_config = config["notification"]
 
-    main(binance_client, r, trading_config)
+    main(binance_client, r, trading_config, notification_config["webhook"])
 

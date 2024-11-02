@@ -2,19 +2,24 @@ import sys
 import pandas as pd
 import binance.client as BinanceClient
 import helper.logging as logging
+import helper
+from .notification import trading_process_start
 from trader.data import KLine
 
 logger = logging.getLogger("trading")
 
 class Pythagoras:
-    def __init__(self, binance_client: BinanceClient, trading_config: dict):
+    def __init__(self, binance_client: BinanceClient, trading_config: dict, webhook_url: str):
         self.client = binance_client
         self.symbol = trading_config["symbol"]
         self.balance = {
             self.base: 0,
             self.quote: 0
         }
-        self.get_balance()
+        self.update_balance()
+        self.webhook_url = webhook_url
+        
+        helper.send_notification(self.webhook_url, None, "Pythagoras", trading_process_start("Pythagoras", symbol=self.symbol, **trading_config["meta"]))
 
     @property
     def base(self):
@@ -24,14 +29,13 @@ class Pythagoras:
     def quote(self):
         return self.symbol[:-4]
     
-    def get_balance(self):
+    def update_balance(self):
         self.balance[self.base] = float(self.client.get_asset_balance(asset=self.base)['free'])
         self.balance[self.quote] = float(self.client.get_asset_balance(asset=self.quote)['free'])
         logger.info(f"Current balance: {self.balance}")
 
     def invoke(self, data: list[KLine]):
         df = self.to_dataframe(data)
-        df.to_csv("data.csv", index=False)
         sys.exit(0)
         
 

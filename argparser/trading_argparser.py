@@ -7,7 +7,7 @@ import threading
 import signal
 import traceback
 from binance.client import Client as BinanceClient
-from trader.data import query_kline
+from trader.data import query_kline, get_key
 from trader.strategy import Pythagoras
 
 logging.setup_logging()
@@ -43,27 +43,24 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
 
     with Strategy(binance_client, trading_config, webook_url) as strategy:
         # while not shutdown_event.is_set():
-        while not shutdown_event.is_set():
+        pubsub = r.pubsub()
+        key = get_key(symbol, granular)
+        pubsub.subscribe(key)
+        for _ in pubsub.listen():
             current_time = int(time.time() * 1000)
             retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
             klines = query_kline(r, symbol, granular, retro_time, current_time)
             
             logger.info(f"num of kline data: {len(klines)}")
-            if klines:
-                logger.info(f"latest kline data: {klines[-1]}")
-                
+            if len(klines) >= limit:
+                logger.info(f"latest kline data: {klines[-1]}")    
                 try:
                     strategy.invoke(klines)
-                    # If invoke succeeds, reset the backoff wait time
-                    wait_time = 1
                 except Exception as e:
                     full_traceback = traceback.format_exc()
                     logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
-                    # Increase wait time exponentially with a cap of 10 seconds
-                    wait_time = min(wait_time * 2, max_wait_time)
             
-            # Wait with the current backoff time, and allow early exit if shutdown is signaled
-            if shutdown_event.wait(wait_time):
+            if shutdown_event.is_set():
                 break
 
     logger.info("Trading process terminated gracefully.")

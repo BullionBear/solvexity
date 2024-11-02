@@ -61,6 +61,7 @@ def main(r: redis.Redis, data_config: dict):
             else:
                 logger.info(f"New kline data received: {kline}")
                 r.zadd(key, {kline.model_dump_json(): score})
+            r.publish(key, 'update')
             if r.zcard(key) > MAX_SIZE:
                 # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
                 logger.info(f"Removing oldest kline data to keep only {MAX_SIZE} items")
@@ -99,6 +100,7 @@ def main(r: redis.Redis, data_config: dict):
     shutdown_event.wait()
     logger.info("Shutting down WebSocket manager...")
     twm.stop()  # Stop the WebSocket manager
+
 
 if __name__ == "__main__":
     # Register signal handlers for graceful shutdown

@@ -8,6 +8,8 @@
         "url": "postgresql://username:password@35.229.134.70:5432/solvexity",
         "symbol": "BTCUSDT",
         "granular": "1d",
-        "limit": 90
-    },
+        "limit": 90,
+        "start": 1730476800000,
+        "end": 1730563200000
+    }
 }

@@ -7,3 +7,6 @@ pydantic
 # unittest
 pytest
 fakeredis
+# Backtest
+sqlalchemy
+psycopg2-binary

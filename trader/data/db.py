@@ -1,12 +1,53 @@
 from sqlalchemy import create_engine
+import helper
 import pandas as pd
 
 
 def get_engine(url: str):
     return create_engine(url)
 
-def get_klines(engine, symbol: str, granular: str, start: int, end: int):
-    query = f"SELECT * FROM kline WHERE symbol = '{symbol}' AND open_time >= {start} AND open_time < {end}"
+def get_klines(engine, symbol: str, interval: str, start: int, end: int):
+    granular_ms = helper.to_unixtime_interval(interval) * 1000
+    query = f"""
+        SELECT 
+    grandular,
+    MAX(CASE WHEN row_num_asc = 1 THEN open_px END) AS open_px,
+    MAX(high_px) AS max_high_px,
+    MIN(low_px) AS min_low_px,
+    SUM(base_asset_volume) AS total_base_asset_volume,
+    SUM(quote_asset_volume) AS total_quote_asset_volume,
+    MAX(CASE WHEN row_num_desc = 1 THEN close_px END) AS close_px
+FROM (
+    SELECT 
+        open_time,
+        open_px,
+        high_px,
+        low_px,
+        close_px,
+        base_asset_volume,
+        quote_asset_volume,
+        FLOOR(open_time / {granular_ms}) AS grandular,
+        ROW_NUMBER() OVER (
+            PARTITION BY FLOOR(open_time / {granular_ms}) 
+            ORDER BY open_time ASC
+        ) AS row_num_asc,
+        ROW_NUMBER() OVER (
+            PARTITION BY FLOOR(open_time / {granular_ms}) 
+            ORDER BY open_time DESC
+        ) AS row_num_desc
+    FROM 
+        kline
+    WHERE 
+        symbol = 'BTCUSDT' 
+        AND open_time >= {start} 
+        AND open_time < {end}
+) AS ranked_kline
+GROUP BY 
+    grandular
+ORDER BY 
+    grandular;
+    """
+    
     return pd.read_sql(query, engine)
 
 

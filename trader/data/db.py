@@ -50,6 +50,5 @@ ORDER BY
     grandular;
     """
     df = pd.read_sql(query, engine)
-    # df.insert(1, 'D', [10, 11, 12])
     res = df.values.tolist()
     return [KLine.from_rest(r, interval) for r in res] 

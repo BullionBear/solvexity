@@ -40,14 +40,14 @@ class KLine(BaseModel):
     def from_rest(cls, data: list, granular: str):
         return cls(
             interval=granular,
-            open_time=data[0],
-            close_time=data[6],
-            event_time=data[6],
+            open_time=int(data[0]),
+            close_time=int(data[6]),
+            event_time=int(data[6]),
             open=float(data[1]),
             high=float(data[2]),
             low=float(data[3]),
             close=float(data[4]),
-            number_of_trades=data[8],
+            number_of_trades=int(data[8]),
             base_asset_volume=float(data[5]),
             quote_asset_volume=float(data[7]),
             taker_buy_base_asset_volume=float(data[9]),

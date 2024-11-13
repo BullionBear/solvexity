@@ -30,7 +30,7 @@ class PaperTrade(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """
-    def __init__(self, init_balance: dict, granular: str, redis: redis.Redis):
+    def __init__(self, init_balance: dict[str, str], granular: str, redis: redis.Redis):
         """
         Args:
             init_balance (dict): The initial balance for the backtest context, e.g. {"BTC": '1', "USDT": '10000'}
@@ -80,7 +80,14 @@ class LiveTradeContext(TradeContext):
         self.balance = self._get_balance()
 
     def _get_balance(self):
-        self.client
+        user_assets = self.client.get_user_asset(needBtcValuation=True)
+        balance = {}
+        for asset in user_assets:
+            balance[asset['asset']] = str(Decimal(asset['free']) + Decimal(asset['locked']))
+        return balance
+    
+    def get_balance(self, token: str) -> Decimal:
+        return Decimal(self.balance[token])
 
 
     def market_buy(self, symbol: str, size: Decimal):

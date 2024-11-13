@@ -34,7 +34,7 @@ def main(data_config: dict, trading_config: dict):
     start = data_config["start"] // granular_ts * granular_ts
     end = data_config["end"] // granular_ts * granular_ts
     db_url = data_config["url"]
-    db = get_engine(db_url)
+    db = create_engine(db_url)
 
 
 if __name__ == "__main__":

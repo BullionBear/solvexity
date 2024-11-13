@@ -15,9 +15,7 @@
         "limit": 90,
         "metadata": {
             "fast_ma_period": 10,
-            "slow_ma_period": 30,
-            "newton_differential_step": 3
-        }
+            "slow_ma_period": 30        }
     },
     "notification": {
         "webhook": "https://webhook.url/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"

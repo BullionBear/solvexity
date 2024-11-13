@@ -36,7 +36,7 @@ class TradeContext(ABC):
 
     
 
-class PaperTrade(TradeContext):
+class PaperTradeContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """

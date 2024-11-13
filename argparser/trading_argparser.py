@@ -32,9 +32,6 @@ def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, we
     symbol = trading_config["symbol"]
     granular = trading_config["granular"]
     limit = trading_config["limit"]
-
-    wait_time = 1  # Start with 1 second
-    max_wait_time = 10  # Cap the backoff at 10 seconds
     
     if trading_config["family"] == "pythagoras":
         Strategy = Pythagoras

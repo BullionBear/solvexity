@@ -135,9 +135,9 @@ class LiveTradeContext(TradeContext):
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
     
     def notify(self, **kwargs):
-        contents = [f'{key} = {value}' for key, value in kwargs.items()]
-        content='\n'.join(contents)
-        helper.send_notification(self.webhook_url, content)
+        family = kwargs.get("family", "Notification")
+        kwargs.pop("family", None)
+        helper.send_notification(self.webhook_url, None, family, kwargs)
 
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)

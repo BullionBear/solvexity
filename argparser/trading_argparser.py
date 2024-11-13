@@ -56,24 +56,22 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
     granular = trigger_config["granular"]
     with Strategy(context, trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
         # while not shutdown_event.is_set():
-        pubsub = r.pubsub()
+        pubsub = services["redis"].pubsub()
         key = get_key(symbol, granular)
         pubsub.subscribe(key)
         for msg in pubsub.listen():
-            current_time = int(time.time() * 1000)
-            message = json.loads(msg)
-            logger.info(f"Received message: {message}")
-            # retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
-            # klines = query_kline(r, symbol, granular, retro_time, current_time)
-            # 
-            # logger.info(f"num of kline data: {len(klines)}")
-            # if len(klines) >= limit:
-            #     logger.info(f"latest kline data: {klines[-1]}")    
-            #     try:
-            #         strategy.invoke(klines)
-            #     except Exception as e:
-            #         full_traceback = traceback.format_exc()
-            #         logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
+            if msg["type"] != "message": # 1st message is subscribe confirmation
+                continue
+            data = json.loads(msg["data"].decode('utf-8'))
+            if data["x"] == True:
+                logger.info("Kline data is not complete yet")
+                continue
+            
+            try:
+                strategy.invoke()
+            except Exception as e:
+                full_traceback = traceback.format_exc()
+                logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
             if shutdown_event.is_set():
                 break

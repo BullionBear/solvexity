@@ -2,7 +2,6 @@ import time
 import pandas as pd
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
-import binance.client as BinanceClient
 import helper.logging as logging
 from .notification import (
     on_trading_start, on_trading_finish, on_order_sent, on_error
@@ -14,17 +13,31 @@ logger = logging.getLogger("trading")
 class Pythagoras(Strategy):
     def __init__(self, trade_context: TradeContext, symbol: str, limit: int, metadata: dict, trade_id = None):
         super().__init__(trade_context, trade_id)
+        self.family = "Pythagoras"
         self.symbol = symbol
         self.limit = limit
         self.metadata = metadata
+        logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
     
     def __enter__(self):
-        self.trade_context.notify(on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.trading_metadata))
+        self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.trade_context.notify(on_trading_finish(self.family, id=self._id, symbol=self.symbol))
-        return self
+    # Check if an exception occurred
+        if exc_type is not None:
+        # Log or display the error details
+            error_message = f"Error in {self.family} strategy: {exc_type.__name__} - {exc_val}"
+            self.trade_context.notify(error=error_message, id=self._id, symbol=self.symbol)
+
+            # Optionally, handle the traceback or print it
+            import traceback
+            traceback_str = ''.join(traceback.format_exception(exc_type, exc_val, exc_tb))
+            logger.error(traceback_str)  # Or use logging instead of print
+
+        # Notify the trading finish regardless of error
+        self.trade_context.notify(**on_trading_finish(self.family, id=self._id, symbol=self.symbol))
+        return False  # Propagate the exception if needed
     
     @property
     def base(self):
@@ -116,11 +129,16 @@ class Pythagoras(Strategy):
         if last_update['close'].values[0] < last_update['fast_ma'].values[0] * (1 + q):
             return False
         return True
+    
+    def is_hold(self, px: float):
+        if float(self.get_balance(self.quote)) * px > float(self.get_balance(self.base)):
+            return True
+        return False
 
     def analyze(self, df: pd.DataFrame):
         df_analysis = df.copy()
-        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["fast_ma_period"]).mean()
-        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["slow_ma_period"]).mean()
+        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.metadata["fast_ma_period"]).mean()
+        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.metadata["slow_ma_period"]).mean()
         df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
         return df_analysis.dropna()
 

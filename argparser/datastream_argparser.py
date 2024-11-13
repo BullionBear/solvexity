@@ -63,7 +63,7 @@ def main(r: redis.Redis, data_config: dict):
             else:
                 logger.info(f"New kline data received: {kline}")
                 r.zadd(key, {kline.model_dump_json(): score})
-            event = json.dumps({"kT": kline.close_time, "E": msg['E']})
+            event = json.dumps({"x": kline.is_closed, "E": msg['E']})
             r.publish(key, event)
             if r.zcard(key) > MAX_SIZE:
                 # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items

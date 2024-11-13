@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 import redis
-from trader.data import query_latest_kline
+from trader.data import query_latest_kline, KLine, query_kline
 import helper.logging as logging
 import binance.client as BinanceClient
 from datetime import datetime, timezone
@@ -27,6 +27,10 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def get_klines(self, symbol: str, limit: int) -> list[KLine]:
+        pass
+
+    @abstractmethod
     def notify(self, **kwargs):
         pass
 
@@ -43,7 +47,6 @@ class PaperTrade(TradeContext):
             granular (str): The granularity of the kline data, e.g. "1m", "1h"
             redis (redis.Redis): The Redis client instance for querying kline data
         """
-        self.ts = 0
         self.granular = granular
         self.balance = {k: Decimal(v) for k, v in init_balance.items()}
         logger.info(f"Initial balance: {self.balance}\n Granular: {self.granular}")
@@ -76,8 +79,8 @@ class PaperTrade(TradeContext):
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
         if not lastest_kline:
             raise ValueError("No kline data found")
-        self.ts = lastest_kline.close_time
-        close_dt = datetime.fromtimestamp(self.ts // 1000, tz=timezone.utc)
+        ts = lastest_kline.close_time
+        close_dt = datetime.fromtimestamp(ts // 1000, tz=timezone.utc)
         logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
     
@@ -85,9 +88,19 @@ class PaperTrade(TradeContext):
         content = [f'{key} = {value}' for key, value in kwargs.items()]
         logger.info(f"Notification: {', '.join(content)}")
 
+    def get_klines(self, symbol, limit) -> list[KLine]:
+        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
+        if not lastest_kline:
+            raise ValueError("No kline data found")
+        ts = lastest_kline.close_time
+        grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
+        end_ts = ts // grandular_ts * grandular_ts
+        start_ts = end_ts - grandular_ts * limit
+        klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
+        return klines
+
 class LiveTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, granular: str, redis: redis.Redis, webhook_url: str):
-        self.ts = 0
         self.granular = granular
         self.client = client
         self.redis = redis
@@ -125,3 +138,14 @@ class LiveTradeContext(TradeContext):
         contents = [f'{key} = {value}' for key, value in kwargs.items()]
         content='\n'.join(contents)
         helper.send_notification(self.webhook_url, content)
+
+    def get_klines(self, symbol, limit) -> list[KLine]:
+        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
+        if not lastest_kline:
+            raise ValueError("No kline data found")
+        ts = lastest_kline.close_time
+        grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
+        end_ts = ts // grandular_ts * grandular_ts
+        start_ts = end_ts - grandular_ts * limit
+        klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
+        return klines

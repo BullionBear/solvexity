@@ -3,5 +3,5 @@ venv
 *.pyc
 __pycache__/
 notebooks
-*test.json
+*test.json*
 .DS_Store

@@ -5,6 +5,7 @@ from trader.data import query_latest_kline
 import helper.logging as logging
 import binance.client as BinanceClient
 from datetime import datetime, timezone
+import helper
 
 logger = logging.getLogger("trading")
 
@@ -23,6 +24,10 @@ class TradeContext(ABC):
 
     @abstractmethod
     def get_askbid(self, symbol: str) -> tuple[Decimal, Decimal]:
+        pass
+
+    @abstractmethod
+    def notify(self, **kwargs):
         pass
 
 
@@ -71,12 +76,17 @@ class PaperTrade(TradeContext):
         close_dt = datetime.fromtimestamp(self.ts // 1000, tz=timezone.utc)
         logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
+    
+    def notify(self, **kwargs):
+        content = ['{key} = {value}' for key, value in kwargs.items()]
+        logger.info(f"Notification: {', '.join(content)}")
 
 class LiveTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, granular: str, redis: redis.Redis):
+    def __init__(self, client: BinanceClient, granular: str, redis: redis.Redis, webhook_url: str):
         self.granular = granular
         self.client = client
         self.redis = redis
+        self.webhook_url = webhook_url
         self.balance = self._get_balance()
 
     def _get_balance(self):
@@ -87,10 +97,26 @@ class LiveTradeContext(TradeContext):
         return balance
     
     def get_balance(self, token: str) -> Decimal:
-        return Decimal(self.balance[token])
+        return Decimal(self.balance.get(token, '0'))
 
 
     def market_buy(self, symbol: str, size: Decimal):
         self.client.order_market_buy(symbol=self.symbol, quantity=str(size))
-        logger.info(f"Market sell: {symbol}, size: {size}, price: {bid}")
+        logger.info(f"Market buy: {symbol}, size: {size}")
+        self.balance = self._get_balance()
         logger.info(f"Current balance: {self.balance}")
+
+    def market_sell(self, symbol: str, size: Decimal):
+        self.client.order_market_sell(symbol=self.symbol, quantity=str(size))
+        logger.info(f"Market sell: {symbol}, size: {size}")
+        self.balance = self._get_balance()
+        logger.info(f"Current balance: {self.balance}")
+
+    def get_askbid(self, symbol: str):
+        order_book = self.client.get_order_book(symbol=symbol, limit=1)
+        return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
+    
+    def notify(self, **kwargs):
+        contents = ['{key} = {value}' for key, value in kwargs.items()]
+        content='\n'.join(contents)
+        helper.send_notification(self.webhook_url, content)

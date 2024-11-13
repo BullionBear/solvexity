@@ -78,7 +78,7 @@ class PaperTrade(TradeContext):
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
     
     def notify(self, **kwargs):
-        content = ['{key} = {value}' for key, value in kwargs.items()]
+        content = [f'{key} = {value}' for key, value in kwargs.items()]
         logger.info(f"Notification: {', '.join(content)}")
 
 class LiveTradeContext(TradeContext):
@@ -117,6 +117,6 @@ class LiveTradeContext(TradeContext):
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
     
     def notify(self, **kwargs):
-        contents = ['{key} = {value}' for key, value in kwargs.items()]
+        contents = [f'{key} = {value}' for key, value in kwargs.items()]
         content='\n'.join(contents)
         helper.send_notification(self.webhook_url, content)

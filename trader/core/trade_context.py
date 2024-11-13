@@ -30,6 +30,7 @@ class TradeContext(ABC):
     def notify(self, **kwargs):
         pass
 
+    
 
 class PaperTrade(TradeContext):
     """
@@ -69,9 +70,12 @@ class PaperTrade(TradeContext):
 
     def get_balance(self, token: str) -> Decimal:
         return self.balance[token]
+
     
     def get_askbid(self, symbol: str):
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
+        if not lastest_kline:
+            raise ValueError("No kline data found")
         self.ts = lastest_kline.close_time
         close_dt = datetime.fromtimestamp(self.ts // 1000, tz=timezone.utc)
         logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
@@ -83,6 +87,7 @@ class PaperTrade(TradeContext):
 
 class LiveTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, granular: str, redis: redis.Redis, webhook_url: str):
+        self.ts = 0
         self.granular = granular
         self.client = client
         self.redis = redis

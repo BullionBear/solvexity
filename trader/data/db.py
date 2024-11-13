@@ -51,4 +51,4 @@ ORDER BY
     """
     df = pd.read_sql(query, engine)
     res = df.values.tolist()
-    return [KLine.from_rest(r, interval) for r in res] 
+    return [KLine.from_rest(r, interval) for r in res]

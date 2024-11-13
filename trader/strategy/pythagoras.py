@@ -12,11 +12,11 @@ from trader.data import KLine
 logger = logging.getLogger("trading")
 
 class Pythagoras(Strategy):
-    def __init__(self, trade_context: TradeContext, trading_config: dict, trade_id = None):
+    def __init__(self, trade_context: TradeContext, symbol: str, limit: int, metadata: dict, trade_id = None):
         super().__init__(trade_context, trade_id)
-        self.symbol = trading_config["symbol"]
-        self.limit = trading_config["limit"]
-        self.trading_metadata = trading_config["metadata"]
+        self.symbol = symbol
+        self.limit = limit
+        self.metadata = metadata
     
     def __enter__(self):
         self.trade_context.notify(on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.trading_metadata))

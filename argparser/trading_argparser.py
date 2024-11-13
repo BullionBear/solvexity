@@ -5,9 +5,11 @@ import helper
 import helper.logging as logging
 import threading
 import signal
+import json
 import traceback
 from binance.client import Client as BinanceClient
 from trader.data import query_kline, get_key
+from trader.core import LiveTradeContext
 from trader.strategy import Pythagoras
 
 logging.setup_logging()
@@ -28,34 +30,50 @@ def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
     shutdown_event.set()
 
-def main(binance_client: BinanceClient, r: redis.Redis, trading_config: dict, webook_url: str):
-    symbol = trading_config["symbol"]
-    granular = trading_config["granular"]
-    limit = trading_config["limit"]
+def main(services_config: dict, trigger_config: dict, context_config: dict, trading_config: dict):
+    services = {}
+    services["redis"] = redis.Redis(host=services_config["redis"]["host"], port=services_config["redis"]["port"], db=services_config["redis"]["db"])
+    services["binance"] = BinanceClient(services_config["binance"]["api_key"], services_config["binance"]["api_secret"])
+    services["webhook"] = services_config["webhook"]
+
+    if context_config["mode"] == "live":
+        logger.info("Initializing live trading context")
+        client = context_config["client"]
+        r = context_config["redis"]
+        webhook = context_config["webhook"]
+        granular = context_config["granular"]
+        context = LiveTradeContext(services[client], services[r], services[webhook], granular)
+    elif context_config["mode"] == "paper":
+        raise NotImplementedError("Paper trading context is not implemented yet")
+    else:
+        raise ValueError("Unknown context mode")
     
     if trading_config["family"] == "pythagoras":
         Strategy = Pythagoras
     else:
         raise ValueError(f"Unknown strategy family: {trading_config['family']}")
-
-    with Strategy(binance_client, trading_config, webook_url) as strategy:
+    symbol = trigger_config["symbol"]
+    granular = trigger_config["granular"]
+    with Strategy(context, trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
         # while not shutdown_event.is_set():
         pubsub = r.pubsub()
         key = get_key(symbol, granular)
         pubsub.subscribe(key)
-        for _ in pubsub.listen():
+        for msg in pubsub.listen():
             current_time = int(time.time() * 1000)
-            retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
-            klines = query_kline(r, symbol, granular, retro_time, current_time)
-            
-            logger.info(f"num of kline data: {len(klines)}")
-            if len(klines) >= limit:
-                logger.info(f"latest kline data: {klines[-1]}")    
-                try:
-                    strategy.invoke(klines)
-                except Exception as e:
-                    full_traceback = traceback.format_exc()
-                    logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
+            message = json.loads(msg)
+            logger.info(f"Received message: {message}")
+            # retro_time = current_time - helper.to_unixtime_interval(granular) * (limit + 10) * 1000
+            # klines = query_kline(r, symbol, granular, retro_time, current_time)
+            # 
+            # logger.info(f"num of kline data: {len(klines)}")
+            # if len(klines) >= limit:
+            #     logger.info(f"latest kline data: {klines[-1]}")    
+            #     try:
+            #         strategy.invoke(klines)
+            #     except Exception as e:
+            #         full_traceback = traceback.format_exc()
+            #         logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
             if shutdown_event.is_set():
                 break
@@ -75,14 +93,8 @@ if __name__ == "__main__":
         raise
     
     logger.info("Configuration loaded successfully")
-    binance_config = config["binance"]
-    binance_client = BinanceClient(binance_config["api_key"], binance_config["api_secret"])
-    redis_config = config["redis"] 
-    r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config["db"])
-    trading_config = config["trading"]
-    notification_config = config["notification"]
 
     try:
-        main(binance_client, r, trading_config, notification_config["webhook"])
+        main(config["services"], config["trigger"], config["context"], config["trading"])
     except Exception as e:
         logger.error(f"Unexpected error: {e}")

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from trader.data import KLine
-from trader.core import TradeContext
+from .trade_context import TradeContext
 from decimal import Decimal
 import helper
 

@@ -100,7 +100,7 @@ class PaperTradeContext(TradeContext):
         return klines
 
 class LiveTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, granular: str, redis: redis.Redis, webhook_url: str):
+    def __init__(self, client: BinanceClient, redis: redis.Redis, webhook_url: str, granular: str):
         self.granular = granular
         self.client = client
         self.redis = redis

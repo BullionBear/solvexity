@@ -1,15 +1,15 @@
 {
   "services": {
     "binance": {
-      "api_key": "your_api_key",
-      "api_secret": "your_api_secret"
+      "api_key": "YuRdpUSNqBkdIXpi7U57D6k17jPhc97eDj18CrRiqAkUbvaZ60CEzVYSoKybTPh6",
+      "api_secret": "jfkXwB97RzLkwusimYDo69tDVuqwAT3HubN3wk0FwNaIfYhQznKQ2zs8l8rQXvTf"
     },
     "redis": {
       "host": "localhost",
       "port": 6379,
       "db": 0
     },
-    "webhook": "https://webhook.url/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+    "webhook": "https://discord.com/api/webhooks/1302059943473451102/VKRvZwwHm8Fw74TdNx2XDVEt61h32JXU7WgQlzZjUiZEi3as1wpcq7rIRKa1-UcJpr_R"
   },
   "trigger": {  // Used to control the execution
     "symbol": "BTCUSDT",

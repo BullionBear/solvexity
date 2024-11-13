@@ -11,7 +11,7 @@ class Strategy(ABC):
             self._id = trade_id
         else:
             self._id = helper.generate_random_id()
-            
+
 
     @abstractmethod
     def invoke(self, klines: list[KLine]):
@@ -25,3 +25,6 @@ class Strategy(ABC):
 
     def get_balance(self, token: str) -> Decimal:
         return self.trade_context.get_balance(token)
+    
+    def get_klines(self, symbol: str, limit: int) -> list[KLine]:
+        return self.trade_context.get_klines(symbol, limit)

@@ -1,15 +1,70 @@
 import time
 import pandas as pd
 from decimal import Decimal, ROUND_DOWN
+from trader.core import TradeContext, Strategy
 import binance.client as BinanceClient
 import helper.logging as logging
-import helper
 from .notification import (
     on_trading_start, on_trading_finish, on_order_sent, on_error
 )
 from trader.data import KLine
 
 logger = logging.getLogger("trading")
+
+class Pythagoras(Strategy):
+    def __init__(self, trade_context: TradeContext, trading_config: dict, trade_id = None):
+        super().__init__(trade_context, trade_id)
+        self.symbol = trading_config["symbol"]
+        self.limit = trading_config["limit"]
+        self.trading_metadata = trading_config["metadata"]
+    
+    def __enter__(self):
+        self.trade_context.notify(on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.trading_metadata))
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.trade_context.notify(on_trading_finish(self.family, id=self._id, symbol=self.symbol))
+        return self
+    
+    @property
+    def base(self):
+        return self.symbol[-4:]
+    
+    @property
+    def quote(self):
+        return self.symbol[:-4]
+    
+    @property
+    def exchange_metadata(self):
+        metadata = {}
+        filters = self.client.get_symbol_info(self.symbol)['filters']
+        for _filter in filters:
+            if _filter['filterType'] == 'LOT_SIZE':
+                metadata['lot_size'] = _filter['stepSize'].rstrip('0')
+            elif _filter['filterType'] == 'PRICE_FILTER':
+                metadata['lot_size'] = _filter['tickSize'].rstrip('0')
+        return metadata
+    
+    def market_buy(self, symbol: str, size: Decimal):
+        super().market_buy(symbol, size)
+
+    def market_sell(self, symbol: str, size: Decimal):
+        super().market_sell(symbol, size)
+
+    def get_balance(self, token: str) -> Decimal:
+        return super().get_balance(token)
+    
+    def invoke(self):
+        super().get_klines(self.symbol, self.limit)
+
+
+    
+
+    
+
+    
+        
+
 
 class Pythagoras:
     def __init__(self, binance_client: BinanceClient, trading_config: dict, webhook_url: str):

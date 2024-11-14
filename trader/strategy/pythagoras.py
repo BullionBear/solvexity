@@ -73,6 +73,10 @@ class Pythagoras(Strategy):
             logger.error("No data to analyze in invoke method")
             self.notify(family=self.family, **on_error(self.family, id=self._id, error="No data to analyze in invoke method"))
             return
+        if len(data) < self.limit:
+            logger.warning("Not enough data to analyze in invoke method")
+            self.notify(family=self.family, **on_error(self.family, id=self._id, error="Not enough data to analyze in invoke method"))
+            return
         df = self.to_dataframe(data)
         df_analysis = self.analyze(df)
         if self.is_buy(df_analysis):

@@ -60,10 +60,13 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
         key = get_key(symbol, granular)
         pubsub.subscribe(key)
         for msg in pubsub.listen():
+            if shutdown_event.is_set():
+                break
+            print(msg)
             if msg["type"] != "message": # 1st message is subscribe confirmation
                 continue
             data = json.loads(msg["data"].decode('utf-8'))
-            if data["x"] == True:
+            if data["x"] == False:
                 logger.info("Kline data is not complete yet")
                 continue
             
@@ -73,8 +76,7 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
                 full_traceback = traceback.format_exc()
                 logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
-            if shutdown_event.is_set():
-                break
+            
 
     logger.info("Trading process terminated gracefully.")
 

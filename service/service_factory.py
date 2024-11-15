@@ -16,6 +16,9 @@ class ServiceFactory:
     def __init__(self, services_config: dict):
         self.services_config = services_config
 
+    def __getitem__(self, service_name: str):
+        return self.get_service(service_name)
+
     def get_service(self, service_name: str):
         if service_name == "redis":
             return self.get_redis()
@@ -23,6 +26,8 @@ class ServiceFactory:
             return self.get_sqlengine()
         elif service_name == "binance":
             return self.get_binance_client()
+        elif service_name == "webhook":
+            return self.get_webhook()
         else:
             raise ValueError(f"Unknown service: {service_name}")
 
@@ -47,3 +52,6 @@ class ServiceFactory:
             self.services_config["binance"]["api_key"],
             self.services_config["binance"]["api_secret"]
        )
+    
+    def get_webhook(self) -> str:
+        return self.services_config["webhook"]

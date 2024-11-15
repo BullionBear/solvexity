@@ -1,14 +1,13 @@
 import argparse
-import time
-import redis
 import helper
 import helper.logging as logging
 import threading
 import signal
 import json
+import time
 import traceback
-from binance.client import Client as BinanceClient
-from trader.data import query_kline, get_key
+from service import ServiceFactory
+from trader.data import get_key
 from trader.core import LiveTradeContext
 from trader.strategy import Pythagoras
 
@@ -30,11 +29,17 @@ def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
     shutdown_event.set()
 
+def heartbeat(redis, interval):
+    while not shutdown_event.is_set():
+        message = json.dumps({"type": "ping", "timestamp": int(time.time()) * 1000})
+        redis.publish("heartbeat", message)
+        time.sleep(interval)  # Send a ping every `interval` seconds
+    message = json.dumps({"type": "ping", "timestamp": int(time.time()) * 1000})
+    redis.publish("heartbeat", message)
+    logger.info("Heartbeat thread terminated.")
+
 def main(services_config: dict, trigger_config: dict, context_config: dict, trading_config: dict):
-    services = {}
-    services["redis"] = redis.Redis(host=services_config["redis"]["host"], port=services_config["redis"]["port"], db=services_config["redis"]["db"])
-    services["binance"] = BinanceClient(services_config["binance"]["api_key"], services_config["binance"]["api_secret"])
-    services["webhook"] = services_config["webhook"]
+    service = ServiceFactory(services_config)
 
     if context_config["mode"] == "live":
         logger.info("Initializing live trading context")
@@ -42,7 +47,7 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
         r = context_config["redis"]
         webhook = context_config["webhook"]
         granular = context_config["granular"]
-        context = LiveTradeContext(services[client], services[r], services[webhook], granular)
+        context = LiveTradeContext(service[client], service[r], service[webhook], granular)
     elif context_config["mode"] == "paper":
         raise NotImplementedError("Paper trading context is not implemented yet")
     else:
@@ -54,16 +59,23 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
         raise ValueError(f"Unknown strategy family: {trading_config['family']}")
     symbol = trigger_config["symbol"]
     granular = trigger_config["granular"]
+    heartbeat_thread = threading.Thread(target=heartbeat, args=(service["redis"], 1))  # Ping every 5 seconds
+    heartbeat_thread.daemon = True
+    heartbeat_thread.start()
+    # signal.signal(signal.SIGINT, lambda signum, frame: heartbeat_thread.join())
+    # signal.signal(signal.SIGTERM, lambda signum, frame: heartbeat_thread.join())
     with Strategy(context, trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
         # while not shutdown_event.is_set():
-        pubsub = services["redis"].pubsub()
+        pubsub = service["redis"].pubsub()
         key = get_key(symbol, granular)
-        pubsub.subscribe(key)
+        pubsub.subscribe(key, "heartbeat")
         for msg in pubsub.listen():
             if shutdown_event.is_set():
                 break
             print(msg)
-            if msg["type"] != "message": # 1st message is subscribe confirmation
+            if msg["type"] == "subscribe": # 1st message is subscribe confirmation
+                continue
+            if msg["channel"].decode('utf-8') == "heartbeat":
                 continue
             data = json.loads(msg["data"].decode('utf-8'))
             if data["x"] == False:
@@ -76,8 +88,6 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
                 full_traceback = traceback.format_exc()
                 logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
-            
-
     logger.info("Trading process terminated gracefully.")
 
 if __name__ == "__main__":

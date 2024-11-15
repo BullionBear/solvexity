@@ -5,6 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Run playback argument parser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/playback_argparser.py",
+            "args": [
+                "-c",
+                "config/playback_test.json5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
+        },
+        {
             "name": "Python Debugger: Run trade arguement parser",
             "type": "debugpy",
             "request": "launch",

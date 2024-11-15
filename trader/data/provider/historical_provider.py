@@ -4,16 +4,16 @@ from threading import Thread, Lock, Event
 from sqlalchemy.engine import Engine
 from queue import Queue, Empty, Full
 import json
-import time
 from trader.data import get_key, get_klines, batch_insert_klines
 import helper
-from helper.logging import get_logger
+import helper.logging as logging
 
-logger = get_logger("data")
+logger = logging.getLogger("data")
 
 
 class HistoricalProvider(DataProvider):
-    BATCH_SZ = 1024
+    BATCH_SZ = 128
+    MAX_SZ = 1024
     def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int):
         """
         Args:
@@ -46,7 +46,10 @@ class HistoricalProvider(DataProvider):
         """Retrieve the next item from the buffer."""
         while not self._stop_event.is_set():
             try:
-                return self._buffer.get(block=True, timeout=1)
+                key = get_key(self.symbol, self.granular)
+                kline = self._buffer.get(block=True, timeout=1)
+                event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
+                self.redis.publish(key, event)
             except Empty:
                 continue
         logger.info("Historical provider stopped.")
@@ -63,17 +66,22 @@ class HistoricalProvider(DataProvider):
     def _fetch_and_stream_klines(self, granular_ms: int):
         """Fetch and stream klines in batches."""
         current_ts = self.start + granular_ms * self.BATCH_SZ * self._index
+        key = get_key(self.symbol, self.granular)
         while current_ts < self.end:
             if self._stop_event.is_set():
                 logger.info("Receive stop event signal.")
                 break
 
             # Calculate batch timestamps
-            next_ts = min(current_ts + granular_ms * self.BATCH_SZ, self.end)
+            next_ts = min(current_ts + granular_ms * self.BATCH_SZ - 1, self.end)
 
             # Fetch klines for the batch
             klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
-
+            batch_insert_klines(self.redis, key, klines)
+            if self.redis.zcard(key) > self.MAX_SZ:
+                # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
+                logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
+                self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
             # Stream klines to the buffer
             for kline in klines:
                 if self._stop_event.is_set():
@@ -81,7 +89,7 @@ class HistoricalProvider(DataProvider):
                 self._put_to_buffer(kline)
 
             self._index += 1
-            current_ts = next_ts
+            current_ts = next_ts + 1
 
     def _put_to_buffer(self, kline):
         """Put a kline into the buffer, handling the case where the buffer is full."""

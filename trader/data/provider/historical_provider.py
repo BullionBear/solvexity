@@ -50,6 +50,7 @@ class HistoricalProvider(DataProvider):
                 kline = self._buffer.get(block=True, timeout=1)
                 event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
                 self.redis.publish(key, event)
+                return kline
             except Empty:
                 continue
         logger.info("Historical provider stopped.")

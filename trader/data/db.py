@@ -1,12 +1,10 @@
-from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 import helper
 import pandas as pd
 from .model import KLine
 
-def get_engine(url: str):
-    return create_engine(url)
 
-def get_klines(engine, symbol: str, interval: str, start: int, end: int):
+def get_klines(engine: Engine, symbol: str, interval: str, start: int, end: int):
     granular_ms = helper.to_unixtime_interval(interval) * 1000
     query = f"""
 SELECT 

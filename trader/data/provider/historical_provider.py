@@ -2,13 +2,18 @@ from trader.core import DataProvider
 from redis import Redis
 from threading import Thread, Lock, Event
 from sqlalchemy.engine import Engine
-from queue import Queue, Empty
+from queue import Queue, Empty, Full
+import json
+import time
 from trader.data import get_key, get_klines, batch_insert_klines
 import helper
+from helper.logging import get_logger
+
+logger = get_logger("data")
+
 
 class HistoricalProvider(DataProvider):
     BATCH_SZ = 1024
-    SLEEP_INTERVAL = 0.1
     def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int):
         """
         Args:
@@ -34,37 +39,83 @@ class HistoricalProvider(DataProvider):
         self._lock = Lock()
         self._index = 0
         self._thread = Thread(target=self._stream_data)
-        self._thread.daemon = True  # Allow thread to exit with main program
+        self._thread.daemon = False  # Allow thread to exit with main program
         self._thread.start()
     
     def __next__(self):
         """Retrieve the next item from the buffer."""
-        try:
-            data = self.buffer.get(timeout=2 * self.SLEEP_INTERVAL)  # Block if buffer is empty
-            return data
-        except Empty:
-            self._stop_event.set()
-            raise StopIteration
+        while not self._stop_event.is_set():
+            try:
+                return self._buffer.get(block=True, timeout=1)
+            except Empty:
+                continue
+        logger.info("Historical provider stopped.")
+        raise StopIteration
+
+    def _fetch_and_store_prestart_data(self, granular_ms: int, key: str):
+        """Fetch and store historical data before the start time."""
+        prestart_ts = (self.start - granular_ms * self.limit) // granular_ms * granular_ms
+        preend_ts = (self.start - granular_ms) // granular_ms * granular_ms - 1
+
+        klines = get_klines(self.sql_engine, self.symbol, self.granular, prestart_ts, preend_ts)
+        batch_insert_klines(self.redis, key, klines)
+
+    def _fetch_and_stream_klines(self, granular_ms: int):
+        """Fetch and stream klines in batches."""
+        current_ts = self.start + granular_ms * self.BATCH_SZ * self._index
+        while current_ts < self.end:
+            if self._stop_event.is_set():
+                logger.info("Receive stop event signal.")
+                break
+
+            # Calculate batch timestamps
+            next_ts = min(current_ts + granular_ms * self.BATCH_SZ, self.end)
+
+            # Fetch klines for the batch
+            klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
+
+            # Stream klines to the buffer
+            for kline in klines:
+                if self._stop_event.is_set():
+                    return
+                self._put_to_buffer(kline)
+
+            self._index += 1
+            current_ts = next_ts
+
+    def _put_to_buffer(self, kline):
+        """Put a kline into the buffer, handling the case where the buffer is full."""
+        while not self._stop_event.is_set():
+            try:
+                self._buffer.put(kline, block=True, timeout=1)
+                break
+            except Full:
+                logger.warning("Buffer is full, retrying...")
 
     def _stream_data(self):
-        grandular_ms = helper.to_unixtime_interval(self.granular) * 1000
-        key = get_key(self.symbol, self.granular)
-        self.start = self.start // grandular_ms * grandular_ms
-        self.end = self.end // grandular_ms * grandular_ms
-        if self._index == 0:
-            prestart_ts = (self.start - grandular_ms * self.limit) // grandular_ms * grandular_ms
-            preend_ts = (self.start - grandular_ms) // grandular_ms * grandular_ms - 1
-            klines = get_klines(self.sql_engine, self.symbol, self.granular, prestart_ts, preend_ts)
-            batch_insert_klines(self.redis, key, klines)
-            current = preend_ts + 1
-        while not self._stop_event.is_set():
-            current = self.start + self._index * self._grandular_ms
-            next_ts = min(current + grandular_ms * self.BATCH_SZ, self.end)
-            klines = get_klines(self.sql_engine, self.symbol, self.granular, current, next_ts)
-            for kline in klines:
-                score = kline.event_time
-                self.redis.zadd(key, {kline.model_dump_json(): score})
-                self.redis.publish(key, 'update')
-                if self.redis.zcard(key) > self.Q_SZ:
-                    self.redis.zremrangebyrank(key, 0, -self.Q_SZ - 1)
-    
+        """Main method to stream data."""
+        try:
+            granular_ms = helper.to_unixtime_interval(self.granular) * 1000
+            key = get_key(self.symbol, self.granular)
+
+            # Align start and end timestamps to the granularity
+            self.start = self.start // granular_ms * granular_ms
+            self.end = self.end // granular_ms * granular_ms
+
+            # Fetch and store prestart data
+            if self._index == 0:
+                self._fetch_and_store_prestart_data(granular_ms, key)
+
+            # Fetch and stream data in batches
+            self._fetch_and_stream_klines(granular_ms)
+
+        except Exception as e:
+            logger.error(f"Error in _stream_data: {e}", exc_info=True)
+        finally:
+            self._stop_event.set()
+
+    def stop(self):
+        """Signal the provider to stop streaming data."""
+        with self._lock:
+            self._stop_event.set()
+        self._thread.join()

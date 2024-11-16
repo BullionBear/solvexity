@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Callable
 import pandas as pd
 from service.socket_argparser import SocketArgparser
 from trader.data import Trade, KLine
@@ -12,6 +12,7 @@ from .notification import (
 from trader.data import KLine
 
 logger = logging.getLogger("trading")
+pd.options.mode.copy_on_write = True
 
 class Pythagoras(Strategy):
     def __init__(self, trade_context: Type[TradeContext], tcp_server: SocketArgparser, symbol: str, limit: int, metadata: dict, trade_id = None):
@@ -22,6 +23,8 @@ class Pythagoras(Strategy):
         self.metadata = metadata
         self.tcp_server = tcp_server
         logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
+
+        self.tcp_server.register_command("mytrade", self.mytrade_command)
     
     def __enter__(self):
         self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
@@ -80,7 +83,21 @@ class Pythagoras(Strategy):
         return super().get_klines(self.symbol, limit)
     
     def get_trades(self, limit) -> list[Trade]:
-        return super().get_trades(self.symbol, limit)      
+        return super().get_trades(self.symbol, limit)
+    
+    def mytrade_command(self, parser: argparse.ArgumentParser) -> Callable[[argparse.Namespace], str]:
+        parser.add_argument("dst", type=str, help="Path to save the trades")
+        parser.add_argument("limit", type=int, help="Number of trades to fetch")
+
+        def handler(args: argparse.Namespace) -> str:
+            trades = self.get_trades(args.limit)
+            if not trades:
+                return "No trades found"
+            data = [trade.model_dump() for trade in trades]
+            df = pd.DataFrame(data)
+            df.to_csv(args.dst, index=False)
+            return f"Export {len(trades)} trades to {args.dst}\n{df.head(args.limit)}"
+        return handler
         
     def invoke(self):
         data = self.get_klines(self.limit)
@@ -122,7 +139,7 @@ class Pythagoras(Strategy):
         df_condition = df[df['fast_ma'] > df['close']]
         if df_condition.empty:
             return False
-        df_condition.iloc[:, 'drawdown'] = (df_condition['fast_ma'] - df_condition['close']) / df_condition['fast_ma']
+        df_condition['drawdown'] = (df_condition['fast_ma'] - df_condition['close']) / df_condition['fast_ma']
         q = df_condition['drawdown'].quantile(0.25) # q is negative
         logger.info(f"Trigger buy px should below {last_update['fast_ma'].values[0] * (1 + q)}")
         if last_update['close'].values[0] > last_update['fast_ma'].values[0] * (1 + q):
@@ -142,7 +159,7 @@ class Pythagoras(Strategy):
         df_condition = df[df['fast_ma'] < df['close']]
         if df_condition.empty:
             return False
-        df_condition.iloc[:, 'gain'] = (df_condition['close'] - df_condition['fast_ma']) / df_condition['fast_ma']
+        df_condition['gain'] = (df_condition['close'] - df_condition['fast_ma']) / df_condition['fast_ma']
         q = df_condition['gain'].quantile(0.25)
         logger.info(f"Trigger buy px should below {last_update['fast_ma'].values[0] * (1 + q)}")
         if last_update['close'].values[0] < last_update['fast_ma'].values[0] * (1 + q):
@@ -150,7 +167,7 @@ class Pythagoras(Strategy):
         return True
     
     def is_hold(self, px: float):
-        if float(self.get_balance(self.quote)) * px > float(self.get_balance(self.base)):
+        if float(self.get_balance(self.base)) * px > float(self.get_balance(self.quote)):
             return True
         return False
 
@@ -160,8 +177,6 @@ class Pythagoras(Strategy):
         df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.metadata["slow_ma_period"]).mean()
         df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
         return df_analysis.dropna()
-
-    
         
 
     @staticmethod

@@ -30,6 +30,9 @@ class Strategy(ABC):
     def get_klines(self, symbol: str, limit: int) -> list[KLine]:
         return self.trade_context.get_klines(symbol, limit)
     
+    def get_trades(self, symbol: str, limit: int):
+        return self.trade_context.get_trades(symbol, limit)
+    
     def notify(self, **kwargs):
         self.trade_context.notify(**kwargs)
     

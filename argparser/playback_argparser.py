@@ -37,6 +37,8 @@ def main(service_config: dict, trigger_config: dict, data_config: dict):
             data_config["granular"], data_config["start"], data_config["end"],
             data_config["limit"]
         )
+    elif data_config["provider"] == "realtime":
+        raise NotImplementedError("realtime provider is not implemented yet")
     else:
         raise ValueError(f"Unknown data provider: {data_config['provider']}")
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())

@@ -40,7 +40,7 @@ class PaperTradeContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """
-    def __init__(self, init_balance: dict[str, str], granular: str, redis: redis.Redis):
+    def __init__(self, redis: redis.Redis, init_balance: dict[str, str], granular: str):
         """
         Args:
             init_balance (dict): The initial balance for the backtest context, e.g. {"BTC": '1', "USDT": '10000'}
@@ -78,7 +78,7 @@ class PaperTradeContext(TradeContext):
     def get_askbid(self, symbol: str):
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
         if not lastest_kline:
-            raise ValueError("No kline data found")
+            raise ValueError(f"No kline data found: {symbol}:{self.granular}")
         ts = lastest_kline.close_time
         close_dt = datetime.fromtimestamp(ts // 1000, tz=timezone.utc)
         logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
@@ -91,7 +91,7 @@ class PaperTradeContext(TradeContext):
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
         if not lastest_kline:
-            raise ValueError("No kline data found")
+            raise ValueError(f"No kline data found: {symbol}:{self.granular}")
         ts = lastest_kline.close_time
         grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
         end_ts = ts // grandular_ts * grandular_ts
@@ -119,13 +119,13 @@ class LiveTradeContext(TradeContext):
 
 
     def market_buy(self, symbol: str, size: Decimal):
-        self.client.order_market_buy(symbol=self.symbol, quantity=str(size))
+        self.client.order_market_buy(symbol=symbol, quantity=str(size))
         logger.info(f"Market buy: {symbol}, size: {size}")
         self.balance = self._get_balance()
         logger.info(f"Current balance: {self.balance}")
 
     def market_sell(self, symbol: str, size: Decimal):
-        self.client.order_market_sell(symbol=self.symbol, quantity=str(size))
+        self.client.order_market_sell(symbol=symbol, quantity=str(size))
         logger.info(f"Market sell: {symbol}, size: {size}")
         self.balance = self._get_balance()
         logger.info(f"Current balance: {self.balance}")

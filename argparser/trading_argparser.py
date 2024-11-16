@@ -8,7 +8,7 @@ import time
 import traceback
 from service import ServiceFactory
 from trader.data import get_key
-from trader.core import LiveTradeContext
+from trader.core import LiveTradeContext, PaperTradeContext
 from trader.strategy import Pythagoras
 
 logging.setup_logging()
@@ -49,7 +49,10 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
         granular = context_config["granular"]
         context = LiveTradeContext(service[client], service[r], service[webhook], granular)
     elif context_config["mode"] == "paper":
-        raise NotImplementedError("Paper trading context is not implemented yet")
+        logger.info("Initializing paper trading context")
+        r = context_config["redis"]
+        granular = context_config["granular"]
+        context = PaperTradeContext(service[r], context_config["balance"], granular)
     else:
         raise ValueError("Unknown context mode")
     
@@ -72,7 +75,6 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
         for msg in pubsub.listen():
             if shutdown_event.is_set():
                 break
-            print(msg)
             if msg["type"] == "subscribe": # 1st message is subscribe confirmation
                 continue
             if msg["channel"].decode('utf-8') == "heartbeat":

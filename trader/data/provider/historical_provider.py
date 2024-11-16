@@ -47,7 +47,7 @@ class HistoricalProvider(DataProvider):
         while not self._stop_event.is_set():
             try:
                 key = get_key(self.symbol, self.granular)
-                kline = self._buffer.get(block=True, timeout=1)
+                kline = self._buffer.get(block=True, timeout=2)
                 event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
                 self.redis.publish(key, event)
                 return kline
@@ -68,6 +68,7 @@ class HistoricalProvider(DataProvider):
         """Fetch and stream klines in batches."""
         current_ts = self.start + granular_ms * self.BATCH_SZ * self._index
         key = get_key(self.symbol, self.granular)
+        self.redis.delete(key)
         while current_ts < self.end:
             if self._stop_event.is_set():
                 logger.info("Receive stop event signal.")
@@ -96,7 +97,7 @@ class HistoricalProvider(DataProvider):
         """Put a kline into the buffer, handling the case where the buffer is full."""
         while not self._stop_event.is_set():
             try:
-                self._buffer.put(kline, block=True, timeout=1)
+                self._buffer.put(kline, block=True, timeout=2)
                 break
             except Full:
                 logger.warning("Buffer is full, retrying...")
@@ -128,3 +129,6 @@ class HistoricalProvider(DataProvider):
         with self._lock:
             self._stop_event.set()
         self._thread.join()
+        key = get_key(self.symbol, self.granular)
+        self.redis.delete(key)
+        logger.info("Historical provider stop is called.")

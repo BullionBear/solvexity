@@ -1,4 +1,4 @@
-import time
+from typing import Type
 import pandas as pd
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
@@ -11,7 +11,7 @@ from trader.data import KLine
 logger = logging.getLogger("trading")
 
 class Pythagoras(Strategy):
-    def __init__(self, trade_context: TradeContext, symbol: str, limit: int, metadata: dict, trade_id = None):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, limit: int, metadata: dict, trade_id = None):
         super().__init__(trade_context, trade_id)
         self.family = "Pythagoras"
         self.symbol = symbol
@@ -81,10 +81,10 @@ class Pythagoras(Strategy):
         df_analysis = self.analyze(df)
         if self.is_buy(df_analysis):
             ask, _ = self.get_askbid()
-            sz = Decimal(self.balance[self.base]) / Decimal(ask)
-            self.market_buy(str(sz))
+            sz = Decimal(self.get_balance(self.base)) / Decimal(ask)
+            self.market_buy(self.symbol, str(sz))
         elif self.is_sell(df_analysis):
-            self.market_sell(self.balance[self.base])
+            self.market_sell(self.symbol, self.get_balance(self.base))
 
     def is_buy(self, df: pd.DataFrame):
         """

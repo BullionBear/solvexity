@@ -33,6 +33,21 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
             }
+        },
+        {
+            "name": "Python Debugger: Run paper trade arguement parser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/trading_argparser.py",
+            "args": [
+                "-c",
+                "config/papertrade_test.json5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
         }
     ]
 }

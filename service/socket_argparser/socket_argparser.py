@@ -2,6 +2,7 @@ import socketserver
 import argparse
 import threading
 import json
+from typing import Callable, Dict, Optional, Any
 import helper.logging as logging
 
 logger = logging.getLogger("tcp")
@@ -9,23 +10,23 @@ logger = logging.getLogger("tcp")
 
 class SocketArgparser:
     def __init__(self, host: str, port: int):
-        self.host = host
-        self.port = port
-        self.commands = {}
-        self.server = None
-        self.server_thread = None
+        self.host: str = host
+        self.port: int = port
+        self.commands: Dict[str, Callable[[argparse.ArgumentParser], str]] = {}
+        self.server: Optional[socketserver.ThreadingTCPServer] = None
+        self.server_thread: Optional[threading.Thread] = None
         self.register_command("ping", self.ping_handler)
 
-    def register_command(self, command: str, handler):
+    def register_command(self, command: str, handler: Callable[[argparse.ArgumentParser], str]) -> None:
         """
         Register a command with a handler function.
-        :param command: Command name (string)
+        :param command: Command name
         :param handler: Handler function for the command
         """
         self.commands[command] = handler
         logger.info(f"Registered command: {command}")
 
-    def start_socket_server(self):
+    def start_socket_server(self) -> None:
         """
         Start a socket server using socketserver.
         """
@@ -33,7 +34,7 @@ class SocketArgparser:
             """
             Request handler for processing commands.
             """
-            def handle(self):
+            def handle(self) -> None:
                 # Receive the command data
                 data = self.request.recv(1024).decode().strip()
                 if data:
@@ -47,9 +48,9 @@ class SocketArgparser:
             """
             allow_reuse_address = True
 
-            def __init__(self, server_address, handler_class, strategy):
+            def __init__(self, server_address: tuple, handler_class: Callable[..., socketserver.BaseRequestHandler], strategy: 'SocketArgparser'):
                 super().__init__(server_address, handler_class)
-                self.strategy = strategy
+                self.strategy: 'SocketArgparser' = strategy
 
         # Create the server and start it in a thread
         self.server = StrategyServer((self.host, self.port), CommandHandler, self)
@@ -80,7 +81,7 @@ class SocketArgparser:
         except SystemExit:
             return json.dumps({"error": "Error in command parsing"})
 
-    def close(self):
+    def close(self) -> None:
         """
         Gracefully shutdown the server.
         """
@@ -95,8 +96,10 @@ class SocketArgparser:
             self.server_thread = None
         logger.info("Server has been shut down.")
 
-    def ping_handler(self, parser):
+    def ping_handler(self, parser: argparse.ArgumentParser) -> str:
         """
         Handler function for the 'ping' command.
+        :param parser: Argument parser for the command
+        :return: Response as a JSON string
         """
         return json.dumps({"response": "pong"})

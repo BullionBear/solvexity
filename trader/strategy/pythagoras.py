@@ -1,5 +1,6 @@
 from typing import Type
 import pandas as pd
+import json
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
 import helper.logging as logging
@@ -18,6 +19,7 @@ class Pythagoras(Strategy):
         self.limit = limit
         self.metadata = metadata
         logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
+        super().register_command("balance", handler=self.balance_handler)
     
     def __enter__(self):
         self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
@@ -58,6 +60,14 @@ class Pythagoras(Strategy):
                 metadata['lot_size'] = _filter['tickSize'].rstrip('0')
         return metadata
     
+    def balance_handler(self, parser):
+        def execute():
+            return json.dumps({
+                self.base: str(self.get_balance(self.base)), 
+                self.quote: str(self.get_balance(self.quote))
+            }, indent=4)
+        return execute()
+
     def market_buy(self, symbol: str, size: Decimal):
         super().market_buy(symbol, size)
 

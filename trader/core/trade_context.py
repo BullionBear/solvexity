@@ -49,7 +49,7 @@ class PaperTradeContext(TradeContext):
         """
         self.granular = granular
         self.balance = {k: Decimal(v) for k, v in init_balance.items()}
-        logger.info(f"Initial balance: {self.balance}\n Granular: {self.granular}")
+        logger.info(f"Initial balance: {self.balance}\t Granular: {self.granular}")
         self.redis = redis
         self.trade = []
 

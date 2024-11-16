@@ -1,5 +1,21 @@
 from pydantic import BaseModel
 
+class Trade(BaseModel):
+    symbol: str
+    id: int
+    order_id: int
+    order_list_id: int
+    price: float
+    qty: float
+    quote_qty: float
+    commission: float
+    commission_asset: str
+    time: int
+    is_buyer: bool
+    is_maker: bool
+    is_best_match: bool
+
+
 
 class KLine(BaseModel):
     interval: str

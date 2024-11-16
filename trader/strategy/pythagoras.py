@@ -47,11 +47,11 @@ class Pythagoras(Strategy):
     
     @property
     def base(self):
-        return self.symbol[-4:]
+        return self.symbol[:-4] # e.g. BTCUSDT -> BTC
     
     @property
     def quote(self):
-        return self.symbol[:-4]
+        return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
     @property
     def exchange_metadata(self):
@@ -64,11 +64,11 @@ class Pythagoras(Strategy):
                 metadata['lot_size'] = _filter['tickSize'].rstrip('0')
         return metadata
 
-    def market_buy(self, symbol: str, size: Decimal):
-        super().market_buy(symbol, size)
+    def market_buy(self, size: Decimal):
+        super().market_buy(self.symbol, size)
 
-    def market_sell(self, symbol: str, size: Decimal):
-        super().market_sell(symbol, size)
+    def market_sell(self, size: Decimal):
+        super().market_sell(self.symbol, size)
 
     def get_balance(self, token: str) -> Decimal:
         return super().get_balance(token)
@@ -76,18 +76,18 @@ class Pythagoras(Strategy):
     def notify(self, **kwargs):
         return super().notify(**kwargs)
     
-    def get_klines(self, symbol, limit):
-        return super().get_klines(symbol, limit)
+    def get_klines(self, limit):
+        return super().get_klines(self.symbol, limit)
     
-    def get_trades(self, symbol, limit) -> list[Trade]:
-        return super().get_trades(symbol, limit)
+    def get_trades(self, limit) -> list[Trade]:
+        return super().get_trades(self.symbol, limit)
     
     def get_trades_handler(self, parse):
         trades = self.get_trades(self.symbol, parse.limit)
         response = {"data": [trade.mo() for trade in trades]}
     
     def invoke(self):
-        data = self.get_klines(self.symbol, self.limit)
+        data = self.get_klines(self.limit)
         if not data:
             logger.error("No data to analyze in invoke method")
             self.notify(family=self.family, **on_error(self.family, id=self._id, error="No data to analyze in invoke method"))
@@ -101,9 +101,9 @@ class Pythagoras(Strategy):
         if self.is_buy(df_analysis):
             ask, _ = self.get_askbid()
             sz = Decimal(self.get_balance(self.base)) / Decimal(ask)
-            self.market_buy(self.symbol, str(sz))
+            self.market_buy(str(sz))
         elif self.is_sell(df_analysis):
-            self.market_sell(self.symbol, self.get_balance(self.base))
+            self.market_sell(self.get_balance(self.base))
 
     def is_buy(self, df: pd.DataFrame):
         """

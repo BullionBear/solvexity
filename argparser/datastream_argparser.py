@@ -1,4 +1,5 @@
 import sys
+import json
 import argparse
 import time
 import signal
@@ -49,6 +50,7 @@ def main(r: redis.Redis, data_config: dict):
         if shutdown_event.is_set():
             return  # Stop processing if shutdown is triggered
         if msg.get('e', '') == 'kline':
+            logger.info(f"Received kline data: {msg}")
             kline = KLine.from_ws(msg['k'] , msg['E'])
             score = kline.open_time
             latest_kline = query_latest_kline(r, symbol, granular)
@@ -61,7 +63,8 @@ def main(r: redis.Redis, data_config: dict):
             else:
                 logger.info(f"New kline data received: {kline}")
                 r.zadd(key, {kline.model_dump_json(): score})
-            r.publish(key, 'update')
+            event = json.dumps({"x": kline.is_closed, "E": msg['E']})
+            r.publish(key, event)
             if r.zcard(key) > MAX_SIZE:
                 # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
                 logger.info(f"Removing oldest kline data to keep only {MAX_SIZE} items")

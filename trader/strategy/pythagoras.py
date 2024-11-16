@@ -1,9 +1,8 @@
-import time
+from typing import Type
 import pandas as pd
 from decimal import Decimal, ROUND_DOWN
-import binance.client as BinanceClient
+from trader.core import TradeContext, Strategy
 import helper.logging as logging
-import helper
 from .notification import (
     on_trading_start, on_trading_finish, on_order_sent, on_error
 )
@@ -11,24 +10,35 @@ from trader.data import KLine
 
 logger = logging.getLogger("trading")
 
-class Pythagoras:
-    def __init__(self, binance_client: BinanceClient, trading_config: dict, webhook_url: str):
+class Pythagoras(Strategy):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, limit: int, metadata: dict, trade_id = None):
+        super().__init__(trade_context, trade_id)
         self.family = "Pythagoras"
-        self.client = binance_client
-        self._id = helper.generate_random_id()
-        self.symbol = trading_config["symbol"]
-        self.balance = self.get_balance()
-        self.webhook_url = webhook_url
-        self.trading_metadata = trading_config["metadata"]
+        self.symbol = symbol
+        self.limit = limit
+        self.metadata = metadata
+        logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
     
     def __enter__(self):
-        helper.send_notification(self.webhook_url, None, self.family, on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.trading_metadata))
+        self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        helper.send_notification(self.webhook_url, None, self.family, on_trading_finish(self.family, id=self._id, symbol=self.symbol))
-        return self
+    # Check if an exception occurred
+        if exc_type is not None:
+        # Log or display the error details
+            error_message = f"Error in {self.family} strategy: {exc_type.__name__} - {exc_val}"
+            self.trade_context.notify(error=error_message, id=self._id, symbol=self.symbol)
 
+            # Optionally, handle the traceback or print it
+            import traceback
+            traceback_str = ''.join(traceback.format_exception(exc_type, exc_val, exc_tb))
+            logger.error(traceback_str)  # Or use logging instead of print
+
+        # Notify the trading finish regardless of error
+        self.trade_context.notify(**on_trading_finish(self.family, id=self._id, symbol=self.symbol))
+        return False  # Propagate the exception if needed
+    
     @property
     def base(self):
         return self.symbol[-4:]
@@ -46,53 +56,36 @@ class Pythagoras:
                 metadata['lot_size'] = _filter['stepSize'].rstrip('0')
             elif _filter['filterType'] == 'PRICE_FILTER':
                 metadata['lot_size'] = _filter['tickSize'].rstrip('0')
-        return metadata    
+        return metadata
     
-    def get_balance(self):
-        user_assets = self.client.get_user_asset(needBtcValuation=True)
-        balance = {}
-        for asset in user_assets:
-            balance[asset['asset']] = str(Decimal(asset['free']) + Decimal(asset['locked']))
-        if self.base not in balance:
-            balance[self.base] = '0'
-        if self.quote not in balance:
-            balance[self.quote] = '0'
-        logger.info(f"Current balance: {balance}")
-        return balance
-    
-    def get_askbid(self)-> tuple[str, str]:
-        order_book = self.client.get_order_book(symbol=self.symbol, limit=1)
-        return order_book['asks'][0][0], order_book['bids'][0][0]
+    def market_buy(self, symbol: str, size: Decimal):
+        super().market_buy(symbol, size)
 
-    def invoke(self, data: list[KLine]):
+    def market_sell(self, symbol: str, size: Decimal):
+        super().market_sell(symbol, size)
+
+    def get_balance(self, token: str) -> Decimal:
+        return super().get_balance(token)
+    
+    def invoke(self):
+        data = super().get_klines(self.symbol, self.limit)
         if not data:
             logger.error("No data to analyze in invoke method")
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_error(self.family, id=self._id, error="No data to analyze in invoke method")
-                                     )
+            self.notify(family=self.family, **on_error(self.family, id=self._id, error="No data to analyze in invoke method"))
             return
-        if not self.is_updated(data[-1].event_time):
-            logger.error(f"Data is not updated")
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_error(self.family, id=self._id, error="Data is not updated")
-                                     )
+        if len(data) < self.limit:
+            logger.warning("Not enough data to analyze in invoke method")
+            self.notify(family=self.family, **on_error(self.family, id=self._id, error="Not enough data to analyze in invoke method"))
             return
         df = self.to_dataframe(data)
         df_analysis = self.analyze(df)
         if self.is_buy(df_analysis):
             ask, _ = self.get_askbid()
-            sz = Decimal(self.balance[self.base]) / Decimal(ask)
-            self.market_buy(str(sz))
+            sz = Decimal(self.get_balance(self.base)) / Decimal(ask)
+            self.market_buy(self.symbol, str(sz))
         elif self.is_sell(df_analysis):
-            self.market_sell(self.balance[self.base])
+            self.market_sell(self.symbol, self.get_balance(self.base))
 
-    def analyze(self, df: pd.DataFrame):
-        df_analysis = df.copy()
-        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["fast_ma_period"]).mean()
-        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.trading_metadata["slow_ma_period"]).mean()
-        df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
-        return df_analysis.dropna()
-        
     def is_buy(self, df: pd.DataFrame):
         """
         Buy Logic:
@@ -140,44 +133,22 @@ class Pythagoras:
         if last_update['close'].values[0] < last_update['fast_ma'].values[0] * (1 + q):
             return False
         return True
-
     
     def is_hold(self, px: float):
-        if float(self.balance[self.quote]) * px > float(self.balance[self.base]):
+        if float(self.get_balance(self.quote)) * px > float(self.get_balance(self.base)):
             return True
         return False
-    
-    @staticmethod
-    def is_updated(ts: int, recv_window: int = 10000):
-        current_time = int(time.time() * 1000)
-        return ts > current_time - recv_window
-    
-    def market_buy(self, quantity: float):
-        qty = Decimal(quantity).quantize(Decimal(self.exchange_metadata['lot_size']), rounding=ROUND_DOWN)
-        try:
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_order_sent(self.family, id=self._id, symbol=self.symbol, side="BUY", quantity=str(qty))
-                                     )
-            self.client.order_market_buy(symbol=self.symbol, quantity=str(qty))
-        except Exception as e:
-            logger.error(f"Failed to place market buy order: {e}")
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_error(self.family, id=self._id, error=e)
-                                     )            
-    
-    def market_sell(self, quantity: float):
-        qty = Decimal(quantity).quantize(Decimal(self.exchange_metadata['lot_size']), rounding=ROUND_DOWN)
-        try:
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_order_sent(self.family, id=self._id, symbol=self.symbol, side="SELL", quantity=str(qty))
-                                     )
-            self.client.order_market_sell(symbol=self.symbol, quantity=str(qty))
-        except Exception as e:
-            logger.error(f"Failed to place market buy order: {e}")
-            helper.send_notification(self.webhook_url, None, self.family, 
-                                     on_error(self.family, id=self._id, error=e)
-                                     )
-    
+
+    def analyze(self, df: pd.DataFrame):
+        df_analysis = df.copy()
+        df_analysis['fast_ma'] = df_analysis['close'].rolling(window=self.metadata["fast_ma_period"]).mean()
+        df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.metadata["slow_ma_period"]).mean()
+        df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
+        return df_analysis.dropna()
+
+    def notify(self, **kwargs):
+        return super().notify(**kwargs)
+
     @staticmethod
     def to_dataframe(data: list[KLine]):
         data_dict = [kline.model_dump() for kline in data]

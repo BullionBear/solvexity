@@ -1,26 +1,15 @@
-import sys
 import argparse
-import time
 import signal
 import threading
-import redis
-from datetime import datetime, timezone
-from pytz import utc
-from binance.client import Client as BinanceClient
 import helper
 import helper.logging as logging
-from trader.data import (
-    get_key, get_engine, get_klines, batch_insert_klines,
-    KLine
-)
+import time
+from trader.data.provider import HistoricalProvider
+from service import ServiceFactory
 
 logging.setup_logging()
 logger = logging.getLogger("data")
-
-
-MAX_SIZE = 65536
-shutdown_event = threading.Event()  # Event for managing shutdown
-
+shutdown_event = threading.Event()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run playback process")
@@ -38,60 +27,27 @@ def handle_shutdown(signum, frame):
     shutdown_event.set()  # Trigger shutdown event to stop main loop
 
 
-def main(r: redis.Redis, data_config: dict):
-    symbol = data_config["symbol"]
-    granular = data_config["granular"]
-    granular_ts = helper.to_unixtime_interval(granular) * 1000
-    key = get_key(symbol, granular)
-    r.delete(key)  # Clear existing data
-    limit = data_config["limit"]
-    start = data_config["start"] // granular_ts * granular_ts
-    end = data_config["end"] // granular_ts * granular_ts
-    db_url = data_config["url"]
-    db = get_engine(db_url)
-
-    pre_start_ts = start - granular_ts * limit
-    pre_end_ts = start - granular_ts
-    pre_start_dt = datetime.fromtimestamp(pre_start_ts // 1000, tz=timezone.utc)
-    pre_end_dt = datetime.fromtimestamp(pre_end_ts // 1000, tz=timezone.utc)
-    logger.info(f"Pre-fetching {symbol} kline data, granular: {granular} from {pre_start_dt.strftime('%Y-%m-%d %H:%M:%S')} to {pre_end_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-    current = pre_start_ts
-    while current < pre_end_ts:
-        next_day = min(current + 86400 * 1000, pre_end_ts)
-        klines = get_klines(db, symbol, granular, current, next_day)
-        logger.info(f"Retrieved {len(klines)} klines from {datetime.fromtimestamp(current // 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} "
-                    f"to {datetime.fromtimestamp(next_day // 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}")
-        batch_insert_klines(r, key, klines)
-        current = next_day  # Move to the next day
+def main(service_config: dict, trigger_config: dict, data_config: dict):
+    service = ServiceFactory(service_config)
+    if data_config["provider"] == "history":
+        r = data_config["redis"]
+        sql = data_config["sql_engine"]
+        provider = HistoricalProvider(
+            service[r], service[sql], data_config["symbol"],
+            data_config["granular"], data_config["start"], data_config["end"],
+            data_config["limit"]
+        )
+    else:
+        raise ValueError(f"Unknown data provider: {data_config['provider']}")
+    signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
+    signal.signal(signal.SIGTERM, lambda signum, frame: provider.stop())
+    sleep_time = trigger_config["sleep"] / 1000
+    for kline in provider:
         if shutdown_event.is_set():
             break
-
-    start_dt = datetime.fromtimestamp(start // 1000, tz=timezone.utc)
-    end_dt = datetime.fromtimestamp(end // 1000, tz=timezone.utc)
-    logger.info(f"Start consuming {symbol} kline data, granular: {granular} from {start_dt.strftime('%Y-%m-%d %H:%M:%S')} to {end_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-
-    current = start
-
-    while current < end:
-        next_day = min(current + 86400 * 1000, end)  # 86400 seconds in a day, multiplied by 1000 for milliseconds
-        klines = get_klines(db, symbol, granular, current, next_day)
-        logger.info(f"Retrieved {len(klines)} klines from {datetime.fromtimestamp(current // 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} "
-                    f"to {datetime.fromtimestamp(next_day // 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}")
-        for kline in klines:
-            score = kline.event_time
-            r.zadd(key, {kline.model_dump_json(): score})
-            r.publish(key, 'update')
-            if r.zcard(key) > MAX_SIZE:
-                # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
-                logger.info(f"Removing oldest kline data to keep only {MAX_SIZE} items")
-                r.zremrangebyrank(key, 0, -MAX_SIZE - 1)
-        # res.to_csv(f"{symbol}_{granular}_{current}_{next_day}.csv", index=False)
-        current = next_day  # Move to the next day
-        if shutdown_event.is_set():
-            break
+        logger.info(f"Publish kline data: {kline}")
+        time.sleep(sleep_time)
     
-
-
 
 
 if __name__ == "__main__":
@@ -105,9 +61,9 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
         raise    
-    logger.info(f"Start consuming {config['data']['symbol']} kline data")
+    logger.info("Configuration loaded successfully")
 
-    redis_config = config["redis"]
-    r = redis.Redis(host=redis_config["host"], port=redis_config["port"], db=redis_config["db"])
-    data_config = config["data"]
-    main(r, data_config)
+    try:
+        main(config["services"], config["trigger"], config["data"])
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")

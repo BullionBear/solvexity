@@ -4,6 +4,7 @@ scipy
 pandas
 redis[hiredis]
 pydantic
+json5
 # unittest
 pytest
 fakeredis

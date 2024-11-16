@@ -1,5 +1,6 @@
 from typing import Type
 import pandas as pd
+from service.socket_argparser import SocketArgparser
 import json
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
@@ -12,16 +13,18 @@ from trader.data import KLine
 logger = logging.getLogger("trading")
 
 class Pythagoras(Strategy):
-    def __init__(self, trade_context: Type[TradeContext], symbol: str, limit: int, metadata: dict, trade_id = None):
+    def __init__(self, trade_context: Type[TradeContext], tcp_server: SocketArgparser, symbol: str, limit: int, metadata: dict, trade_id = None):
         super().__init__(trade_context, trade_id)
         self.family = "Pythagoras"
         self.symbol = symbol
         self.limit = limit
         self.metadata = metadata
+        self.tcp_server = tcp_server
         logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
     
     def __enter__(self):
         self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
+        self.tcp_server.start_socket_server()
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -38,6 +41,7 @@ class Pythagoras(Strategy):
 
         # Notify the trading finish regardless of error
         self.trade_context.notify(**on_trading_finish(self.family, id=self._id, symbol=self.symbol))
+        self.tcp_server.close()
         return False  # Propagate the exception if needed
     
     @property

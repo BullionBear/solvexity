@@ -12,6 +12,9 @@ class SocketArgparser:
         self.host = host
         self.port = port
         self.commands = {}
+        self.server = None
+        self.server_thread = None
+        self.register_command("ping", self.ping_handler)
 
     def register_command(self, command: str, handler):
         """
@@ -25,8 +28,6 @@ class SocketArgparser:
     def start_socket_server(self):
         """
         Start a socket server using socketserver.
-        :param host: Host address to bind
-        :param port: Port to bind
         """
         class CommandHandler(socketserver.BaseRequestHandler):
             """
@@ -36,7 +37,7 @@ class SocketArgparser:
                 # Receive the command data
                 data = self.request.recv(1024).decode().strip()
                 if data:
-                    print(f"Received command: {data}")
+                    logger.info(f"Received command: {data}")
                     response = self.server.strategy._process_command(data)
                     self.request.sendall(response.encode())
 
@@ -51,9 +52,9 @@ class SocketArgparser:
                 self.strategy = strategy
 
         # Create the server and start it in a thread
-        server = StrategyServer((self.host, self.port), CommandHandler, self)
-        server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-        server_thread.start()
+        self.server = StrategyServer((self.host, self.port), CommandHandler, self)
+        self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.server_thread.start()
         logger.info(f"Socket server running on {self.host}:{self.port}")
 
     def _process_command(self, command_line: str) -> str:
@@ -78,7 +79,7 @@ class SocketArgparser:
                 return json.dumps({"error": "Unknown command"})
         except SystemExit:
             return json.dumps({"error": "Error in command parsing"})
-    
+
     def close(self):
         """
         Gracefully shutdown the server.
@@ -93,3 +94,9 @@ class SocketArgparser:
             self.server_thread.join()  # Wait for the thread to finish
             self.server_thread = None
         logger.info("Server has been shut down.")
+
+    def ping_handler(self, parser):
+        """
+        Handler function for the 'ping' command.
+        """
+        return json.dumps({"response": "pong"})

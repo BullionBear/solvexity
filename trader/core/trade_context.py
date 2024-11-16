@@ -86,7 +86,9 @@ class PaperTradeContext(TradeContext):
     
     def notify(self, **kwargs):
         content = [f'{key} = {value}' for key, value in kwargs.items()]
-        logger.info(f"Notification: {', '.join(content)}")
+        content = '\t'.join(content)
+        content = content.replace("\n", ", ")
+        logger.info(f"Notification: {content}")
 
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)

@@ -126,7 +126,7 @@ class Pythagoras(Strategy):
         df_condition = df[df['fast_ma'] > df['close']]
         if df_condition.empty:
             return False
-        df_condition['drawdown'] = (df_condition['fast_ma'] - df_condition['close']) / df_condition['fast_ma']
+        df_condition.iloc[:, 'drawdown'] = (df_condition['fast_ma'] - df_condition['close']) / df_condition['fast_ma']
         q = df_condition['drawdown'].quantile(0.25) # q is negative
         logger.info(f"Trigger buy px should below {last_update['fast_ma'].values[0] * (1 + q)}")
         if last_update['close'].values[0] > last_update['fast_ma'].values[0] * (1 + q):
@@ -146,7 +146,7 @@ class Pythagoras(Strategy):
         df_condition = df[df['fast_ma'] < df['close']]
         if df_condition.empty:
             return False
-        df_condition['gain'] = (df_condition['close'] - df_condition['fast_ma']) / df_condition['fast_ma']
+        df_condition.iloc[:, 'gain'] = (df_condition['close'] - df_condition['fast_ma']) / df_condition['fast_ma']
         q = df_condition['gain'].quantile(0.25)
         logger.info(f"Trigger buy px should below {last_update['fast_ma'].values[0] * (1 + q)}")
         if last_update['close'].values[0] < last_update['fast_ma'].values[0] * (1 + q):

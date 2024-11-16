@@ -2,7 +2,7 @@ from typing import Type
 import pandas as pd
 from service.socket_argparser import SocketArgparser
 from trader.data import Trade, KLine
-import json
+import argparse
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
 import helper.logging as logging
@@ -76,16 +76,12 @@ class Pythagoras(Strategy):
     def notify(self, **kwargs):
         return super().notify(**kwargs)
     
-    def get_klines(self, limit):
+    def get_klines(self, limit: int) -> list[KLine]:
         return super().get_klines(self.symbol, limit)
     
     def get_trades(self, limit) -> list[Trade]:
-        return super().get_trades(self.symbol, limit)
-    
-    def get_trades_handler(self, parse):
-        trades = self.get_trades(self.symbol, parse.limit)
-        response = {"data": [trade.mo() for trade in trades]}
-    
+        return super().get_trades(self.symbol, limit)      
+        
     def invoke(self):
         data = self.get_klines(self.limit)
         if not data:

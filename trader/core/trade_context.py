@@ -184,7 +184,7 @@ class LiveTradeContext(TradeContext):
         for trade in trades:
             if trade['orderId'] not in self.trade:
                 n_trade += 1
-                self.trade[trade['orderId']] = trade
+                self.trade[trade['orderId']] = Trade.from_rest(trade)
         logger.info(f"Updated {n_trade} new trades for {symbol}")
     
     def notify(self, **kwargs):

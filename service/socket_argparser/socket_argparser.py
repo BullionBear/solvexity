@@ -1,8 +1,7 @@
 import socketserver
-import argparse
 import threading
 import json
-from typing import Callable, Dict, Optional, Any
+from typing import Callable, Dict, Optional
 import helper.logging as logging
 
 logger = logging.getLogger("tcp")
@@ -12,12 +11,12 @@ class SocketArgparser:
     def __init__(self, host: str, port: int):
         self.host: str = host
         self.port: int = port
-        self.commands: Dict[str, Callable[[argparse.ArgumentParser], str]] = {}
+        self.commands: Dict[str, Callable[[list], str]] = {}
         self.server: Optional[socketserver.ThreadingTCPServer] = None
         self.server_thread: Optional[threading.Thread] = None
         self.register_command("ping", self.ping_handler)
 
-    def register_command(self, command: str, handler: Callable[[argparse.ArgumentParser], str]) -> None:
+    def register_command(self, command: str, handler: Callable[[list], str]) -> None:
         """
         Register a command with a handler function.
         :param command: Command name
@@ -64,22 +63,17 @@ class SocketArgparser:
         :param command_line: Raw command string
         :return: Response string
         """
-        parser = argparse.ArgumentParser(prog="command")
-        subparsers = parser.add_subparsers(dest="command")
+        parts = command_line.split()
+        if not parts:
+            return json.dumps({"error": "Empty command"})
 
-        # Dynamically add registered commands to the parser
-        for command, handler in self.commands.items():
-            subparser = subparsers.add_parser(command)
-            handler(subparser)
+        command = parts[0]
+        args = parts[1:]
 
-        try:
-            args = parser.parse_args(command_line.split())
-            if args.command in self.commands:
-                return self.commands[args.command](args)
-            else:
-                return json.dumps({"error": "Unknown command"})
-        except SystemExit:
-            return json.dumps({"error": "Error in command parsing"})
+        if command in self.commands:
+            return self.commands[command](args)
+        else:
+            return json.dumps({"error": "Unknown command"})
 
     def close(self) -> None:
         """
@@ -96,10 +90,10 @@ class SocketArgparser:
             self.server_thread = None
         logger.info("Server has been shut down.")
 
-    def ping_handler(self, parser: argparse.ArgumentParser) -> str:
+    def ping_handler(self, args: list) -> str:
         """
         Handler function for the 'ping' command.
-        :param parser: Argument parser for the command
+        :param args: List of arguments for the command
         :return: Response as a JSON string
         """
         return json.dumps({"response": "pong"})

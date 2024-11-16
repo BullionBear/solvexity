@@ -1,6 +1,7 @@
 from typing import Type
 import pandas as pd
 from service.socket_argparser import SocketArgparser
+from trader.data import Trade, KLine
 import json
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
@@ -72,8 +73,21 @@ class Pythagoras(Strategy):
     def get_balance(self, token: str) -> Decimal:
         return super().get_balance(token)
     
+    def notify(self, **kwargs):
+        return super().notify(**kwargs)
+    
+    def get_klines(self, symbol, limit):
+        return super().get_klines(symbol, limit)
+    
+    def get_trades(self, symbol, limit) -> list[Trade]:
+        return super().get_trades(symbol, limit)
+    
+    def get_trades_handler(self, parse):
+        trades = self.get_trades(self.symbol, parse.limit)
+        response = {"data": [trade.mo() for trade in trades]}
+    
     def invoke(self):
-        data = super().get_klines(self.symbol, self.limit)
+        data = self.get_klines(self.symbol, self.limit)
         if not data:
             logger.error("No data to analyze in invoke method")
             self.notify(family=self.family, **on_error(self.family, id=self._id, error="No data to analyze in invoke method"))
@@ -151,8 +165,8 @@ class Pythagoras(Strategy):
         df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
         return df_analysis.dropna()
 
-    def notify(self, **kwargs):
-        return super().notify(**kwargs)
+    
+        
 
     @staticmethod
     def to_dataframe(data: list[KLine]):

@@ -68,7 +68,6 @@ def main(services_config: dict, trigger_config: dict, context_config: dict, trad
     # signal.signal(signal.SIGINT, lambda signum, frame: heartbeat_thread.join())
     # signal.signal(signal.SIGTERM, lambda signum, frame: heartbeat_thread.join())
     with Strategy(context, trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
-        strategy.start_socket_server('127.0.0.1', 20819)
         # while not shutdown_event.is_set():
         pubsub = service["redis"].pubsub()
         key = get_key(symbol, granular)

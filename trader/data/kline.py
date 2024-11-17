@@ -3,7 +3,9 @@ import redis
 import json
 from .utils import get_key
 from .model import KLine
+import helper.logging as logging 
 
+logger = logging.getLogger("data")
 
 def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int, end_time: int) -> list[KLine]:
     """Get kline data from Redis
@@ -33,7 +35,15 @@ def query_latest_kline(redis: redis.Redis, symbol: str, granular: str) -> Option
     """
     key = get_key(symbol, granular)
     kline = redis.zrevrange(key, 0, 0)
-    return KLine(**json.loads(kline[0])) if kline else None  # Deserialize the latest entry
+    try:
+        if kline and isinstance(kline[0], bytes):
+            return KLine(**json.loads(kline[0].decode('utf-8')))  # Deserialize the entry
+        else:
+            logger.error(f"Unable to get latest kline data: {kline}")
+            return None
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.error(f"Failed to deserialize kline: {e}")
+        return None
 
 
 def batch_insert_klines(r: redis.Redis, key: str, historical_klines: list[KLine]):

@@ -4,7 +4,7 @@ import threading
 import helper
 import helper.logging as logging
 import time
-from trader.data.provider import HistoricalProvider
+from trader.data.provider import HistoricalProvider, RealtimeProvider
 from service import ServiceFactory
 
 logging.setup_logging()
@@ -38,7 +38,10 @@ def main(service_config: dict, trigger_config: dict, data_config: dict):
             data_config["limit"]
         )
     elif data_config["provider"] == "realtime":
-        raise NotImplementedError("realtime provider is not implemented yet")
+        r = data_config["redis"]
+        provider = RealtimeProvider(
+            service[r], data_config["symbol"], data_config["granular"], data_config["limit"]
+        )
     else:
         raise ValueError(f"Unknown data provider: {data_config['provider']}")
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())

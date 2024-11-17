@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 import redis
-from trader.data import query_latest_kline, KLine, query_kline
+from trader.data import query_latest_kline, KLine, query_kline, Trade
 import helper.logging as logging
 import binance.client as BinanceClient
 from datetime import datetime, timezone
@@ -33,6 +33,10 @@ class TradeContext(ABC):
     @abstractmethod
     def notify(self, **kwargs):
         pass
+    
+    @abstractmethod
+    def get_trades(self, symbol: str, limit: int) -> list[Trade]:
+        pass
 
     
 
@@ -49,9 +53,10 @@ class PaperTradeContext(TradeContext):
         """
         self.granular = granular
         self.balance = {k: Decimal(v) for k, v in init_balance.items()}
-        logger.info(f"Initial balance: {self.balance}\n Granular: {self.granular}")
+        logger.info(f"Initial balance: {self.balance}\t Granular: {self.granular}")
         self.redis = redis
-        self.trade = []
+        self._trade_id = 1
+        self.trade: list[Trade] = []
 
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)
@@ -60,7 +65,20 @@ class PaperTradeContext(TradeContext):
         self.balance[quote] -= size * ask
         logger.info(f"Market buy: {symbol}, size: {size}, price: {ask}")
         logger.info(f"Current balance: {self.balance}")
-        self.trade.append({"symbol": symbol, "size": str(size), "price": str(ask), "side": "sell"})
+        self.trade.append(Trade(symbol=symbol, 
+                                id=self._trade_id, 
+                                order_id=self._trade_id, 
+                                order_list_id=-1, 
+                                price=float(ask), 
+                                qty=float(size), 
+                                quote_qty=float(size * ask), 
+                                commission=0, 
+                                commission_asset="BNB", 
+                                time=self._get_time(symbol), 
+                                is_buyer=True, 
+                                is_maker=False, 
+                                is_best_match=True))
+        self._trade_id += 1
 
     def market_sell(self, symbol: str, size: Decimal):
         _, bid = self.get_askbid(symbol)
@@ -69,13 +87,32 @@ class PaperTradeContext(TradeContext):
         self.balance[quote] += size * bid
         logger.info(f"Market sell: {symbol}, size: {size}, price: {bid}")
         logger.info(f"Current balance: {self.balance}")
-        self.trade.append({"symbol": symbol, "size": str(size), "price": str(bid), "side": "sell"})
+        self.trade.append(Trade(symbol=symbol, 
+                                id=self._trade_id, 
+                                order_id=self._trade_id, 
+                                order_list_id=-1, 
+                                price=float(bid), 
+                                qty=float(size), 
+                                quote_qty=float(size * bid), 
+                                commission=0, 
+                                commission_asset="BNB", 
+                                time=self._get_time(symbol), 
+                                is_buyer=False, 
+                                is_maker=False, 
+                                is_best_match=True))
+        self._trade_id += 1
 
     def get_balance(self, token: str) -> Decimal:
         return self.balance[token]
 
+    def _get_time(self, symbol: str) -> int:
+        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
+        if not lastest_kline:
+            raise ValueError(f"No kline data found: {symbol}:{self.granular}")
+        return lastest_kline.event_time
+        
     
-    def get_askbid(self, symbol: str):
+    def get_askbid(self, symbol: str) -> tuple[Decimal, Decimal]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
         if not lastest_kline:
             raise ValueError(f"No kline data found: {symbol}:{self.granular}")
@@ -86,7 +123,9 @@ class PaperTradeContext(TradeContext):
     
     def notify(self, **kwargs):
         content = [f'{key} = {value}' for key, value in kwargs.items()]
-        logger.info(f"Notification: {', '.join(content)}")
+        content = '\t'.join(content)
+        content = content.replace("\n", ", ")
+        logger.info(f"Notification: {content}")
 
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
@@ -98,6 +137,10 @@ class PaperTradeContext(TradeContext):
         start_ts = end_ts - grandular_ts * limit
         klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
         return klines
+    
+    def get_trades(self, symbol, limit) -> list[Trade]:
+        trades = filter(lambda x: x.symbol == symbol, self.trade)
+        return list(trades)[-limit:]
 
 class LiveTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, redis: redis.Redis, webhook_url: str, granular: str):
@@ -106,6 +149,7 @@ class LiveTradeContext(TradeContext):
         self.redis = redis
         self.webhook_url = webhook_url
         self.balance = self._get_balance()
+        self.trade: dict[int, Trade] = {}
 
     def _get_balance(self):
         user_assets = self.client.get_user_asset(needBtcValuation=True)
@@ -134,6 +178,15 @@ class LiveTradeContext(TradeContext):
         order_book = self.client.get_order_book(symbol=symbol, limit=1)
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
     
+    def _update_trade(self, symbol: str):
+        trades = self.client.get_my_trades(symbol=symbol, limit=100)
+        n_trade = 0
+        for trade in trades:
+            if trade['orderId'] not in self.trade:
+                n_trade += 1
+                self.trade[trade['orderId']] = Trade.from_rest(trade)
+        logger.info(f"Updated {n_trade} new trades for {symbol}")
+    
     def notify(self, **kwargs):
         family = kwargs.get("family", "Notification")
         kwargs.pop("family", None)
@@ -149,3 +202,8 @@ class LiveTradeContext(TradeContext):
         start_ts = end_ts - grandular_ts * limit
         klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
         return klines
+    
+    def get_trades(self, symbol, limit) -> list[Trade]:
+        self._update_trade(symbol)
+        trades = filter(lambda x: x['symbol'] == symbol, self.trade.values())
+        return sorted(trades, key=lambda t: t.id)[-limit:]

@@ -1,9 +1,5 @@
 {
   "services": {
-    "binance": {
-      "api_key": "",
-      "api_secret": ""
-    },
     "redis": {
       "host": "localhost",
       "port": 6379,
@@ -12,15 +8,16 @@
     "sql": {
       "host": "localhost",
       "port": 5432,
-      "database": "postgres",
-      "user": "postgres",
+      "db": "database",
+      "username": "user",
       "password": "password"
     }
   },
   "trigger": {  // Used to control the execution
+    "sleep": 1000, // 1 second
   },
   "data": {
-    "provider": "live", // "live" or "paper"
+    "provider": "history", // "history" or "realtime"
     "sql_engine": "sql", 
     "redis": "redis",
     "symbol": "BTCUSDT",
@@ -28,14 +25,5 @@
     "start": 1714521600000, // 2024-05-01 00:00:00
     "end": 1715126399999,  // 2024-05-07 23:59:59
     "limit": 90
-  },
-  "trading": {
-    "family": "pythagoras",
-    "symbol": "BTCUSDT",
-    "limit": 90,
-    "meta": {
-      "fast_ma_period": 10,
-      "slow_ma_period": 30
-    }
   }
 }

@@ -1,3 +1,4 @@
+from typing import Type
 from abc import ABC, abstractmethod
 from trader.data import KLine
 from .trade_context import TradeContext
@@ -5,7 +6,7 @@ from decimal import Decimal
 import helper
 
 class Strategy(ABC):
-    def __init__(self, trade_context: TradeContext, trade_id: str = None):
+    def __init__(self, trade_context: Type[TradeContext], trade_id: str = None):
         self.trade_context = trade_context
         if trade_id:
             self._id = trade_id
@@ -29,5 +30,9 @@ class Strategy(ABC):
     def get_klines(self, symbol: str, limit: int) -> list[KLine]:
         return self.trade_context.get_klines(symbol, limit)
     
+    def get_trades(self, symbol: str, limit: int):
+        return self.trade_context.get_trades(symbol, limit)
+    
     def notify(self, **kwargs):
         self.trade_context.notify(**kwargs)
+    

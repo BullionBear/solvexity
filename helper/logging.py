@@ -62,6 +62,11 @@ LOGGING_CONFIG = {
             'handlers': ['console', 'file'],
             'propagate': False
         },
+        'tcp': {
+            'level': 'INFO',
+            'handlers': ['console', 'file'],
+            'propagate': False
+        },
     }
 }
 

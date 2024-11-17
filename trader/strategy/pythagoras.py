@@ -1,5 +1,8 @@
-from typing import Type
+from typing import Type, Callable
 import pandas as pd
+from service.socket_argparser import SocketArgparser
+from trader.data import Trade, KLine
+import argparse
 from decimal import Decimal, ROUND_DOWN
 from trader.core import TradeContext, Strategy
 import helper.logging as logging
@@ -9,18 +12,23 @@ from .notification import (
 from trader.data import KLine
 
 logger = logging.getLogger("trading")
+pd.options.mode.copy_on_write = True
 
 class Pythagoras(Strategy):
-    def __init__(self, trade_context: Type[TradeContext], symbol: str, limit: int, metadata: dict, trade_id = None):
+    def __init__(self, trade_context: Type[TradeContext], tcp_server: SocketArgparser, symbol: str, limit: int, metadata: dict, trade_id = None):
         super().__init__(trade_context, trade_id)
         self.family = "Pythagoras"
         self.symbol = symbol
         self.limit = limit
         self.metadata = metadata
+        self.tcp_server = tcp_server
         logger.info(f"Init balance:  {self.base}: {self.get_balance(self.base)}, {self.quote}: {self.get_balance(self.quote)}")
+
+        self.tcp_server.register_command("mytrade", self.mytrade_command)
     
     def __enter__(self):
         self.trade_context.notify(**on_trading_start(self.family, id=self._id, symbol=self.symbol, **self.metadata))
+        self.tcp_server.start_socket_server()
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -37,15 +45,16 @@ class Pythagoras(Strategy):
 
         # Notify the trading finish regardless of error
         self.trade_context.notify(**on_trading_finish(self.family, id=self._id, symbol=self.symbol))
+        self.tcp_server.close()
         return False  # Propagate the exception if needed
     
     @property
     def base(self):
-        return self.symbol[-4:]
+        return self.symbol[:-4] # e.g. BTCUSDT -> BTC
     
     @property
     def quote(self):
-        return self.symbol[:-4]
+        return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
     @property
     def exchange_metadata(self):
@@ -57,18 +66,41 @@ class Pythagoras(Strategy):
             elif _filter['filterType'] == 'PRICE_FILTER':
                 metadata['lot_size'] = _filter['tickSize'].rstrip('0')
         return metadata
-    
-    def market_buy(self, symbol: str, size: Decimal):
-        super().market_buy(symbol, size)
 
-    def market_sell(self, symbol: str, size: Decimal):
-        super().market_sell(symbol, size)
+    def market_buy(self, size: Decimal):
+        super().market_buy(self.symbol, size)
+
+    def market_sell(self, size: Decimal):
+        super().market_sell(self.symbol, size)
 
     def get_balance(self, token: str) -> Decimal:
         return super().get_balance(token)
     
+    def notify(self, **kwargs):
+        return super().notify(**kwargs)
+    
+    def get_klines(self, limit: int) -> list[KLine]:
+        return super().get_klines(self.symbol, limit)
+    
+    def get_trades(self, limit) -> list[Trade]:
+        return super().get_trades(self.symbol, limit)
+    
+    def mytrade_command(self, parser: argparse.ArgumentParser) -> Callable[[argparse.Namespace], str]:
+        parser.add_argument("dst", type=str, help="Path to save the trades")
+        parser.add_argument("limit", type=int, help="Number of trades to fetch")
+
+        def handler(args: argparse.Namespace) -> str:
+            trades = self.get_trades(args.limit)
+            if not trades:
+                return "No trades found"
+            data = [trade.model_dump() for trade in trades]
+            df = pd.DataFrame(data)
+            df.to_csv(args.dst, index=False)
+            return f"Export {len(trades)} trades to {args.dst}\n{df.head(args.limit)}"
+        return handler
+        
     def invoke(self):
-        data = super().get_klines(self.symbol, self.limit)
+        data = self.get_klines(self.limit)
         if not data:
             logger.error("No data to analyze in invoke method")
             self.notify(family=self.family, **on_error(self.family, id=self._id, error="No data to analyze in invoke method"))
@@ -82,9 +114,9 @@ class Pythagoras(Strategy):
         if self.is_buy(df_analysis):
             ask, _ = self.get_askbid()
             sz = Decimal(self.get_balance(self.base)) / Decimal(ask)
-            self.market_buy(self.symbol, str(sz))
+            self.market_buy(str(sz))
         elif self.is_sell(df_analysis):
-            self.market_sell(self.symbol, self.get_balance(self.base))
+            self.market_sell(self.get_balance(self.base))
 
     def is_buy(self, df: pd.DataFrame):
         """
@@ -135,7 +167,7 @@ class Pythagoras(Strategy):
         return True
     
     def is_hold(self, px: float):
-        if float(self.get_balance(self.quote)) * px > float(self.get_balance(self.base)):
+        if float(self.get_balance(self.base)) * px > float(self.get_balance(self.quote)):
             return True
         return False
 
@@ -145,9 +177,7 @@ class Pythagoras(Strategy):
         df_analysis['slow_ma'] = df_analysis['close'].rolling(window=self.metadata["slow_ma_period"]).mean()
         df_analysis['slow_ma.diff'] = df_analysis['slow_ma'].diff()
         return df_analysis.dropna()
-
-    def notify(self, **kwargs):
-        return super().notify(**kwargs)
+        
 
     @staticmethod
     def to_dataframe(data: list[KLine]):

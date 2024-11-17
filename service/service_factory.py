@@ -1,6 +1,7 @@
 import redis
 from sqlalchemy.engine import Engine
 from binance.client import Client as BinanceClient
+from .socket_argparser import SocketArgparser
 
 def get_redis(host: str, port: int, db: int) -> redis.Redis:
     return redis.Redis(host=host, port=port, db=db)
@@ -28,6 +29,8 @@ class ServiceFactory:
             return self.get_binance_client()
         elif service_name == "webhook":
             return self.get_webhook()
+        elif service_name == "tcp":
+            return self.get_tcp()
         else:
             raise ValueError(f"Unknown service: {service_name}")
 
@@ -55,3 +58,6 @@ class ServiceFactory:
     
     def get_webhook(self) -> str:
         return self.services_config["webhook"]
+    
+    def get_tcp(self) -> SocketArgparser:
+        return SocketArgparser(self.services_config["tcp"]["host"], self.services_config["tcp"]["port"])

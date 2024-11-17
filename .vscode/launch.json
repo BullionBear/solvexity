@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Run playback argument parser",
+            "name": "Python Debugger: Run datastream argument parser with history",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/playback_argparser.py",
+            "program": "${workspaceFolder}/argparser/datastream_argparser.py",
             "args": [
                 "-c",
-                "config/playback_test.json5"
+                "config/datastream_history_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -20,13 +20,28 @@
             }
         },
         {
-            "name": "Python Debugger: Run trade arguement parser",
+            "name": "Python Debugger: Run datastream argument parser with realtime",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/datastream_argparser.py",
+            "args": [
+                "-c",
+                "config/datastream_realtime_test.json5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
+        },
+        {
+            "name": "Python Debugger: Run trade arguement parser with live",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/argparser/trading_argparser.py",
             "args": [
                 "-c",
-                "config/trading_test.json5"
+                "config/trading_live_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -41,7 +56,7 @@
             "program": "${workspaceFolder}/argparser/trading_argparser.py",
             "args": [
                 "-c",
-                "config/papertrade_test.json5"
+                "config/trading_paper_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

@@ -22,11 +22,11 @@ class Signal(ABC):
         pass
 
     @abstractmethod
-    def export(self, destination: str):
+    def export(self, output_dir: str):
         pass
 
     @abstractmethod
-    def visualize(self, destination: str):
+    def visualize(self, output_dir: str):
         pass
 
     @staticmethod

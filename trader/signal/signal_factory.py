@@ -1,4 +1,4 @@
-from .moving_average import MovingAverageSignal
+from .doubly_moving_average import MovingAverageSignal
 
 class SignalFactory:
     def __init__(self, trade_context, signal_config: dict):

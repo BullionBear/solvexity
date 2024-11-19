@@ -6,7 +6,7 @@ import pandas as pd
 pd.options.mode.copy_on_write = True
 
 
-class DoubleMovingAverage(Signal):
+class DoublyMovingAverage(Signal):
     def __init__(self, trade_context: Type[TradeContext], symbol: str, fast_period: int, slow_period: int, limit: int):
         super().__init__(trade_context)
         self.name = "Double Moving Average"
@@ -19,7 +19,7 @@ class DoubleMovingAverage(Signal):
         klines = self.trade_context.get_klines(self.symbol, self.limit)
         df = Signal.to_dataframe(klines)
         df_analyze = self.analyze(df)
-        
+
         return SignalType.HOLD
     
     def analyze(self, df: pd.DataFrame) -> pd.DataFrame:

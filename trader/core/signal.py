@@ -3,8 +3,11 @@ from typing import Type
 from abc import ABC, abstractmethod
 from trader.data import KLine
 from .trade_context import TradeContext
+import helper.logging as logging
 import pandas as pd
 import enum
+
+logger = logging.getLogger("trading")
 
 class SignalType(enum.Enum):
     BUY = 'BUY'
@@ -36,23 +39,26 @@ class Signal(ABC):
         return pd.DataFrame(data_dict)
     
     @staticmethod
-    def path_validator(self, output_path: str, extension: str):
-        try:
-            # Ensure the path ends with .png
-            if not output_path.lower().endswith(f'.{extension}'):
-                return False
-
-            # Check if the directory exists
-            directory = os.path.dirname(output_path)
-            if directory and not os.path.exists(directory):
-                return False
-
-            # Check if we can write to the directory
-            if directory and not os.access(directory, os.W_OK):
-                return False
-
-            # Check if the path does not contain invalid characters
-            os.path.normpath(output_path)  # Raises an exception if the path is invalid
-            return True
-        except Exception:
+    def directory_validator(directory: str) -> bool:
+        """
+        Validates a directory path.
+    
+        Args:
+            directory (str): The directory path to validate.
+    
+        Returns:
+            bool: True if the path is a valid directory, False otherwise.
+        """
+        if not directory:
+            logger.error("Error: The directory path is empty.")
             return False
+        
+        if not os.path.exists(directory):
+            logger.error(f"Error: The directory '{directory}' does not exist.")
+            return False
+        
+        if not os.path.isdir(directory):
+            logger.error(f"Error: The path '{directory}' is not a directory.")
+            return False
+    
+        return True

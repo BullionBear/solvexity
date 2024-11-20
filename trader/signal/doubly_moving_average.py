@@ -13,10 +13,12 @@ class DoublyMovingAverage(Signal):
     NAME = "Double Moving Average"
     def __init__(self, trade_context: Type[TradeContext], symbol: str, fast_period: int, slow_period: int, limit: int):
         super().__init__(trade_context)
-        self.symbol = symbol
-        self.fast_period = fast_period
-        self.slow_period = slow_period
-        self.limit = limit
+        self.symbol: str = symbol
+        self.fast_period: int = fast_period
+        self.slow_period: int = slow_period
+        self.limit: int = limit
+
+        self.dataframe: pd.DataFrame = None
 
     def solve(self) -> SignalType:
         # Retrieve historical market data

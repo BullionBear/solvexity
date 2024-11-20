@@ -9,10 +9,10 @@ class SignalFactory:
         return self.get_signal(signal_name)
 
     def get_signal(self, signal_name: str):
-        if signal_name == "ma":
+        if signal_name == "dmv":
             return MovingAverageSignal(
                 self.trade_context,
-                **self.signal_config["ma"]
+                **self.signal_config["dmv"]
             )
         else:
             raise ValueError(f"Unknown signal: {signal_name}")

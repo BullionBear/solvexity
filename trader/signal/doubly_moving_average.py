@@ -10,9 +10,9 @@ logger = logging.getLogger("trading")
 pd.options.mode.copy_on_write = True
 
 class DoublyMovingAverage(Signal):
+    NAME = "Double Moving Average"
     def __init__(self, trade_context: Type[TradeContext], symbol: str, fast_period: int, slow_period: int, limit: int):
         super().__init__(trade_context)
-        self.name = "Double Moving Average"
         self.symbol = symbol
         self.fast_period = fast_period
         self.slow_period = slow_period

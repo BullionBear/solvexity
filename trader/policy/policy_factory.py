@@ -1,7 +1,7 @@
 from .all_in import AllIn
 
 class PolicyFactory:
-   def __init__(self, trade_context, policy_config: dict):
+    def __init__(self, trade_context, policy_config: dict):
         self.trade_context = trade_context
         self.policy_config = policy_config
 

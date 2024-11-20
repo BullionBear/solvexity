@@ -1,4 +1,5 @@
 
+import os
 from typing import Type
 from trader.core import TradeContext
 from trader.core import Signal, SignalType
@@ -18,7 +19,7 @@ class DoublyMovingAverage(Signal):
         self.slow_period: int = slow_period
         self.limit: int = limit
 
-        self.dataframe: pd.DataFrame = None
+        self.df_analyze: pd.DataFrame = None
 
     def solve(self) -> SignalType:
         # Retrieve historical market data
@@ -26,15 +27,15 @@ class DoublyMovingAverage(Signal):
         df = Signal.to_dataframe(klines)
         
         # Analyze the data to calculate moving averages
-        df_analyze = self.analyze(df)
+        self.df_analyze = self.analyze(df)
         
         # Check if there are enough data points for analysis
-        if len(df_analyze) < 2:
+        if len(self.df_analyze) < 2:
             return SignalType.HOLD
         
         # Get the last two rows to determine the latest and previous values
-        last_row = df_analyze.iloc[-1]
-        previous_row = df_analyze.iloc[-2]
+        last_row = self.df_analyze.iloc[-1]
+        previous_row = self.df_analyze.iloc[-2]
 
         # Check for a cross-over
         if last_row['fast'] > last_row['slow'] and previous_row['fast'] <= previous_row['slow']:
@@ -49,28 +50,31 @@ class DoublyMovingAverage(Signal):
         df_analyze['fast'] = df_analyze['close'].rolling(window=self.fast_period).mean()
         df_analyze['slow'] = df_analyze['close'].rolling(window=self.slow_period).mean()
         return df_analyze
+    
+    def get_filename(self) -> str:
+        latest_time = self.df_analyze.iloc[-1].open_time
+        return f"{self.symbol}_{latest_time}"
         
     
-    def export(self, df: pd.DataFrame, output_path: str):
-        if not Signal.path_validator(output_path, 'csv'):
-            logger.error(f"Invalid output csv path: {output_path}")
+    def export(self, output_dir: str):
+        if not Signal.directory_validator(output_dir):
             return
-        df.to_csv(output_path, index=False)
+        target_dest = os.path.join(output_dir, f"{self.get_filename()}.csv")
+        self.df_analyze.to_csv(target_dest, index=False)
 
         
 
-    def visualize(self, df: pd.DataFrame, output_path: str):
-        if not Signal.path_validator(output_path, 'png'):
-            logger.error(f"Invalid output png path: {output_path}")
+    def visualize(self, output_dir: str):
+        if not Signal.directory_validator(output_dir):
             return
         import mplfinance as mpf
 
-        ohlc_data = df[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume']]
+        ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume']]
         ohlc_data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'quote_asset_volume': 'Volume'}, inplace=True)
 
         ohlc_data['open_time'] = pd.to_datetime(ohlc_data['open_time'], unit='ms')
         ohlc_data.set_index('open_time', inplace=True)
-
+        target_dest = os.path.join(output_dir, f"{self.get_filename()}.png")
         mpf.plot(
             ohlc_data,
             type='candle',
@@ -82,6 +86,6 @@ class DoublyMovingAverage(Signal):
             mav=(5, 10),  # Moving averages
             figsize=(12, 8),
             show_nontrading=True,
-            savefig=output_path
+            savefig=target_dest
         )
 

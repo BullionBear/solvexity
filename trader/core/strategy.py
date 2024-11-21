@@ -1,6 +1,7 @@
 from typing import Type
 from abc import ABC, abstractmethod
 from trader.data import KLine
+from trader.core import Policy, Signal, SignalType
 from .trade_context import TradeContext
 from decimal import Decimal
 import helper
@@ -35,4 +36,17 @@ class Strategy(ABC):
     
     def notify(self, **kwargs):
         self.trade_context.notify(**kwargs)
+
+class StrategyV2(ABC):
+    def __init__(self, policy: Type[Policy], signal: Type[Signal], trade_id: str = None):
+        self.policy = policy
+        self.signal = signal
+        if trade_id:
+            self._id = trade_id
+        else:
+            self._id = helper.generate_random_id()
+    
+    @abstractmethod
+    def invoke(self, klines: list[KLine]):
+        pass
     

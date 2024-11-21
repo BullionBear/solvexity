@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from decimal import Decimal
 import redis
 from trader.core import TradeContext

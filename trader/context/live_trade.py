@@ -5,9 +5,9 @@ from trader.core import TradeContext
 from trader.data import query_latest_kline, KLine, query_kline, Trade
 import helper.logging as logging
 import binance.client as BinanceClient
-from datetime import datetime, timezone
 import helper
 
+logger = logging.getLogger("trading")
 
 class LiveTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, redis: redis.Redis, webhook_url: str, granular: str):

@@ -1,4 +1,3 @@
-from .live_trade import LiveTradeContext
-from .paper_trade import PaperTradeContext
+from .context_factory import TradeContextFactory
 
-__all__ = ["LiveTradeContext", "PaperTradeContext"]
+__all__ = ["TradeContextFactory"]

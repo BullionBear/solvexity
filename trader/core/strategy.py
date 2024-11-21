@@ -38,15 +38,19 @@ class Strategy(ABC):
         self.trade_context.notify(**kwargs)
 
 class StrategyV2(ABC):
-    def __init__(self, policy: Type[Policy], signal: Type[Signal], trade_id: str = None):
+    def __init__(self, policy: Type[Policy], signal: Type[Signal], strategy_id: str = None):
         self.policy = policy
         self.signal = signal
-        if trade_id:
-            self._id = trade_id
+        if strategy_id:
+            self._id = strategy_id
         else:
             self._id = helper.generate_random_id()
     
     @abstractmethod
-    def invoke(self, klines: list[KLine]):
+    def invoke(self):
         pass
+
+    @property
+    def id(self):
+        return self._id
     

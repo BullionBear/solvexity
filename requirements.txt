@@ -11,3 +11,6 @@ fakeredis
 # Backtest
 sqlalchemy
 psycopg2-binary
+# Jupyter
+jupyterlab
+mplfinance

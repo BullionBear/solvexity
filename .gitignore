@@ -2,6 +2,6 @@
 venv
 *.pyc
 __pycache__/
-notebooks
+notebook
 *test.json*
 .DS_Store

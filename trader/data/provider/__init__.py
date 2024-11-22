@@ -1,7 +1,5 @@
-from .historical_provider import HistoricalProvider
-from .realtime_provider import RealtimeProvider
+from .data_provider_factory import DataProviderFactory
 
 __all__ = [
-    "HistoricalProvider",
-    "RealtimeProvider"
+    "DataProviderFactory"
 ]

@@ -2,62 +2,85 @@ import redis
 from sqlalchemy.engine import Engine
 from binance.client import Client as BinanceClient
 from .socket_argparser import SocketArgparser
+from .notification import Notification
+from sqlalchemy import create_engine
 
-def get_redis(host: str, port: int, db: int) -> redis.Redis:
+
+# Individual factory methods for creating services
+def create_redis(host: str, port: int, db: int) -> redis.Redis:
     return redis.Redis(host=host, port=port, db=db)
 
-def get_sqlengine(host: str, port: int, username: str, password: str, db: str) -> Engine:
-    from sqlalchemy import create_engine
+
+def create_sql_engine(host: str, port: int, username: str, password: str, db: str) -> Engine:
     return create_engine(f"postgresql://{username}:{password}@{host}:{port}/{db}")
 
-def get_binance_client(api_key: str, api_secret: str) -> BinanceClient:
+
+def create_binance_client(api_key: str, api_secret: str) -> BinanceClient:
     return BinanceClient(api_key, api_secret)
 
+
+def create_notification(webhook: str) -> Notification:
+    return Notification(webhook)
+
+
+def create_tcp_socket(host: str, port: int) -> SocketArgparser:
+    return SocketArgparser(host, port)
+
+
+# ServiceFactory for managing services
 class ServiceFactory:
     def __init__(self, services_config: dict):
         self.services_config = services_config
+        self._service_creators = {
+            "redis": self._create_redis,
+            "sqlengine": self._create_sql_engine,
+            "binance": self._create_binance_client,
+            "notify": self._create_notification,
+            "tcp": self._create_tcp_socket,
+        }
 
     def __getitem__(self, service_name: str):
         return self.get_service(service_name)
 
     def get_service(self, service_name: str):
-        if service_name == "redis":
-            return self.get_redis()
-        elif service_name == "sql":
-            return self.get_sqlengine()
-        elif service_name == "binance":
-            return self.get_binance_client()
-        elif service_name == "webhook":
-            return self.get_webhook()
-        elif service_name == "tcp":
-            return self.get_tcp()
-        else:
+        creator = self._service_creators.get(service_name)
+        if not creator:
             raise ValueError(f"Unknown service: {service_name}")
+        return creator()
 
-    def get_redis(self) -> redis.Redis:
-        return get_redis(
-            self.services_config["redis"]["host"],
-            self.services_config["redis"]["port"],
-            self.services_config["redis"]["db"]
+    # Internal methods for each service
+    def _create_redis(self) -> redis.Redis:
+        redis_config = self.services_config["redis"]
+        return create_redis(
+            host=redis_config["host"],
+            port=redis_config["port"],
+            db=redis_config["db"]
         )
 
-    def get_sqlengine(self) -> Engine:
-        return get_sqlengine(
-            self.services_config["sql"]["host"],
-            self.services_config["sql"]["port"],
-            self.services_config["sql"]["username"],
-            self.services_config["sql"]["password"],
-            self.services_config["sql"]["db"]
+    def _create_sql_engine(self) -> Engine:
+        sql_config = self.services_config["sql"]
+        return create_sql_engine(
+            host=sql_config["host"],
+            port=sql_config["port"],
+            username=sql_config["username"],
+            password=sql_config["password"],
+            db=sql_config["db"]
         )
 
-    def get_binance_client(self) -> BinanceClient:
-        return get_binance_client(
-            self.services_config["binance"]["api_key"],
-            self.services_config["binance"]["api_secret"]
-       )
-    
-    def get_webhook(self) -> str:
-        return self.services_config["webhook"]
-    
-    def get_tcp(self) -> SocketArgparser:
-        return SocketArgparser(self.services_config["tcp"]["host"], self.services_config["tcp"]["port"])
+    def _create_binance_client(self) -> BinanceClient:
+        binance_config = self.services_config["binance"]
+        return create_binance_client(
+            api_key=binance_config["api_key"],
+            api_secret=binance_config["api_secret"]
+        )
+
+    def _create_notification(self) -> Notification:
+        notify_config = self.services_config["notify"]
+        return create_notification(webhook=notify_config["webhook"])
+
+    def _create_tcp_socket(self) -> SocketArgparser:
+        tcp_config = self.services_config["tcp"]
+        return create_tcp_socket(
+            host=tcp_config["host"],
+            port=tcp_config["port"]
+        )

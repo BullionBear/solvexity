@@ -6,12 +6,13 @@ def create_live_trade_context(config: dict, services: dict) -> LiveTradeContext:
     # Resolve services
     binance_client = services[config["binance_client"].split(".")[1]]
     redis_instance = services[config["redis"].split(".")[1]]
+    notification_service = services[config["notification"].split(".")[1]]
 
     # Create and return the context
     return LiveTradeContext(
         client=binance_client,
         redis=redis_instance,
-        webhook_url=config["webhook_url"],
+        notification=notification_service,
         granular=config["granular"]
     )
 
@@ -33,7 +34,7 @@ CONTEXT_FACTORY_REGISTRY = {
 }
 
 class ContextFactory:
-    def __init__(self, contexts_config: dict, services: dict):
+    def __init__(self, services: ServiceFactory, contexts_config: dict):
         self.contexts_config = contexts_config
         self.services = services
         self._instances = {}

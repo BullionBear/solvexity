@@ -8,8 +8,8 @@ import time
 import traceback
 from service import ServiceFactory
 from trader.data import get_key
-from trader.core import LiveTradeContext, PaperTradeContext
-from trader.strategy import Pythagoras
+from trader.context import ContextFactory
+from trader.signal import SignalFactory
 
 logging.setup_logging()
 logger = logging.getLogger("trading")
@@ -38,57 +38,60 @@ def heartbeat(redis, interval):
     redis.publish("heartbeat", message)
     logger.info("Heartbeat thread terminated.")
 
-def main(services_config: dict, trigger_config: dict, context_config: dict, trading_config: dict):
-    service = ServiceFactory(services_config)
+def main(services_config: dict, context_config: dict, signal_config: dict):
+    services = ServiceFactory(services_config)
+    contexts = ContextFactory(services, context_config)
+    signals = SignalFactory(contexts, signal_config)
 
-    if context_config["mode"] == "live":
-        logger.info("Initializing live trading context")
-        client = context_config["client"]
-        r = context_config["redis"]
-        webhook = context_config["webhook"]
-        granular = context_config["granular"]
-        context = LiveTradeContext(service[client], service[r], service[webhook], granular)
-    elif context_config["mode"] == "paper":
-        logger.info("Initializing paper trading context")
-        r = context_config["redis"]
-        granular = context_config["granular"]
-        context = PaperTradeContext(service[r], context_config["balance"], granular)
-    else:
-        raise ValueError("Unknown context mode")
-    
-    if trading_config["family"] == "pythagoras":
-        Strategy = Pythagoras
-    else:
-        raise ValueError(f"Unknown strategy family: {trading_config['family']}")
-    symbol = trigger_config["symbol"]
-    granular = trigger_config["granular"]
-    heartbeat_thread = threading.Thread(target=heartbeat, args=(service["redis"], 1))  # Ping every 5 seconds
-    heartbeat_thread.daemon = True
-    heartbeat_thread.start()
+
+    # if context_config["mode"] == "live":
+    #     logger.info("Initializing live trading context")
+    #     client = context_config["client"]
+    #     r = context_config["redis"]
+    #     webhook = context_config["webhook"]
+    #     granular = context_config["granular"]
+    #     context = LiveTradeContext(service[client], service[r], service[webhook], granular)
+    # elif context_config["mode"] == "paper":
+    #     logger.info("Initializing paper trading context")
+    #     r = context_config["redis"]
+    #     granular = context_config["granular"]
+    #     context = PaperTradeContext(service[r], context_config["balance"], granular)
+    # else:
+    #     raise ValueError("Unknown context mode")
+    # 
+    # if trading_config["family"] == "pythagoras":
+    #     Strategy = Pythagoras
+    # else:
+    #     raise ValueError(f"Unknown strategy family: {trading_config['family']}")
+    # symbol = trigger_config["symbol"]
+    # granular = trigger_config["granular"]
+    # heartbeat_thread = threading.Thread(target=heartbeat, args=(service["redis"], 1))  # Ping every 5 seconds
+    # heartbeat_thread.daemon = True
+    # heartbeat_thread.start()
     # signal.signal(signal.SIGINT, lambda signum, frame: heartbeat_thread.join())
     # signal.signal(signal.SIGTERM, lambda signum, frame: heartbeat_thread.join())
-    with Strategy(context, service["tcp"], trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
-        # while not shutdown_event.is_set():
-        pubsub = service["redis"].pubsub()
-        key = get_key(symbol, granular)
-        pubsub.subscribe(key, "heartbeat")
-        for msg in pubsub.listen():
-            if shutdown_event.is_set():
-                break
-            if msg["type"] == "subscribe": # 1st message is subscribe confirmation
-                continue
-            if msg["channel"].decode('utf-8') == "heartbeat":
-                continue
-            data = json.loads(msg["data"].decode('utf-8'))
-            if data["x"] == False:
-                logger.info("Kline data is not complete yet")
-                continue
-            
-            try:
-                strategy.invoke()
-            except Exception as e:
-                full_traceback = traceback.format_exc()
-                logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
+    # with Strategy(context, service["tcp"], trading_config["symbol"], trading_config["limit"], trading_config["meta"]) as strategy:
+    #     # while not shutdown_event.is_set():
+    #     pubsub = service["redis"].pubsub()
+    #     key = get_key(symbol, granular)
+    #     pubsub.subscribe(key, "heartbeat")
+    #     for msg in pubsub.listen():
+    #         if shutdown_event.is_set():
+    #             break
+    #         if msg["type"] == "subscribe": # 1st message is subscribe confirmation
+    #             continue
+    #         if msg["channel"].decode('utf-8') == "heartbeat":
+    #             continue
+    #         data = json.loads(msg["data"].decode('utf-8'))
+    #         if data["x"] == False:
+    #             logger.info("Kline data is not complete yet")
+    #             continue
+    #         
+    #         try:
+    #             strategy.invoke()
+    #         except Exception as e:
+    #             full_traceback = traceback.format_exc()
+    #             logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
             
     logger.info("Trading process terminated gracefully.")
 
@@ -107,6 +110,7 @@ if __name__ == "__main__":
     logger.info("Configuration loaded successfully")
 
     try:
-        main(config["services"], config["trigger"], config["context"], config["trading"])
+        main(config["services"], config["contexts"], config["signals"])
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        full_traceback = traceback.format_exc()
+        logger.error(f"Error invoking strategy: {e}\n{full_traceback}")

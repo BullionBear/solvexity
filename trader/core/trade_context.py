@@ -5,10 +5,6 @@ import helper.logging as logging
 
 logger = logging.getLogger("trading")
 
-"""
-    Deprecated
-"""
-
 class TradeContext(ABC):
     @abstractmethod
     def market_buy(self, symbol: str, size: Decimal):

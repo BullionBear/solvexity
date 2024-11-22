@@ -1,7 +1,8 @@
 from typing import Type
 from abc import ABC, abstractmethod
 from trader.data import KLine
-from trader.core import Policy, Signal, SignalType
+from .policy import Policy
+from .signal import Signal
 from .trade_context import TradeContext
 from decimal import Decimal
 import helper

@@ -6,6 +6,10 @@ from .trade_context import TradeContext
 from decimal import Decimal
 import helper
 
+"""
+    Deprecated
+"""
+
 class Strategy(ABC):
     def __init__(self, trade_context: Type[TradeContext], trade_id: str = None):
         self.trade_context = trade_context

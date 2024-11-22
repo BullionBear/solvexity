@@ -1,86 +1,73 @@
 import redis
 from sqlalchemy.engine import Engine
 from binance.client import Client as BinanceClient
+from sqlalchemy import create_engine
 from .socket_argparser import SocketArgparser
 from .notification import Notification
-from sqlalchemy import create_engine
+
+# Individual factory methods for service creation
+def create_redis(config: dict) -> redis.Redis:
+    return redis.Redis(
+        host=config["host"],
+        port=config["port"],
+        db=config["db"]
+    )
 
 
-# Individual factory methods for creating services
-def create_redis(host: str, port: int, db: int) -> redis.Redis:
-    return redis.Redis(host=host, port=port, db=db)
+def create_sql_engine(config: dict) -> Engine:
+    return create_engine(
+        f"postgresql://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['db']}"
+    )
 
 
-def create_sql_engine(host: str, port: int, username: str, password: str, db: str) -> Engine:
-    return create_engine(f"postgresql://{username}:{password}@{host}:{port}/{db}")
+def create_binance_client(config: dict) -> BinanceClient:
+    return BinanceClient(config["api_key"], config["api_secret"])
 
 
-def create_binance_client(api_key: str, api_secret: str) -> BinanceClient:
-    return BinanceClient(api_key, api_secret)
+def create_notification(config: dict) -> Notification:
+    return Notification(config["webhook"])
 
 
-def create_notification(webhook: str) -> Notification:
-    return Notification(webhook)
+def create_tcp_socket(config: dict) -> SocketArgparser:
+    return SocketArgparser(config["host"], config["port"])
 
 
-def create_tcp_socket(host: str, port: int) -> SocketArgparser:
-    return SocketArgparser(host, port)
+# A registry of factory methods for dynamic service creation
+FACTORY_REGISTRY = {
+    "redis": create_redis,
+    "sqlengine": create_sql_engine,
+    "binance": create_binance_client,
+    "notify": create_notification,
+    "tcp": create_tcp_socket,
+}
 
 
-# ServiceFactory for managing services
+# Refactored ServiceFactory
 class ServiceFactory:
     def __init__(self, services_config: dict):
         self.services_config = services_config
-        self._service_creators = {
-            "redis": self._create_redis,
-            "sqlengine": self._create_sql_engine,
-            "binance": self._create_binance_client,
-            "notify": self._create_notification,
-            "tcp": self._create_tcp_socket,
-        }
+        self._instances = {}
 
     def __getitem__(self, service_name: str):
         return self.get_service(service_name)
 
     def get_service(self, service_name: str):
-        creator = self._service_creators.get(service_name)
-        if not creator:
-            raise ValueError(f"Unknown service: {service_name}")
-        return creator()
+        if service_name in self._instances:
+            return self._instances[service_name]
 
-    # Internal methods for each service
-    def _create_redis(self) -> redis.Redis:
-        redis_config = self.services_config["redis"]
-        return create_redis(
-            host=redis_config["host"],
-            port=redis_config["port"],
-            db=redis_config["db"]
-        )
+        service_config = self.services_config.get(service_name)
+        if not service_config:
+            raise ValueError(f"Service '{service_name}' not found in the configuration.")
 
-    def _create_sql_engine(self) -> Engine:
-        sql_config = self.services_config["sql"]
-        return create_sql_engine(
-            host=sql_config["host"],
-            port=sql_config["port"],
-            username=sql_config["username"],
-            password=sql_config["password"],
-            db=sql_config["db"]
-        )
+        # Extract the factory and specific config
+        factory_name = service_config["factory"]
+        factory_config = {k: v for k, v in service_config.items() if k != "factory"}
 
-    def _create_binance_client(self) -> BinanceClient:
-        binance_config = self.services_config["binance"]
-        return create_binance_client(
-            api_key=binance_config["api_key"],
-            api_secret=binance_config["api_secret"]
-        )
+        # Dynamically resolve and create the service
+        factory_function = FACTORY_REGISTRY.get(factory_name)
+        if not factory_function:
+            raise ValueError(f"Factory '{factory_name}' not registered for service '{service_name}'.")
 
-    def _create_notification(self) -> Notification:
-        notify_config = self.services_config["notify"]
-        return create_notification(webhook=notify_config["webhook"])
-
-    def _create_tcp_socket(self) -> SocketArgparser:
-        tcp_config = self.services_config["tcp"]
-        return create_tcp_socket(
-            host=tcp_config["host"],
-            port=tcp_config["port"]
-        )
+        instance = factory_function(factory_config)
+        self._instances[service_name] = instance
+        return instance

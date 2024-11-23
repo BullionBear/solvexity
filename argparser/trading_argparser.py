@@ -34,7 +34,7 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
     providers = DataProviderFactory(services, data_config)
 
     signal = signals["doubly_ma"]
-    provider = providers["historical_provider"]
+    provider = providers["realtime_provider"]
    
     try:
         for cue in provider.receive():

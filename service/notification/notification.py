@@ -1,3 +1,4 @@
+import enum
 from typing import Callable, Dict, Optional, Any
 import requests
 import helper.logging as logging
@@ -21,9 +22,30 @@ def send_notification(webhook_url, content, username, embed=None):
         logger.error(f"Failed to send notification: {response.status_code}")
         logger.error(response.text)
 
+
+class Color(enum.IntEnum):
+    # Common colors with their RGB 24-bit integer values
+    RED = 0xFF0000        # Decimal: 16711680
+    GREEN = 0x00FF00      # Decimal: 65280
+    BLUE = 0x0000FF       # Decimal: 255
+    YELLOW = 0xFFFF00     # Decimal: 16776960
+    CYAN = 0x00FFFF       # Decimal: 65535
+    MAGENTA = 0xFF00FF    # Decimal: 16711935
+    WHITE = 0xFFFFFF      # Decimal: 16777215
+    BLACK = 0x000000      # Decimal: 0
+    ORANGE = 0xFFA500     # Decimal: 16753920
+    PURPLE = 0x800080     # Decimal: 8388736
+    GRAY = 0x808080       # Decimal: 8421504
+
+
 class Notification:
     def __init__(self, webhook: str):
         self.webhook = webhook
 
-    def notify(self, content, username="Notification Bot", embed=None):
+    def notify(self, username: str, title: str, content: Optional[str], color: Color):
+        embed = {
+            "title": title,
+            "description": content,
+            "color": color
+        }
         send_notification(self.webhook, content, username, embed)

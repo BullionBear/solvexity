@@ -86,7 +86,7 @@ class DoublyMovingAverage(Signal):
             title='Candlestick Chart with Volume',
             ylabel='Price',
             ylabel_lower='Volume',
-            mav=(5, 10),  # Moving averages
+            mav=(self.fast_period, self.slow_period),  # Moving averages
             figsize=(12, 8),
             show_nontrading=True,
             savefig=target_dest

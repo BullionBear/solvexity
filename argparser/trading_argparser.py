@@ -9,6 +9,7 @@ from trader.data.provider import DataProviderFactory
 from trader.context import ContextFactory
 from trader.signal import SignalFactory, SignalType
 from trader.policy import PolicyFactory
+from trader.strategy import StrategyFactory
 
 logging.setup_logging()
 logger = logging.getLogger("trading")
@@ -32,15 +33,17 @@ def main(services_config: dict,
          data_config:dict, 
          context_config: dict, 
          signal_config: dict,
-         policy_config: dict):
+         policy_config: dict,
+         strategy_config: dict):
     services = ServiceFactory(services_config)
     contexts = ContextFactory(services, context_config)
     signals = SignalFactory(contexts, signal_config)
     providers = DataProviderFactory(services, data_config)
     policies = PolicyFactory(contexts, policy_config)
+    strategies = StrategyFactory(signals, policies, strategy_config)
 
-    alpha = signals["doubly_ma"]
-    policy = policies["all_in_btc"]
+    # Retrieve a strategy
+    pythagoras_btc = strategies["pythagoras_btc"]
     provider = providers["historical_provider"]
 
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
@@ -50,13 +53,7 @@ def main(services_config: dict,
         for _ in provider.receive():
             if shutdown_event.is_set():
                 break
-            sig = alpha.solve()
-            if sig == SignalType.BUY:
-                policy.buy()
-            elif sig == SignalType.SELL:
-                policy.sell()
-            else:
-                pass
+            pythagoras_btc.invoke()
     finally:
         logger.info("Trading process terminated gracefully.")
 
@@ -81,7 +78,8 @@ if __name__ == "__main__":
              config["data"], 
              config["contexts"], 
              config["signals"],
-             config["policies"])
+             config["policies"],
+             config["strategies"])
     except Exception as e:
         full_traceback = traceback.format_exc()
         logger.error(f"Error invoking strategy: {e}\n{full_traceback}")

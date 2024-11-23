@@ -1,6 +1,8 @@
 from typing import Type
+from service.notification import Color
 from abc import ABC, abstractmethod
 from .trade_context import TradeContext
+import helper
 
 class Policy(ABC):
     """
@@ -20,6 +22,13 @@ class Policy(ABC):
     @abstractmethod
     def sell(self):
         pass
+
+    def notify(self, title: str, content: str, color: Color):
+        self.trade_context.notify(title, content, color)
+
+    @property
+    def id(self):
+        return self._id
 
     
 

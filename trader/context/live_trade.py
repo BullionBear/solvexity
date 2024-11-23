@@ -57,7 +57,7 @@ class LiveTradeContext(TradeContext):
         logger.info(f"Updated {n_trade} new trades for {symbol}")
     
     def notify(self, title: str, content: Optional[str], color: Color):
-        self.notification.notify(self.__class__.__name__, title, content, color)
+        self.notification.notify(self.id, title, content, color)
 
 
     def get_klines(self, symbol, limit) -> list[KLine]:

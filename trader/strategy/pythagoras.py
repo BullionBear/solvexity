@@ -2,7 +2,6 @@ from typing import Type
 from trader.core import Signal, Policy, SignalType
 from trader.core import Strategy, Signal, Policy
 import helper.logging as logging
-from trader.data import KLine
 
 logger = logging.getLogger("trading")
 

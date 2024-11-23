@@ -12,8 +12,8 @@ class AllIn(Policy):
         A policy that buys all available balance of the quote asset.
     """
     MIN_QUOTE_SIZE = Decimal('10')
-    def __init__(self, trade_context: Type[TradeContext], symbol: str):
-        super().__init__(trade_context)
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, trade_id: str):
+        super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
 
     @property

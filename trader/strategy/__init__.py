@@ -1,3 +1,3 @@
-from .pythagoras import Pythagoras
+from .strategy_factory import StrategyFactory
 
-__all__ = ["Pythagoras"]
+__all__ = ["StrategyFactory"]

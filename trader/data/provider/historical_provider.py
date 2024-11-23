@@ -15,6 +15,7 @@ logger = logging.getLogger("data")
 class HistoricalProvider(DataProvider):
     BATCH_SZ = 128
     MAX_SZ = 1024
+
     def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int, sleep_time: int):
         """
         Args:
@@ -43,21 +44,49 @@ class HistoricalProvider(DataProvider):
         self._index = 0
         self._thread = Thread(target=self._stream_data)
         self._thread.daemon = False  # Allow thread to exit with main program
+        
+
+    def send(self):
+        """
+        Stream klines from the buffer and publish them to Redis.
+        """
         self._thread.start()
-    
-    def __next__(self):
-        """Retrieve the next item from the buffer."""
         while not self._stop_event.is_set():
             try:
                 key = get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
+                if kline is None:
+                    logger.warning("No kline data available.")
+                    return
+
                 event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
                 self.redis.publish(key, event)
-                return kline
+                yield kline
             except Empty:
                 continue
-        logger.info("Historical provider stopped.")
-        raise StopIteration
+
+        logger.info("Historical provider stopped streaming.")
+
+    def receive(self):
+        """
+        Listen to Redis Pub/Sub messages for the current key and yield them.
+        """
+        key = get_key(self.symbol, self.granular)
+        pubsub = self.redis.pubsub()
+        pubsub.subscribe(key)
+
+        logger.info(f"Subscribed to Redis Pub/Sub key: {key}")
+
+        try:
+            while not self._stop_event.is_set():
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message:
+                    logger.info(f"Received message: {message}")
+                    yield message
+        finally:
+            logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
+            pubsub.unsubscribe()
+            pubsub.close()
 
     def _fetch_and_store_prestart_data(self, granular_ms: int, key: str):
         """Fetch and store historical data before the start time."""
@@ -77,17 +106,14 @@ class HistoricalProvider(DataProvider):
                 logger.info("Receive stop event signal.")
                 break
 
-            # Calculate batch timestamps
             next_ts = min(current_ts + granular_ms * self.BATCH_SZ - 1, self.end)
 
-            # Fetch klines for the batch
             klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
             batch_insert_klines(self.redis, key, klines)
             if self.redis.zcard(key) > self.MAX_SZ:
-                # Remove oldest elements (those with lowest score) to keep only MAX_SIZE items
                 logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                 self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
-            # Stream klines to the buffer
+
             for kline in klines:
                 if self._stop_event.is_set():
                     return
@@ -113,15 +139,12 @@ class HistoricalProvider(DataProvider):
             granular_ms = helper.to_unixtime_interval(self.granular) * 1000
             key = get_key(self.symbol, self.granular)
 
-            # Align start and end timestamps to the granularity
             self.start = self.start // granular_ms * granular_ms
             self.end = self.end // granular_ms * granular_ms
 
-            # Fetch and store prestart data
             if self._index == 0:
                 self._fetch_and_store_prestart_data(granular_ms, key)
 
-            # Fetch and stream data in batches
             self._fetch_and_stream_klines(granular_ms)
 
         except Exception as e:
@@ -136,6 +159,4 @@ class HistoricalProvider(DataProvider):
         self._thread.join()
         key = get_key(self.symbol, self.granular)
         self.redis.delete(key)
-        logger.info("Historical provider stop is called.")
-
-    
+        logger.info("Historical provider stopped.")

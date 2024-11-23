@@ -37,7 +37,7 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
 
     # Start provider in a controlled loop
     try:
-        for data in provider:
+        for data in provider.send():
             if shutdown_event.is_set():
                 break
             logger.info(f"Publish kline data: {data}")

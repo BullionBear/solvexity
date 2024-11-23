@@ -1,6 +1,5 @@
-from trader.core import TradeContext
+from trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
-
 def create_doubly_moving_average_signal(trade_context, config):
     return DoublyMovingAverage(
         trade_context=trade_context,
@@ -15,8 +14,8 @@ SIGNAL_FACTORY_REGISTRY = {
 }
 
 class SignalFactory:
-    def __init__(self, trade_context: TradeContext, signal_config: dict):
-        self.trade_context = trade_context
+    def __init__(self, context_factory: ContextFactory, signal_config: dict):
+        self.context_factory = context_factory
         self.signal_config = signal_config
         self._instances = {}
 
@@ -36,6 +35,16 @@ class SignalFactory:
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for signal '{signal_name}'.")
 
-        instance = factory_function(self.trade_context, signal_config)
+        # Resolve trade_context from the configuration
+        context_ref = signal_config.get("trade_context")
+        if not context_ref or not context_ref.startswith("contexts."):
+            raise ValueError(
+                f"Invalid or missing trade context reference '{context_ref}' for signal '{signal_name}'."
+            )
+        context_name = context_ref.split(".")[1]
+        trade_context = self.context_factory.get_context(context_name)
+
+        # Create and store the signal instance
+        instance = factory_function(trade_context, signal_config)
         self._instances[signal_name] = instance
         return instance

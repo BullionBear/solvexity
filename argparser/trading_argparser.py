@@ -33,18 +33,19 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
     signals = SignalFactory(contexts, signal_config)
     providers = DataProviderFactory(services, data_config)
 
-    signal = signals["doubly_ma"]
+    alpha = signals["doubly_ma"]
     provider = providers["realtime_provider"]
+
+    signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
+    signal.signal(signal.SIGTERM, lambda signum, frame: provider.stop())
    
     try:
-        for cue in provider.receive():
+        for _ in provider.receive():
             if shutdown_event.is_set():
                 break
-            logger.info(cue)
+            logger.info(alpha.solve())
     finally:
         logger.info("Trading process terminated gracefully.")
-
-    logger.info("Trading process terminated gracefully.")
 
 if __name__ == "__main__":
     # Register signal handler for graceful shutdown

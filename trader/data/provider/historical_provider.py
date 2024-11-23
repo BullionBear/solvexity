@@ -1,3 +1,4 @@
+import time
 from trader.core import DataProvider
 from redis import Redis
 from threading import Thread, Lock, Event
@@ -14,7 +15,7 @@ logger = logging.getLogger("data")
 class HistoricalProvider(DataProvider):
     BATCH_SZ = 128
     MAX_SZ = 1024
-    def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int):
+    def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int, sleep_time: int):
         """
         Args:
             redis (Redis): Redis client instance.
@@ -24,6 +25,7 @@ class HistoricalProvider(DataProvider):
             start (int): The start time of the kline data in ms.
             end (int): The end time of the kline data in ms.
             limit (int): The maximum number of kline data to get.
+            sleep_time (int): The sleep interval (millisecond) between each batch of kline data.
         """
         super().__init__()
         self.redis = redis
@@ -33,6 +35,7 @@ class HistoricalProvider(DataProvider):
         self.start = start
         self.end = end
         self.limit = limit
+        self.sleep_time = sleep_time
 
         self._buffer = Queue(maxsize=1)
         self._stop_event = Event()
@@ -88,6 +91,8 @@ class HistoricalProvider(DataProvider):
             for kline in klines:
                 if self._stop_event.is_set():
                     return
+                if self.sleep_time > 0:
+                    time.sleep(self.sleep_time / 1000)
                 self._put_to_buffer(kline)
 
             self._index += 1
@@ -132,3 +137,5 @@ class HistoricalProvider(DataProvider):
         key = get_key(self.symbol, self.granular)
         self.redis.delete(key)
         logger.info("Historical provider stop is called.")
+
+    

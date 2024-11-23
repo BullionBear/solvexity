@@ -13,7 +13,8 @@ def create_historical_provider(services: ServiceFactory, config: dict) -> Histor
         granular=config["granular"],
         start=config["start"],
         end=config["end"],
-        limit=config["limit"]
+        limit=config["limit"],
+        sleep_time=config["sleep_time"]
     )
 
 

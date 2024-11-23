@@ -9,5 +9,4 @@ class DataProvider(ABC):
         """Return an iterator for the data stream."""
         return self
 
-
     

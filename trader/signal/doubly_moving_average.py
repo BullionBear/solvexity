@@ -46,6 +46,9 @@ class DoublyMovingAverage(Signal):
             return SignalType.HOLD  # No significant crossover
     
     def analyze(self, df: pd.DataFrame) -> pd.DataFrame:
+        if len(df) < self.slow_period:
+            logger.warning(f"Insufficient data points for analysis. Expected at least {self.slow_period} data points.")
+            return df
         df_analyze = df.copy()
         df_analyze['fast'] = df_analyze['close'].rolling(window=self.fast_period).mean()
         df_analyze['slow'] = df_analyze['close'].rolling(window=self.slow_period).mean()

@@ -32,11 +32,12 @@ class PaperTradeContext(TradeContext):
 
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)
+        size, ask = helper.symbol_filter(symbol, size, ask)
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base] += size
         self.balance[quote] -= size * ask
         # self.notify("OnMarketBuy", f"Symbol: {symbol}\n size: {size}\n price: {ask}", Color.BLUE)
-        logger.info(f"Market buy: {symbol}, size: {size}, price: {ask}")
+        logger.info(f"Market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 
@@ -55,11 +56,12 @@ class PaperTradeContext(TradeContext):
 
     def market_sell(self, symbol: str, size: Decimal):
         _, bid = self.get_askbid(symbol)
+        size, bid = helper.symbol_filter(symbol, size, bid)
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base] -= size
         self.balance[quote] += size * bid
         # self.notify("OnMarketSell", f"Symbol: {symbol}\n size: {size}\n price: {bid}", Color.BLUE)
-        logger.info(f"Market sell: {symbol}, size: {size}, price: {bid}")
+        logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 

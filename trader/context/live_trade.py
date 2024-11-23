@@ -1,6 +1,7 @@
 from decimal import Decimal
 import redis
 from trader.core import TradeContext
+from typing import Optional
 from service.notification import Notification, Color
 from trader.data import query_latest_kline, KLine, query_kline, Trade
 import helper.logging as logging

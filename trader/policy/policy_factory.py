@@ -19,19 +19,29 @@ class PolicyFactory:
         return self.get_policy(policy_name)
 
     def get_policy(self, policy_name: str):
+        # Check if the policy is already created
         if policy_name in self._instances:
             return self._instances[policy_name]
 
+        # Fetch the policy configuration by name
         policy_config = self.policy_config.get(policy_name)
         if not policy_config:
-            raise ValueError(f"Policy '{policy_name}' not found in the configuration.")
+            available_policies = ", ".join(self.policy_config.keys())
+            raise ValueError(
+                f"Policy '{policy_name}' not found in the configuration. "
+                f"Available policies: {available_policies}"
+            )
 
+        # Fetch the factory name and function
         factory_name = policy_config["factory"]
         factory_function = POLICY_FACTORY_REGISTRY.get(factory_name)
         if not factory_function:
-            raise ValueError(f"Policy factory '{factory_name}' not registered.")
+            raise ValueError(
+                f"Policy factory '{factory_name}' is not registered. "
+                f"Registered factories: {list(POLICY_FACTORY_REGISTRY.keys())}"
+            )
 
-        # Resolve trade context from the policy configuration
+        # Resolve the trade context
         context_ref = policy_config.get("trade_context")
         if not context_ref or not context_ref.startswith("contexts."):
             raise ValueError(
@@ -40,7 +50,7 @@ class PolicyFactory:
         context_name = context_ref.split(".")[1]
         trade_context = self.context_factory.get_context(context_name)
 
-        # Create and cache the policy instance
+        # Create the policy instance and cache it
         instance = factory_function(trade_context, policy_config)
         self._instances[policy_name] = instance
         return instance

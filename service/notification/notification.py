@@ -48,4 +48,4 @@ class Notification:
             "description": content,
             "color": color
         }
-        send_notification(self.webhook, content, username, embed)
+        send_notification(self.webhook, None, username, embed)

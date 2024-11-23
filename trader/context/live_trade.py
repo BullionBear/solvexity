@@ -1,6 +1,7 @@
 from decimal import Decimal
 import redis
 from trader.core import TradeContext
+from service.notification import Notification, Color
 from trader.data import query_latest_kline, KLine, query_kline, Trade
 import helper.logging as logging
 import binance.client as BinanceClient
@@ -54,10 +55,9 @@ class LiveTradeContext(TradeContext):
                 self.trade[trade['orderId']] = Trade.from_rest(trade)
         logger.info(f"Updated {n_trade} new trades for {symbol}")
     
-    def notify(self, **kwargs):
-        family = kwargs.get("family", "Notification")
-        kwargs.pop("family", None)
-        helper.send_notification(self.webhook_url, None, family, kwargs)
+    def notify(self, title: str, content: Optional[str], color: Color):
+        self.notification.notify(self.__class__.__name__, title, content, color)
+
 
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)

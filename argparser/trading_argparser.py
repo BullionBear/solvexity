@@ -40,7 +40,7 @@ def main(services_config: dict,
     policies = PolicyFactory(contexts, policy_config)
 
     alpha = signals["doubly_ma"]
-    policy = policies["all_in"]
+    policy = policies["all_in_btc"]
     provider = providers["historical_provider"]
 
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
@@ -77,7 +77,11 @@ if __name__ == "__main__":
     logger.info("Configuration loaded successfully")
 
     try:
-        main(config["services"], config["data"], config["contexts"], config["signals"])
+        main(config["services"], 
+             config["data"], 
+             config["contexts"], 
+             config["signals"],
+             config["policies"])
     except Exception as e:
         full_traceback = traceback.format_exc()
         logger.error(f"Error invoking strategy: {e}\n{full_traceback}")

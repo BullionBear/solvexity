@@ -35,7 +35,7 @@ class PaperTradeContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base] += size
         self.balance[quote] -= size * ask
-        self.notification.send("Notification", message=f"Market buy: {symbol}, size: {size}, price: {ask}")
+        # self.notify("OnMarketBuy", f"Symbol: {symbol}\n size: {size}\n price: {ask}", Color.BLUE)
         logger.info(f"Market buy: {symbol}, size: {size}, price: {ask}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -51,7 +51,6 @@ class PaperTradeContext(TradeContext):
                                 is_buyer=True, 
                                 is_maker=False, 
                                 is_best_match=True))
-        self.notify("OnMarketBuy", f"Symbol: {symbol}, size: {size}\n price: {ask}", Color.BLUE)
         self._trade_id += 1
 
     def market_sell(self, symbol: str, size: Decimal):
@@ -59,6 +58,7 @@ class PaperTradeContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base] -= size
         self.balance[quote] += size * bid
+        # self.notify("OnMarketSell", f"Symbol: {symbol}\n size: {size}\n price: {bid}", Color.BLUE)
         logger.info(f"Market sell: {symbol}, size: {size}, price: {bid}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -74,7 +74,6 @@ class PaperTradeContext(TradeContext):
                                 is_buyer=False, 
                                 is_maker=False, 
                                 is_best_match=True))
-        self.notify("OnMarketSell", f"Symbol: {symbol}, size: {size}\n price: {bid}", Color.BLUE)
         self._trade_id += 1
 
     def get_balance(self, token: str) -> Decimal:

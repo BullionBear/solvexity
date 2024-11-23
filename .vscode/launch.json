@@ -35,13 +35,13 @@
             }
         },
         {
-            "name": "Python Debugger: Run trade arguement parser with live",
+            "name": "Python Debugger: Run test arguement parser with live",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/trading_argparser.py",
+            "program": "${workspaceFolder}/argparser/test_argparser.py",
             "args": [
                 "-c",
-                "config/trading_live_test.json5"
+                "config/strategy_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

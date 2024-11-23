@@ -55,6 +55,6 @@ class DataProviderFactory:
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for provider '{provider_name}'.")
 
-        instance = factory_function(provider_config, self.services)
+        instance = factory_function(self.services, provider_config)
         self._instances[provider_name] = instance
         return instance

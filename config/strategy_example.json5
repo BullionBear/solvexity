@@ -1,0 +1,61 @@
+{
+    "services": {
+        "binance_primary": {
+            "factory": "binance",
+            "api_key": "PRIMARY_API_KEY",
+            "api_secret": "PRIMARY_API_SECRET"
+        },
+        "redis": {
+            "factory": "redis",
+            "host": "localhost",
+            "port": 6379,
+            "db": 0
+        },
+        "notify": {
+            "factory": "notify",
+            "webhook": "https://example.com/webhook"
+        },
+        "tcp": {
+            "factory": "tcp",
+            "host": "localhost",
+            "port": 8080
+        }
+    },
+    "data": {
+        "historical_provider": {
+            "factory": "historical",
+            "redis": "services.redis",
+            "sql_engine": "services.sqlengine",
+            "symbol": "BTCUSDT",
+            "granular": "1m",
+            "start": 1630342940000,
+            "end": 1630345999000,
+            "limit": 500
+        },
+        "realtime_provider": {
+            "factory": "realtime",
+            "redis": "services.redis",
+            "symbol": "ETHUSDT",
+            "granular": "5m",
+            "limit": 200
+        }
+    },
+    "contexts": {
+        "live_trade": {
+            "factory": "live_trade",
+            "binance_client": "services.binance_primary",
+            "redis": "services.redis",
+            "notification": "services.notify",
+            "granular": "1m"
+        },
+        "paper_trade": {
+            "factory": "paper_trade",
+            "redis": "services.redis",
+            "init_balance": {
+                "BTC": "1.0",
+                "USDT": "10000.0"
+            },
+            "granular": "1m"
+        }
+    }
+}

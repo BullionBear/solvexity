@@ -7,7 +7,8 @@ import traceback
 from service import ServiceFactory
 from trader.data.provider import DataProviderFactory
 from trader.context import ContextFactory
-from trader.signal import SignalFactory
+from trader.signal import SignalFactory, SignalType
+from trader.policy import PolicyFactory
 
 logging.setup_logging()
 logger = logging.getLogger("trading")
@@ -27,27 +28,39 @@ def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
     shutdown_event.set()
 
-def main(services_config: dict, data_config:dict, context_config: dict, signal_config: dict):
+def main(services_config: dict, 
+         data_config:dict, 
+         context_config: dict, 
+         signal_config: dict,
+         policy_config: dict):
     services = ServiceFactory(services_config)
     contexts = ContextFactory(services, context_config)
     signals = SignalFactory(contexts, signal_config)
     providers = DataProviderFactory(services, data_config)
+    policies = PolicyFactory(contexts, policy_config)
 
     alpha = signals["doubly_ma"]
+    policy = policies["all_in"]
     provider = providers["historical_provider"]
 
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
     signal.signal(signal.SIGTERM, lambda signum, frame: provider.stop())
-   
+
     try:
         for _ in provider.receive():
             if shutdown_event.is_set():
                 break
-            logger.info(alpha.solve())
-            alpha.export("verbose")
-            alpha.visualize("verbose")
+            sig = alpha.solve()
+            if sig == SignalType.BUY:
+                policy.buy()
+            elif sig == SignalType.SELL:
+                policy.sell()
+            else:
+                pass
     finally:
         logger.info("Trading process terminated gracefully.")
+
+
 
 if __name__ == "__main__":
     # Register signal handler for graceful shutdown

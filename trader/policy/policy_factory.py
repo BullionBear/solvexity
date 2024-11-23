@@ -5,7 +5,8 @@ from .all_in import AllIn
 POLICY_FACTORY_REGISTRY = {
     "all_in": lambda context, config: AllIn(
         trade_context=context,
-        symbol=config["symbol"]
+        symbol=config["symbol"],
+        trade_id=config["trade_id"]
     )
 }
 

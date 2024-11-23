@@ -58,7 +58,10 @@ class HistoricalProvider(DataProvider):
                 if kline is None:
                     logger.warning("No kline data available.")
                     return
-
+                self.redis.zadd(key, {json.dumps(kline.dict()): kline.open_time})
+                if self.redis.zcard(key) > self.MAX_SZ:
+                    logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
+                    self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
                 event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
                 self.redis.publish(key, event)
                 yield kline
@@ -94,13 +97,14 @@ class HistoricalProvider(DataProvider):
         preend_ts = (self.start - granular_ms) // granular_ms * granular_ms - 1
 
         klines = get_klines(self.sql_engine, self.symbol, self.granular, prestart_ts, preend_ts)
+        logger.info(f"Storing pre-start data: from {klines[0].open_time} to {klines[-1].open_time}")
         batch_insert_klines(self.redis, key, klines)
 
     def _fetch_and_stream_klines(self, granular_ms: int):
         """Fetch and stream klines in batches."""
         current_ts = self.start + granular_ms * self.BATCH_SZ * self._index
         key = get_key(self.symbol, self.granular)
-        self.redis.delete(key)
+
         while current_ts < self.end:
             if self._stop_event.is_set():
                 logger.info("Receive stop event signal.")
@@ -109,17 +113,13 @@ class HistoricalProvider(DataProvider):
             next_ts = min(current_ts + granular_ms * self.BATCH_SZ - 1, self.end)
 
             klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
-            batch_insert_klines(self.redis, key, klines)
-            if self.redis.zcard(key) > self.MAX_SZ:
-                logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
-                self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
 
             for kline in klines:
                 if self._stop_event.is_set():
                     return
+                self._put_to_buffer(kline)
                 if self.sleep_time > 0:
                     time.sleep(self.sleep_time / 1000)
-                self._put_to_buffer(kline)
 
             self._index += 1
             current_ts = next_ts + 1
@@ -156,7 +156,13 @@ class HistoricalProvider(DataProvider):
         """Signal the provider to stop streaming data."""
         with self._lock:
             self._stop_event.set()
-        self._thread.join()
-        key = get_key(self.symbol, self.granular)
-        self.redis.delete(key)
-        logger.info("Historical provider stopped.")
+        if self._thread.is_alive():
+            self._thread.join()
+        try:
+            time.sleep(1)
+            key = get_key(self.symbol, self.granular)
+            logger.info(f"Deleting Redis key: {key}")
+            self.redis.delete(key)
+        except Exception as e:
+            logger.error(f"Error cleaning up Redis key: {e}")
+        logger.info("Historical stop() finish.")

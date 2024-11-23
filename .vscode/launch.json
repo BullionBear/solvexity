@@ -35,10 +35,10 @@
             }
         },
         {
-            "name": "Python Debugger: Run test arguement parser with live",
+            "name": "Python Debugger: Run historical arguement parser",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/test_argparser.py",
+            "program": "${workspaceFolder}/argparser/historical_argparser.py",
             "args": [
                 "-c",
                 "config/strategy_test.json5"
@@ -56,7 +56,7 @@
             "program": "${workspaceFolder}/argparser/trading_argparser.py",
             "args": [
                 "-c",
-                "config/trading_paper_test.json5"
+                "config/strategy_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

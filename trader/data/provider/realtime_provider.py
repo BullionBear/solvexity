@@ -137,6 +137,7 @@ class RealtimeProvider(DataProvider):
 
         # Delete Redis key safely
         try:
+            time.sleep(1)
             key = get_key(self.symbol, self.granular)
             self.redis.delete(key)
         except Exception as e:

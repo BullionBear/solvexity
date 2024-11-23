@@ -34,7 +34,7 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
     providers = DataProviderFactory(services, data_config)
 
     alpha = signals["doubly_ma"]
-    provider = providers["realtime_provider"]
+    provider = providers["historical_provider"]
 
     signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
     signal.signal(signal.SIGTERM, lambda signum, frame: provider.stop())
@@ -44,6 +44,8 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
             if shutdown_event.is_set():
                 break
             logger.info(alpha.solve())
+            alpha.export("verbose")
+            alpha.visualize("verbose")
     finally:
         logger.info("Trading process terminated gracefully.")
 

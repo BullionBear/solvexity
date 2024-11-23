@@ -3,5 +3,6 @@ venv
 *.pyc
 __pycache__/
 notebook
+verbose
 *test.json*
 .DS_Store

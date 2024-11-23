@@ -1,3 +1,3 @@
-from .context_factory import TradeContextFactory
+from .context_factory import ContextFactory
 
-__all__ = ["TradeContextFactory"]
+__all__ = ["ContextFactory"]

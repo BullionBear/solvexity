@@ -4,16 +4,17 @@ from trader.core import TradeContext
 from trader.data import query_latest_kline, KLine, query_kline, Trade
 import helper.logging as logging
 import binance.client as BinanceClient
+from service.notification import Notification
 import helper
 
 logger = logging.getLogger("trading")
 
 class LiveTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, redis: redis.Redis, webhook_url: str, granular: str):
+    def __init__(self, client: BinanceClient, redis: redis.Redis, notification: Notification, granular: str):
         self.granular = granular
         self.client = client
         self.redis = redis
-        self.webhook_url = webhook_url
+        self.notification = notification
         self.balance = self._get_balance()
         self.trade: dict[int, Trade] = {}
 

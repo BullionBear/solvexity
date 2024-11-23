@@ -25,7 +25,6 @@ class DoublyMovingAverage(Signal):
         # Retrieve historical market data
         klines = self.trade_context.get_klines(self.symbol, self.limit)
         df = Signal.to_dataframe(klines)
-        
         # Analyze the data to calculate moving averages
         self.df_analyze = self.analyze(df)
         
@@ -46,6 +45,9 @@ class DoublyMovingAverage(Signal):
             return SignalType.HOLD  # No significant crossover
     
     def analyze(self, df: pd.DataFrame) -> pd.DataFrame:
+        if len(df) < self.slow_period:
+            logger.warning(f"Insufficient data points for analysis. Expected at least {self.slow_period} but receive {len(df)}.")
+            return df
         df_analyze = df.copy()
         df_analyze['fast'] = df_analyze['close'].rolling(window=self.fast_period).mean()
         df_analyze['slow'] = df_analyze['close'].rolling(window=self.slow_period).mean()
@@ -61,6 +63,7 @@ class DoublyMovingAverage(Signal):
             return
         target_dest = os.path.join(output_dir, f"{self.get_filename()}.csv")
         self.df_analyze.to_csv(target_dest, index=False)
+        logger.info(f"Exported analysis data to {target_dest}")
 
         
 
@@ -88,4 +91,5 @@ class DoublyMovingAverage(Signal):
             show_nontrading=True,
             savefig=target_dest
         )
+        logger.info(f"Exported visualization to {target_dest}")
 

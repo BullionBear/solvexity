@@ -18,6 +18,7 @@ def sample_data():
             "interval": "1m",
             "open_time": 1730342940000,
             "close_time": 1730342945999,
+            "event_time": 1730342941000,  # Add this field
             "open": 0.00822100,
             "close": 0.00822100,
             "high": 0.00822200,
@@ -33,6 +34,7 @@ def sample_data():
             "interval": "1m",
             "open_time": 1730342960000,
             "close_time": 1730342965999,
+            "event_time": 1730342961000,  # Add this field
             "open": 0.00822500,
             "close": 0.00822600,
             "high": 0.00822800,
@@ -45,6 +47,7 @@ def sample_data():
             "is_closed": True,
         },
     ]
+
 
 # Helper function to populate Redis with sample data
 @pytest.fixture

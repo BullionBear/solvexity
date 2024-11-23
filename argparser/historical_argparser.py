@@ -3,8 +3,6 @@ import helper
 import helper.logging as logging
 import threading
 import signal
-import json
-import time
 import traceback
 from service import ServiceFactory
 from trader.data.provider import DataProviderFactory
@@ -35,7 +33,7 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
     # signals = SignalFactory(contexts, signal_config)
     providers = DataProviderFactory(services, data_config)
 
-    provider = providers["realtime_provider"]
+    provider = providers["historical_provider"]
 
     # Start provider in a controlled loop
     try:

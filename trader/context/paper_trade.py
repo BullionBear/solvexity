@@ -104,9 +104,8 @@ class PaperTradeContext(TradeContext):
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
         if not lastest_kline:
             raise ValueError(f"No kline data found: {symbol}:{self.granular}")
-        ts = lastest_kline.close_time
+        end_ts = lastest_kline.close_time
         grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
-        end_ts = ts // grandular_ts * grandular_ts
         start_ts = end_ts - grandular_ts * limit
         klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
         return klines

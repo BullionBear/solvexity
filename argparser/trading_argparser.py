@@ -11,9 +11,10 @@ from trader.signal import SignalFactory, SignalType
 from trader.policy import PolicyFactory
 from trader.strategy import StrategyFactory
 
+
 logging.setup_logging()
 logger = logging.getLogger("trading")
-shutdown_event = threading.Event()
+shutdown = helper.Shutdown(signal.SIGINT, signal.SIGTERM)
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")
@@ -25,9 +26,6 @@ def parse_arguments():
     )
     return parser.parse_args()
 
-def handle_shutdown_signal(signum, frame):
-    logger.info("Shutdown signal received. Shutting down gracefully...")
-    shutdown_event.set()
 
 def main(services_config: dict, 
          data_config:dict, 
@@ -45,13 +43,14 @@ def main(services_config: dict,
     # Retrieve a strategy
     pythagoras_btc = strategies["pythagoras_btc"]
     provider = providers["historical_provider"]
-
-    signal.signal(signal.SIGINT, lambda signum, frame: provider.stop())
-    signal.signal(signal.SIGTERM, lambda signum, frame: provider.stop())
+    shutdown.register(lambda signum: provider.stop())
+    shutdown.register(lambda signum: pythagoras_btc.stop())
+    # signal.signal(signal.SIGINT, lambda signum, frame: pythagoras_btc.stop())
+    # signal.signal(signal.SIGTERM, lambda signum, frame: pythagoras_btc.stop())
 
     try:
         for _ in provider.receive():
-            if shutdown_event.is_set():
+            if shutdown.is_set():
                 break
             pythagoras_btc.invoke()
     finally:
@@ -60,10 +59,6 @@ def main(services_config: dict,
 
 
 if __name__ == "__main__":
-    # Register signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, handle_shutdown_signal)
-    signal.signal(signal.SIGTERM, handle_shutdown_signal)
-    
     args = parse_arguments()
     try:
         config = helper.load_config(args.config)

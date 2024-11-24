@@ -59,10 +59,11 @@ class HistoricalProvider(DataProvider):
                     logger.warning("No kline data available.")
                     return
                 self.redis.zadd(key, {json.dumps(kline.dict()): kline.open_time})
+                logger.info(f"Insert kline data: {kline}")
                 if self.redis.zcard(key) > self.MAX_SZ:
                     logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                     self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
-                event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
+                event = json.dumps({"x": kline.is_closed, "t": kline.open_time, "E": kline.event_time})
                 self.redis.publish(key, event)
                 yield kline
             except Empty:

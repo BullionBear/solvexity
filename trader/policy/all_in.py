@@ -46,7 +46,7 @@ class AllIn(Policy):
 
     def export(self, output_dir: str):
         trades = self.trade_context.get_trades(self.symbol, self.MAX_TRADE_SIZE)
-        df = pd.DataFrame([trade.to_dict() for trade in trades])
+        df = pd.DataFrame([trade.dict() for trade in trades])
         logger.info(f"Exporting policy {self.symbol} trades to {output_dir}")
         target_dest = f"{output_dir}/policy_{self.symbol}_{self.id}.csv"
         df.to_csv(target_dest, index=False)

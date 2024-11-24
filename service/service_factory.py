@@ -25,7 +25,7 @@ def create_binance_client(config: dict) -> BinanceClient:
 
 
 def create_notification(config: dict) -> Notification:
-    return Notification(config["webhook"])
+    return Notification(config["webhook"], config["enabled"])
 
 
 def create_tcp_socket(config: dict) -> SocketArgparser:

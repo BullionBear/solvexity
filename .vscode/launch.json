@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Run datastream argument parser with history",
+            "name": "Python Debugger: Run backtest argument parser with history",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/datastream_argparser.py",
+            "program": "${workspaceFolder}/argparser/backtest_argparser.py",
             "args": [
                 "-c",
-                "config/datastream_history_test.json5"
+                "config/strategy_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

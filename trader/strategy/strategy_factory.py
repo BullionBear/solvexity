@@ -9,7 +9,7 @@ STRATEGY_FACTORY_REGISTRY = {
         policy=policy,
         symbol=config["symbol"],
         trade_id=config["trade_id"],
-        verbose=config["trade_id"],
+        verbose=config["verbose"],
     )
 }
 

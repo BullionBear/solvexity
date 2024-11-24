@@ -11,10 +11,10 @@ POLICY_FACTORY_REGISTRY = {
 }
 
 class PolicyFactory:
+    _instances = {}
     def __init__(self, context_factory: ContextFactory, policy_config: dict):
         self.context_factory = context_factory
         self.policy_config = policy_config
-        self._instances = {}
 
     def __getitem__(self, policy_name: str):
         return self.get_policy(policy_name)

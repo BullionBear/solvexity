@@ -17,10 +17,10 @@ SIGNAL_FACTORY_REGISTRY = {
 }
 
 class SignalFactory:
+    _instances = {}
     def __init__(self, context_factory: ContextFactory, signal_config: dict):
         self.context_factory = context_factory
         self.signal_config = signal_config
-        self._instances = {}
 
     def __getitem__(self, signal_name: str):
         return self.get_signal(signal_name)

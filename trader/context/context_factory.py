@@ -35,10 +35,10 @@ CONTEXT_FACTORY_REGISTRY = {
 }
 
 class ContextFactory:
+    _instances = {}
     def __init__(self, services: ServiceFactory, contexts_config: dict):
         self.contexts_config = contexts_config
-        self.services = services
-        self._instances = {}
+        self.services = services 
 
     def __getitem__(self, context_name: str):
         return self.get_context(context_name)

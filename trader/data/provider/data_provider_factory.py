@@ -35,10 +35,10 @@ DATA_PROVIDER_FACTORY_REGISTRY = {
 }
 
 class DataProviderFactory:
+    _instances = {}
     def __init__(self, services: ServiceFactory, provider_config: dict):
         self.provider_config = provider_config
         self.services = services
-        self._instances = {}
 
     def __getitem__(self, provider_name: str):
         return self.get_provider(provider_name)

@@ -25,7 +25,7 @@ def create_binance_client(config: dict) -> BinanceClient:
 
 
 def create_notification(config: dict) -> Notification:
-    return Notification(config["webhook"])
+    return Notification(config["webhook"], config["enabled"])
 
 
 def create_tcp_socket(config: dict) -> SocketArgparser:
@@ -44,9 +44,9 @@ FACTORY_REGISTRY = {
 
 # Refactored ServiceFactory
 class ServiceFactory:
+    _instances = {}
     def __init__(self, services_config: dict):
         self.services_config = services_config
-        self._instances = {}
 
     def __getitem__(self, service_name: str):
         return self.get_service(service_name)

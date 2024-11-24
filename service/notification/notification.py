@@ -39,8 +39,9 @@ class Color(enum.IntEnum):
 
 
 class Notification:
-    def __init__(self, webhook: str):
+    def __init__(self, webhook: str, enabled: bool = True):
         self.webhook = webhook
+        self.enabled = enabled
 
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         embed = {
@@ -48,4 +49,6 @@ class Notification:
             "description": content,
             "color": color
         }
-        send_notification(self.webhook, None, username, embed)
+        logger.info(f"Sending notification to {title=}")
+        if self.enabled:
+            send_notification(self.webhook, None, username, embed)

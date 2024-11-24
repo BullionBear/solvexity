@@ -9,16 +9,16 @@ STRATEGY_FACTORY_REGISTRY = {
         policy=policy,
         symbol=config["symbol"],
         trade_id=config["trade_id"],
-        verbose=config["trade_id"],
+        verbose=config["verbose"],
     )
 }
 
 class StrategyFactory:
+    _instances = {}
     def __init__(self, signal_factory: SignalFactory, policy_factory: PolicyFactory, strategy_config: dict):
         self.signal_factory = signal_factory
         self.policy_factory = policy_factory
         self.strategy_config = strategy_config
-        self._instances = {}
 
     def __getitem__(self, strategy_name: str):
         return self.get_strategy(strategy_name)

@@ -4,10 +4,7 @@ import helper.logging as logging
 import threading
 import signal
 import traceback
-from service import ServiceFactory
-from trader.data.provider import DataProviderFactory
-from trader.context import ContextFactory
-from trader.signal import SignalFactory
+from trader.config import ConfigLoader
 
 logging.setup_logging()
 logger = logging.getLogger("trading")
@@ -27,13 +24,8 @@ def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
     shutdown_event.set()
 
-def main(services_config: dict, data_config:dict, context_config: dict, signal_config: dict):
-    services = ServiceFactory(services_config)
-    # contexts = ContextFactory(services, context_config)
-    # signals = SignalFactory(contexts, signal_config)
-    providers = DataProviderFactory(services, data_config)
-
-    provider = providers["historical_provider_short"]
+def main(config_loader: ConfigLoader):
+    provider = config_loader["data"]["historical_provider_short"]
 
     # Start provider in a controlled loop
     try:
@@ -53,7 +45,7 @@ if __name__ == "__main__":
     
     args = parse_arguments()
     try:
-        config = helper.load_config(args.config)
+        config = ConfigLoader.from_file(args.config)
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
         raise
@@ -61,7 +53,7 @@ if __name__ == "__main__":
     logger.info("Configuration loaded successfully")
 
     try:
-        main(config["services"], config["data"], config["contexts"], config["signals"])
+        main(config)
     except Exception as e:
         full_traceback = traceback.format_exc()
         logger.error(f"Error invoking strategy: {e}\n{full_traceback}")

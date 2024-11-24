@@ -33,6 +33,9 @@ class Signal(ABC):
     def visualize(self, output_dir: str):
         pass
 
+    def get_context(self) -> Type[TradeContext]:
+        return self.trade_context
+
     @staticmethod
     def to_dataframe(data: list[KLine]):
         data_dict = [kline.model_dump() for kline in data]

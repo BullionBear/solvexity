@@ -7,7 +7,9 @@ STRATEGY_FACTORY_REGISTRY = {
     "pythagoras": lambda signal, policy, config: Pythagoras(
         signal=signal,
         policy=policy,
-        trade_id=config["trade_id"]
+        symbol=config["symbol"],
+        trade_id=config["trade_id"],
+        verbose=config["trade_id"],
     )
 }
 
@@ -49,7 +51,7 @@ class StrategyFactory:
         signal_name = signal_ref.split(".")[1]
         policy_ref = strategy_config["policy"]
         policy_name = policy_ref.split(".")[1]
-        
+
         signal = self.signal_factory[signal_name]
         policy = self.policy_factory[policy_name]
 

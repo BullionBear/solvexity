@@ -16,6 +16,10 @@ class Strategy(ABC):
     def invoke(self):
         pass
 
+    @abstractmethod
+    def stop(self):
+        pass
+
     @property
     def id(self):
         return self._id

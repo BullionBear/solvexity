@@ -66,5 +66,4 @@ def symbol_filter(symbol: str, size: Decimal, price: Decimal) -> tuple[Decimal, 
 def _get_symbol_info(symbol):
     client = BinanceClient()
     symbol_info = client.get_symbol_info(symbol)
-    print(symbol_info)
     return symbol_info

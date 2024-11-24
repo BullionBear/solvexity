@@ -28,8 +28,6 @@ class Pythagoras(Strategy):
             self.policy.buy()
         elif s == SignalType.SELL:
             self.policy.sell()
-        else:
-            pass
         
         if self.verbose:
             self.signal.visualize(self.output_dir)
@@ -39,4 +37,5 @@ class Pythagoras(Strategy):
         self.policy.notify("OnTradingFinish", f"**Trade ID**: {self.id}", 0x00FF00) # Green
         if self.verbose:
             self.report.export(self.output_dir)
+            self.policy.export(self.output_dir)
             logger.info(f"Trading report is exported to {self.output_dir}")

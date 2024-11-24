@@ -26,6 +26,10 @@ class Policy(ABC):
     def notify(self, title: str, content: str, color: Color):
         self.trade_context.notify(self.id, title, content, color)
 
+    @abstractmethod
+    def export(self, output_dir: str):
+        pass
+
     @property
     def id(self):
         return self._id

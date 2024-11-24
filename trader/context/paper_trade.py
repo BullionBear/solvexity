@@ -97,8 +97,8 @@ class PaperTradeContext(TradeContext):
         logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
     
-    def notify(self, title: str, content: Optional[str], color: Color):
-        self.notification.notify(self.__class__.__name__, title, content, color)
+    def notify(self, username: str, title: str, content: Optional[str], color: Color):
+        self.notification.notify(username, title, content, color)
 
     def get_klines(self, symbol, limit) -> list[KLine]:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)

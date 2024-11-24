@@ -1,3 +1,4 @@
-from .notification import Notification
+from .notification import Notification, Color
 
-__all__ = ["Notification"]
+__all__ = ["Notification"
+           "Color"]

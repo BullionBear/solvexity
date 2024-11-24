@@ -1,5 +1,8 @@
+from trader.core import SignalType
 from trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
+
+
 def create_doubly_moving_average_signal(trade_context, config):
     return DoublyMovingAverage(
         trade_context=trade_context,

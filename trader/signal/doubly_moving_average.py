@@ -65,8 +65,6 @@ class DoublyMovingAverage(Signal):
         self.df_analyze.to_csv(target_dest, index=False)
         logger.info(f"Exported analysis data to {target_dest}")
 
-        
-
     def visualize(self, output_dir: str):
         if not Signal.directory_validator(output_dir):
             return
@@ -86,10 +84,9 @@ class DoublyMovingAverage(Signal):
             title='Candlestick Chart with Volume',
             ylabel='Price',
             ylabel_lower='Volume',
-            mav=(5, 10),  # Moving averages
+            mav=(self.fast_period, self.slow_period),  # Moving averages
             figsize=(12, 8),
             show_nontrading=True,
             savefig=target_dest
         )
         logger.info(f"Exported visualization to {target_dest}")
-

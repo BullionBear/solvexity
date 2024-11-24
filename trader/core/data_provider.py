@@ -9,4 +9,7 @@ class DataProvider(ABC):
     def receive():
         pass
 
+    @abstractmethod
+    def stop():
+        pass
     

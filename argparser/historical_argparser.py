@@ -33,7 +33,7 @@ def main(services_config: dict, data_config:dict, context_config: dict, signal_c
     # signals = SignalFactory(contexts, signal_config)
     providers = DataProviderFactory(services, data_config)
 
-    provider = providers["historical_provider"]
+    provider = providers["historical_provider_short"]
 
     # Start provider in a controlled loop
     try:

@@ -35,3 +35,7 @@ class TradeContext(ABC):
     @abstractmethod
     def get_trades(self, symbol: str, limit: int) -> list[Trade]:
         pass
+
+    @abstractmethod
+    def notify(self, username: str, title: str, content: Optional[str], color: Color):
+        pass

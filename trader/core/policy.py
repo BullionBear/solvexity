@@ -24,7 +24,7 @@ class Policy(ABC):
         pass
 
     def notify(self, title: str, content: str, color: Color):
-        self.trade_context.notify(title, content, color)
+        self.trade_context.notify(self.id, title, content, color)
 
     @property
     def id(self):

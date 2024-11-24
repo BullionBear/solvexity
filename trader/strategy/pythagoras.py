@@ -20,3 +20,7 @@ class Pythagoras(Strategy):
             self.policy.sell()
         else:
             pass
+    
+    def stop(self):
+        self.policy.notify("stop")
+    

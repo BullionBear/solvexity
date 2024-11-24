@@ -45,9 +45,11 @@ class StrategyFactory:
             )
 
         # Resolve signal and policy from configuration
-        signal_name = strategy_config["signal"]
-        policy_name = strategy_config["policy"]
-
+        signal_ref = strategy_config["signal"]
+        signal_name = signal_ref.split(".")[1]
+        policy_ref = strategy_config["policy"]
+        policy_name = policy_ref.split(".")[1]
+        
         signal = self.signal_factory[signal_name]
         policy = self.policy_factory[policy_name]
 

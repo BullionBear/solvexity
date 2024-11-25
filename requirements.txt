@@ -6,6 +6,7 @@ pandas
 redis[hiredis]
 pydantic
 json5
+pymongo
 # unittest
 pytest
 fakeredis

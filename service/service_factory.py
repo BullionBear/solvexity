@@ -4,6 +4,7 @@ from binance.client import Client as BinanceClient
 from sqlalchemy import create_engine
 from .socket_argparser import SocketArgparser
 from .notification import Notification
+from pymongo import MongoClient
 
 # Individual factory methods for service creation
 def create_redis(config: dict) -> redis.Redis:
@@ -13,12 +14,15 @@ def create_redis(config: dict) -> redis.Redis:
         db=config["db"]
     )
 
+def create_mongo_client(config: dict) -> MongoClient:
+    return MongoClient(
+        f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['db']}?authSource=admin"
+    )
 
 def create_sql_engine(config: dict) -> Engine:
     return create_engine(
         f"postgresql://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['db']}"
     )
-
 
 def create_binance_client(config: dict) -> BinanceClient:
     return BinanceClient(config["api_key"], config["api_secret"])
@@ -39,6 +43,7 @@ FACTORY_REGISTRY = {
     "binance": create_binance_client,
     "notify": create_notification,
     "tcp": create_tcp_socket,
+    "mongo": create_mongo_client
 }
 
 

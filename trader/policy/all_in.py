@@ -28,7 +28,7 @@ class AllIn(Policy):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
 
     def buy(self):
-        quote_size = self.trade_context.get_balance(self.quote)
+        quote_size = self.trade_context.get_avaliable_balance(self.quote)
         ask, _ = self.trade_context.get_askbid(self.symbol)
         if quote_size > self.MIN_QUOTE_SIZE:
             size, price = helper.symbol_filter(self.symbol, quote_size / ask, ask)
@@ -36,7 +36,7 @@ class AllIn(Policy):
             self.trade_context.market_buy(self.symbol, quote_size / ask)
 
     def sell(self):
-        base_size = self.trade_context.get_balance(self.base)
+        base_size = self.trade_context.get_avaliable_balance(self.base)
         _, bid = self.trade_context.get_askbid(self.symbol)
         
         if base_size * bid > self.MIN_QUOTE_SIZE:

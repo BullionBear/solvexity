@@ -23,7 +23,7 @@ class PaperTradeContext(TradeContext):
             redis (redis.Redis): The Redis client instance for querying kline data
         """
         self.granular = granular
-        self.balance = {k: Decimal(v) for k, v in init_balance.items()}
+        self.balance = {k: {"free": Decimal(v), "locked": Decimal('0')} for k, v in init_balance.items()}
         logger.info(f"Initial balance: {self.balance}\t Granular: {self.granular}")
         self.redis = redis
         self.notification = notification
@@ -34,8 +34,8 @@ class PaperTradeContext(TradeContext):
         ask, _ = self.get_askbid(symbol)
         size, ask = helper.symbol_filter(symbol, size, ask)
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
-        self.balance[base] += size
-        self.balance[quote] -= size * ask
+        self.balance[base]['free'] += size
+        self.balance[quote]['free'] -= size * ask
         # self.notify("OnMarketBuy", f"Symbol: {symbol}\n size: {size}\n price: {ask}", Color.BLUE)
         logger.info(f"Market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
@@ -58,8 +58,8 @@ class PaperTradeContext(TradeContext):
         _, bid = self.get_askbid(symbol)
         size, bid = helper.symbol_filter(symbol, size, bid)
         base, quote = symbol[:-4], symbol[-4:]
-        self.balance[base] -= size
-        self.balance[quote] += size * bid
+        self.balance[base]['free'] -= size
+        self.balance[quote]['locked'] += size * bid
         # self.notify("OnMarketSell", f"Symbol: {symbol}\n size: {size}\n price: {bid}", Color.BLUE)
         logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
@@ -79,7 +79,10 @@ class PaperTradeContext(TradeContext):
         self._trade_id += 1
 
     def get_balance(self, token: str) -> Decimal:
-        return self.balance[token]
+        return self.balance[token]['free'] + self.balance[token]['locked']
+    
+    def get_avaliable_balance(self, token: str) -> Decimal:
+        return self.balance[token]['free']
 
     def _get_time(self, symbol: str) -> int:
         lastest_kline = query_latest_kline(self.redis, symbol, self.granular)

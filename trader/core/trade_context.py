@@ -21,6 +21,10 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def get_avaliable_balance(self, token: str) -> Decimal:
+        pass
+
+    @abstractmethod
     def get_askbid(self, symbol: str) -> tuple[Decimal, Decimal]:
         pass
 
@@ -39,3 +43,14 @@ class TradeContext(ABC):
     @abstractmethod
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         pass
+
+
+class PerpTradeContext(TradeContext):
+    @abstractmethod
+    def get_positions(self, symbol: str):
+        pass
+
+    @abstractmethod
+    def get_leverage_ratio(self, symbol: str):
+        pass
+

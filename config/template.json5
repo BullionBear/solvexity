@@ -1,0 +1,128 @@
+{
+    "services": {
+        "binance_primary": {
+            "factory": "binance",
+            "api_key": "YOUR_API_KEY",
+            "api_secret": "YOUR_API_SECRET"
+        },
+        "redis": {
+            "factory": "redis",
+            "host": "YOUR_REDIS_HOST",
+            "port": YOUR_REDIS_PORT,
+            "db": YOUR_REDIS_DB
+        },
+        "notify": {
+            "factory": "notify",
+            "webhook": "YOUR_NOTIFY_WEBHOOK_URL",
+            "enabled": true
+        },
+        "notifydev": {
+            "factory": "notify",
+            "webhook": "YOUR_NOTIFYDEV_WEBHOOK_URL",
+            "enabled": false
+        },
+        "tcp": {
+            "factory": "tcp",
+            "host": "YOUR_TCP_HOST",
+            "port": YOUR_TCP_PORT
+        },
+        "sqlengine": {
+            "factory": "sqlengine",
+            "host": "YOUR_SQL_ENGINE_HOST",
+            "port": YOUR_SQL_ENGINE_PORT,
+            "username": "YOUR_SQL_ENGINE_USERNAME",
+            "password": "YOUR_SQL_ENGINE_PASSWORD",
+            "db": "YOUR_SQL_ENGINE_DB"
+        },
+        "mongo": {
+            "factory": "mongo",
+            "host": "YOUR_MONGO_HOST",
+            "port": YOUR_MONGO_PORT,
+            "db": "YOUR_MONGO_DB"
+        }
+    },
+    "data": {
+        "historical_provider": {
+            "factory": "historical",
+            "redis": "services.redis",
+            "sql_engine": "services.sqlengine",
+            "symbol": "BTCUSDT",
+            "granular": "1h",
+            "start": 1714521600000,
+            "end": 1715126399999,
+            "limit": 500,
+            "sleep_time": 0
+        },
+        "historical_provider_short": {
+            "factory": "historical",
+            "redis": "services.redis",
+            "sql_engine": "services.sqlengine",
+            "symbol": "BTCUSDT",
+            "granular": "1h",
+            "start": 1714521600000,
+            "end": 1714607999999,
+            "limit": 500,
+            "sleep_time": 10
+        },
+        "realtime_provider": {
+            "factory": "realtime",
+            "redis": "services.redis",
+            "symbol": "ETHUSDT",
+            "granular": "1h",
+            "limit": 200
+        }
+    },
+    "contexts": {
+        "live_trade": {
+            "factory": "live_trade",
+            "binance_client": "services.binance_primary",
+            "redis": "services.redis",
+            "notification": "services.notify",
+            "granular": "1h"
+        },
+        "paper_trade": {
+            "factory": "paper_trade",
+            "redis": "services.redis",
+            "notification": "services.notifydev",
+            "init_balance": {
+                "BTC": "1.0",
+                "USDT": "10000.0"
+            },
+            "granular": "1h"
+        }
+    },
+    "signals": {
+        "doubly_ma": {
+            "factory": "doubly_moving_average",
+            "trade_context": "contexts.paper_trade",
+            "symbol": "BTCUSDT",
+            "fast_period": 5,
+            "slow_period": 10,
+            "limit": 100
+        }
+    },
+    "policies": {
+        "all_in_btc": {
+            "factory": "all_in",
+            "trade_context": "contexts.paper_trade",
+            "symbol": "BTCUSDT",
+            "trade_id": "trade_001"
+        },
+        "all_in_eth": {
+            "factory": "all_in",
+            "trade_context": "contexts.paper_trade",
+            "symbol": "ETHUSDT",
+            "trade_id": "trade_002"
+        }
+    },
+    "strategies": {
+        "pythagoras": {
+            "factory": "pythagoras",
+            "signal": "signals.doubly_ma",
+            "policy": "policies.all_in_btc",
+            "symbol": "BTCUSDT",
+            "trade_id": "trade_001",
+            "verbose": false
+        }
+    }
+}

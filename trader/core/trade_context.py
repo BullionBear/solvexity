@@ -54,6 +54,3 @@ class PerpTradeContext(TradeContext):
     def get_margin_rate(self, symbol: str):
         pass
 
-    @abstractmethod
-    def get_leverage(self, symbol: str):
-        pass

@@ -32,6 +32,27 @@ class Trade(BaseModel):
             is_maker=data["isMaker"],
             is_best_match=data["isBestMatch"]
         )
+    
+    @classmethod
+    def from_perp_rest(cls, data: dict) -> 'Trade':
+        """
+        Create a Trade instance from a perpetual REST API response.
+        """
+        return cls(
+            symbol=data['symbol'],
+            id=data['id'],
+            order_id=data['orderId'],
+            order_list_id=0,  # Assuming it's not present in data
+            price=float(data['price']),
+            qty=float(data['qty']),
+            quote_qty=float(data['quoteQty']),
+            commission=float(data['commission']),
+            commission_asset=data['commissionAsset'],
+            time=data['time'],
+            is_buyer=data['buyer'],
+            is_maker=data['maker'],
+            is_best_match=True  # Assuming True; adjust based on data if available
+        )
 
 
 
@@ -87,4 +108,55 @@ class KLine(BaseModel):
             taker_buy_base_asset_volume=float(data[9]),
             taker_buy_quote_asset_volume=float(data[10]),
             is_closed=True
+        )
+
+
+class Position(BaseModel):
+    symbol: str
+    position_side: str
+    position_amt: float
+    entry_price: float
+    break_even_price: float
+    mark_price: float
+    unrealized_profit: float
+    liquidation_price: float
+    isolated_margin: float
+    notional: float
+    margin_asset: str
+    isolated_wallet: float
+    initial_margin: float
+    maint_margin: float
+    position_initial_margin: float
+    open_order_initial_margin: float
+    adl: int
+    bid_notional: float
+    ask_notional: float
+    update_time: int
+
+    @classmethod
+    def from_perp_rest(cls, data: dict) -> 'Position':
+        """
+        Create a Position instance from a perpetual REST API response.
+        """
+        return cls(
+            symbol=data['symbol'],
+            position_side=data['positionSide'],
+            position_amt=float(data['positionAmt']),
+            entry_price=float(data['entryPrice']),
+            break_even_price=float(data['breakEvenPrice']),
+            mark_price=float(data['markPrice']),
+            unrealized_profit=float(data['unRealizedProfit']),
+            liquidation_price=float(data['liquidationPrice']),
+            isolated_margin=float(data['isolatedMargin']),
+            notional=float(data['notional']),
+            margin_asset=data['marginAsset'],
+            isolated_wallet=float(data['isolatedWallet']),
+            initial_margin=float(data['initialMargin']),
+            maint_margin=float(data['maintMargin']),
+            position_initial_margin=float(data['positionInitialMargin']),
+            open_order_initial_margin=float(data['openOrderInitialMargin']),
+            adl=int(data['adl']),
+            bid_notional=float(data['bidNotional']),
+            ask_notional=float(data['askNotional']),
+            update_time=data['updateTime']
         )

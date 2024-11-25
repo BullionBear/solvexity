@@ -1,4 +1,5 @@
 import helper
+import pymongo
 from service import ServiceFactory
 from trader.data.provider import DataProviderFactory
 from trader.context import ContextFactory
@@ -54,5 +55,12 @@ class ConfigLoader:
     @classmethod
     def from_file(cls, file_path: str):
         config = helper.load_config(file_path)
+        return cls(config)
+    
+    @classmethod
+    def from_db(cls, mongo_client: pymongo.MongoClient, name: str):
+        db = mongo_client.get_database()  # This will use 'db' from the connection string
+        collection = db['config']
+        config = collection.find_one({"name": "test"})
         return cls(config)
     

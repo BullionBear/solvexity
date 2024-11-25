@@ -2,7 +2,7 @@ from service import ServiceFactory
 from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeContext
 
-def create_live_trade_context(config: dict, services: ServiceFactory) -> SpotTradeContext:
+def create_spot_trade_context(config: dict, services: ServiceFactory) -> SpotTradeContext:
     # Resolve services
     binance_client = services[config["binance_client"].split(".")[1]]
     redis_instance = services[config["redis"].split(".")[1]]
@@ -30,7 +30,7 @@ def create_paper_trade_context(config: dict, services: ServiceFactory) -> PaperT
 
 # Register factories
 CONTEXT_FACTORY_REGISTRY = {
-    "live_trade": create_live_trade_context,
+    "spot_trade": create_spot_trade_context,
     "paper_trade": create_paper_trade_context
 }
 

@@ -1,6 +1,7 @@
 from decimal import Decimal
 import redis
-from trader.core import TradeContext
+import time
+from trader.core import PerpTradeContext
 from typing import Optional
 from service.notification import Notification, Color
 from trader.data import query_latest_kline, KLine, query_kline, Trade
@@ -11,41 +12,54 @@ import helper
 
 logger = logging.getLogger("trading")
 
-class SpotTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, redis: redis.Redis, notification: Notification, granular: str):
+class PerpTradeContext(PerpTradeContext):
+    def __init__(self, client: BinanceClient, 
+                 redis: redis.Redis, 
+                 notification: Notification, 
+                 granular: str, 
+                 leverage: int):
         self.granular = granular
         self.client = client
         self.redis = redis
         self.notification = notification
+        self.leverage = leverage
+        self._symbol_with_leverage = set()
         self.balance = self._get_balance()
         self.trade: dict[int, Trade] = {}
 
     def _get_balance(self):
-        user_assets = self.client.get_user_asset(needBtcValuation=True)
+        user_assets = self.client.futures_account_balance()
         balance = {}
         for asset in user_assets:
+            free_balance = Decimal(asset['availableBalance'])
+            total_balance = Decimal(asset['balance'])
             balance[asset['asset']] = {
-                "free": Decimal(asset['free']),
-                "lock": Decimal(asset['locked'])
+                'free': str(free_balance),
+                'locked': str(total_balance - free_balance)
             }
         return balance
     
     def get_balance(self, token: str) -> Decimal:
-        if token not in self.balance:
-            return Decimal('0')
-        return Decimal(self.balance[token]['free']) + Decimal(self.balance[token]['locked'])
+        return Decimal(self.balance.get(token, '0'))
+    
+    def set_leverage(self, symbol: str, leverage: int):
+        if symbol in self._symbol_with_leverage:
+            return
+        self.client.futures_change_leverage(symbol=symbol, leverage=leverage)
+        self._symbol_with_leverage.add(symbol)
+        logger.info(f"Set leverage for {symbol} to {leverage}")
 
-    def get_avaliable_balance(self, token):
-        return Decimal(self.balance.get(token, '0')['free'])
 
     def market_buy(self, symbol: str, size: Decimal):
-        self.client.order_market_buy(symbol=symbol, quantity=str(size))
+        self.set_leverage(symbol, self.leverage)
+        self.client.futures_create_order(symbol=symbol, side='BUY', type='MARKET', quantity=size)
         logger.info(f"Market buy: {symbol}, size: {size}")
         self.balance = self._get_balance()
         logger.info(f"Current balance: {self.balance}")
 
     def market_sell(self, symbol: str, size: Decimal):
-        self.client.order_market_sell(symbol=symbol, quantity=str(size))
+        self.set_leverage(symbol, self.leverage)
+        self.client.futures_create_order(symbol=symbol, quantity=str(size))
         logger.info(f"Market sell: {symbol}, size: {size}")
         self.balance = self._get_balance()
         logger.info(f"Current balance: {self.balance}")

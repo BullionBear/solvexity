@@ -108,13 +108,13 @@ class PerpTradeContext(PerpTradeContext):
         trades = filter(lambda x: x['symbol'] == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]
     
-    def get_positions(self, symbol) -> Position:
+    def get_positions(self) -> list[Position]:
         self._update_position()
-        return self.position[symbol]
+        return self.position
     
-    def get_margin_rate(self) -> Decimal:
+    def get_leverage_ratio(self) -> Decimal:
         usdt = self.get_balance('USDT')
-        position_value = sum([Decimal(pos['positionAmt']) * Decimal(pos['entryPrice']) for pos in self.position.values()])
+        position_value = sum([Decimal(pos['positionAmt']) * Decimal(pos['entryPrice']) for pos in self.get_positions().values()])
         return position_value / usdt
         
         

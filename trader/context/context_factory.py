@@ -1,15 +1,15 @@
 from service import ServiceFactory
-from .live_trade import LiveTradeContext
+from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeContext
 
-def create_live_trade_context(config: dict, services: ServiceFactory) -> LiveTradeContext:
+def create_live_trade_context(config: dict, services: ServiceFactory) -> SpotTradeContext:
     # Resolve services
     binance_client = services[config["binance_client"].split(".")[1]]
     redis_instance = services[config["redis"].split(".")[1]]
     notification_service = services[config["notification"].split(".")[1]]
 
     # Create and return the context
-    return LiveTradeContext(
+    return SpotTradeContext(
         client=binance_client,
         redis=redis_instance,
         notification=notification_service,

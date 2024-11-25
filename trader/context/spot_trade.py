@@ -11,7 +11,7 @@ import helper
 
 logger = logging.getLogger("trading")
 
-class LiveTradeContext(TradeContext):
+class SpotTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, redis: redis.Redis, notification: Notification, granular: str):
         self.granular = granular
         self.client = client

@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import json
-import os
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter to format logs in JSON format."""
@@ -62,10 +61,20 @@ LOGGING_CONFIG = {
             'handlers': ['console', 'file'],
             'propagate': False
         },
-        'tcp': {
+        'server': {
             'level': 'INFO',
             'handlers': ['console', 'file'],
             'propagate': False
+        },
+        "uvicorn.error": {  # Uvicorn's internal logger
+            "handlers": ['console', 'file'],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "uvicorn.access": {  # Uvicorn's access logger
+            "handlers": ['console', 'file'],
+            "level": "INFO",
+            "propagate": False,
         },
     }
 }

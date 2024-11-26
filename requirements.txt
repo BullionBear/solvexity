@@ -8,6 +8,7 @@ pydantic
 json5
 pymongo
 jsonrpcserver
+fastapi[standard]
 # unittest
 pytest
 fakeredis

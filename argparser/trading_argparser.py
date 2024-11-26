@@ -1,10 +1,8 @@
 import argparse
 import helper
 import helper.logging as logging
-import threading
 import signal
 import traceback
-from service import ServiceFactory
 from trader.config import ConfigLoader
 
 logging.setup_logging()

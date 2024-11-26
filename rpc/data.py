@@ -13,24 +13,9 @@ app = FastAPI()
 def ping() -> Result:
     return Success("pong")
 
-
-api_key = ''
-api_secret = ''
-
 @method
-def futures_position_information():
-    c = Client(api_key, api_secret)
-    return Success(c.futures_position_information())
-
-@method
-def futures_order_book(symbol, limit=5):
-    c = Client(api_key, api_secret)
-    return Success(c.futures_order_book(symbol=symbol, limit=limit))
-
-@method
-def futures_account_trades(symbol, limit=5):
-    c = Client(api_key, api_secret)
-    return Success(c.futures_account_trades(symbol=symbol, limit=limit))
+def add(a: int, b: int) -> Result:
+    return Success(a + b)
 
 
 @app.post("/")

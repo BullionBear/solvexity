@@ -9,6 +9,7 @@ json5
 pymongo
 jsonrpcserver
 fastapi[standard]
+uvicorn
 # unittest
 pytest
 fakeredis

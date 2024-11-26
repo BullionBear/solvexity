@@ -1,4 +1,4 @@
-from service import ServiceFactory
+from dependency import ServiceFactory
 from .historical_provider import HistoricalProvider
 from .realtime_provider import RealtimeProvider
 

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from service import ServiceFactory
+from dependency import ServiceFactory
 
 
 @pytest.fixture

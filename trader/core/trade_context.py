@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from trader.data import KLine, Trade
-from service.notification import Color
+from dependency.notification import Color
 from typing import Optional
 import helper.logging as logging
 

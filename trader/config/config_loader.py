@@ -1,6 +1,6 @@
 import helper
 import pymongo
-from service import ServiceFactory
+from dependency import ServiceFactory
 from trader.data.provider import DataProviderFactory
 from trader.context import ContextFactory
 from trader.signal import SignalFactory
@@ -13,7 +13,7 @@ class ConfigLoader:
         self.config = config
 
     def __getitem__(self, service_name: str):
-        if service_name == "services":
+        if service_name == "dependencies":
             return self.get_service_factory()
         elif service_name == "data":
             return self.get_data_factory()
@@ -29,7 +29,7 @@ class ConfigLoader:
             raise ValueError(f"Service '{service_name}' not supported. Available services: {list(self.config.keys())}")
     
     def get_service_factory(self):
-        return ServiceFactory(self.config["services"])
+        return ServiceFactory(self.config["dependencies"])
     
     def get_data_factory(self):
         service_factory = self.get_service_factory()

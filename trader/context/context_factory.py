@@ -1,4 +1,4 @@
-from service import ServiceFactory
+from dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeContext
 

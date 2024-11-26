@@ -1,10 +1,8 @@
 import argparse
-import helper
 import helper.logging as logging
 import threading
 import signal
 import traceback
-from dependency import ServiceFactory
 from trader.config import ConfigLoader
 
 
@@ -27,7 +25,7 @@ def handle_shutdown_signal(signum, frame):
     shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
-    provider = config_loader["dependencies"]["realtime_provider"]
+    provider = config_loader["data"]["realtime_provider"]
     # Start provider in a controlled loop
     try:
         for data in provider.send():

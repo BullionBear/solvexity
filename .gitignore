@@ -6,3 +6,4 @@ notebook
 verbose
 *test.json*
 .DS_Store
+.env

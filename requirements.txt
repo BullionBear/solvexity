@@ -7,9 +7,10 @@ redis[hiredis]
 pydantic
 json5
 pymongo
-jsonrpcserver
+pydantic-settings
 fastapi[standard]
 uvicorn
+flask
 # unittest
 pytest
 fakeredis

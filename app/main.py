@@ -2,9 +2,11 @@ import helper.logging as logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import pymongo
+import signal
 from trader.config import ConfigLoader
 from typing import List
 from app.core import settings
+from helper.shutdown import Shutdown
 import threading
 
 # Configure the logger
@@ -21,6 +23,8 @@ connected_clients: List[WebSocket] = []
 # Lifespan function to handle startup and shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Resource
+    shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
     # Startup code
     mongo_client = pymongo.MongoClient(settings.SOLVEXITY_MONGO_URI)
     # config_loader = ConfigLoader.from_db(mongo_client, "system")
@@ -35,10 +39,10 @@ async def lifespan(app: FastAPI):
     threads = []
     if service_config["runtime"] == "trade":
         from app.runtime.trade import trading_runtime
-        threads.append(threading.Thread(target=trading_runtime, args=(config_loader, service_config["trader"], service_config["feed"])))
+        threads.append(threading.Thread(target=trading_runtime, args=(config_loader, shutdown, service_config["trader"], service_config["feed"])))
     elif service_config["runtime"] == "feed":
         from app.runtime.feed import feed_runtime
-        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, service_config["config"]["feed"])))
+        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, shutdown, service_config["config"]["feed"])))
     else:
         raise ValueError(f"Service runtime '{service_config['runtime']}' not supported. Available runtimes: ['trade', 'feed']")
     threads[0].start()

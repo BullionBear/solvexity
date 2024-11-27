@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 import pymongo
-import signal
+import asyncio
 from trader.config import ConfigLoader
 from typing import List
 from app.core import settings
@@ -24,8 +24,6 @@ connected_clients: List[WebSocket] = []
 # Lifespan function to handle startup and shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Resource
-    shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
     # Startup code
     mongo_client = pymongo.MongoClient(settings.SOLVEXITY_MONGO_URI)
     # config_loader = ConfigLoader.from_db(mongo_client, "system")
@@ -37,24 +35,26 @@ async def lifespan(app: FastAPI):
     app.state.service_config = service_config
     config_loader = ConfigLoader.from_db(mongo_client, service_config["ref"])
     app.state.config_loader = config_loader
-    threads = []
+    tasks = []
     if service_config["runtime"] == "trade":
         from app.runtime.trade import trading_runtime
-        threads.append(threading.Thread(target=trading_runtime, args=(config_loader, shutdown, service_config["trader"], service_config["feed"])))
+        # threads.append(threading.Thread(target=trading_runtime, args=(config_loader, shutdown, service_config["trader"], service_config["feed"])))
     elif service_config["runtime"] == "feed":
         from app.runtime.feed import feed_runtime
-        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, shutdown, service_config["config"]["feed"])))
+        tasks.append(asyncio.create_task(feed_runtime(config_loader, service_config["config"]["feed"])))
+
     else:
         raise ValueError(f"Service runtime '{service_config['runtime']}' not supported. Available runtimes: ['trade', 'feed']")
-    threads[0].start()
+    
     yield
     # Shutdown code
     logger.info("Shutting down...")
     for websocket in connected_clients:
         await websocket.close(code=1001)  # Normal closure
     connected_clients.clear()
+    tasks[0].cancel()
     logger.info("All WebSocket connections closed.")
-    threads[0].join()
+    
 
 # Initialize FastAPI with the lifespan function
 app = FastAPI(lifespan=lifespan)
@@ -66,6 +66,7 @@ async def config():
 
 @app.get("/system")
 async def config():
+    logger.info(f"Config: {app.state.config_loader.get_config()}")
     return JSONResponse(app.state.config_loader.get_config())
 
 # WebSocket Endpoint

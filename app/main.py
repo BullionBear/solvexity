@@ -1,6 +1,7 @@
 import helper.logging as logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 import pymongo
 import signal
 from trader.config import ConfigLoader
@@ -59,9 +60,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # HTTP Endpoint
-@app.get("/")
-async def read_root():
-    return {"message": "Hello, HTTP!"}
+@app.get("/service")
+async def config():
+    return JSONResponse(app.state.service_config)
+
+@app.get("/system")
+async def config():
+    return JSONResponse(app.state.config_loader.get_config())
 
 # WebSocket Endpoint
 @app.websocket("/ws")

@@ -22,22 +22,25 @@ connected_clients: List[WebSocket] = []
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup code
-    logger.info(f"Startup: {settings.SOLVEXITY_SERVICE}")
-    mongo_client = pymongo.MongoClient(settings.MONGO_URI)
+    mongo_client = pymongo.MongoClient(settings.SOLVEXITY_MONGO_URI)
     # config_loader = ConfigLoader.from_db(mongo_client, "system")
     db = mongo_client.get_database("solvexity")
     collection = db['service']
+    logger.info(f"Service: {settings.SOLVEXITY_SERVICE}")
     service_config = collection.find_one({"name": settings.SOLVEXITY_SERVICE})
+    logger.info(f"Service config: {service_config}")
     app.state.service_config = service_config
     config_loader = ConfigLoader.from_db(mongo_client, service_config["ref"])
     app.state.config_loader = config_loader
     threads = []
-    if service_config["type"] == "trade":
+    if service_config["runtime"] == "trade":
         from app.runtime.trade import trading_runtime
         threads.append(threading.Thread(target=trading_runtime, args=(config_loader, service_config["trader"], service_config["feed"])))
-    elif service_config["type"] == "feed":
+    elif service_config["runtime"] == "feed":
         from app.runtime.feed import feed_runtime
-        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, service_config["feed"])))
+        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, service_config["config"]["feed"])))
+    else:
+        raise ValueError(f"Service runtime '{service_config['runtime']}' not supported. Available runtimes: ['trade', 'feed']")
     threads[0].start()
     yield
     # Shutdown code

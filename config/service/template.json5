@@ -1,14 +1,13 @@
 {
     "trade_runtime_name": {
         "ref": "reference_system",
-        "type": "feed",
+        "runtime": "feed",
         "feed": "online_btc",
         "strategy": "pythagoras_btc"
     },
     "feed_runtime_name": {
         "ref": "reference_system",
-        "type": "strategy",
+        "runtime": "strategy",
         "feed": "online_btc",
     }
-
 }

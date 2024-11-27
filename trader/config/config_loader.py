@@ -1,7 +1,7 @@
 import helper
 import pymongo
 from dependency import ServiceFactory
-from trader.data.provider import DataProviderFactory
+from trader.data.feed import FeedFactory
 from trader.context import ContextFactory
 from trader.signal import SignalFactory
 from trader.policy import PolicyFactory
@@ -33,7 +33,7 @@ class ConfigLoader:
     
     def get_data_factory(self):
         service_factory = self.get_service_factory()
-        return DataProviderFactory(service_factory, self.config["feeds"])
+        return FeedFactory(service_factory, self.config["feeds"])
     
     def get_context_factory(self):
         service_factory = self.get_service_factory()

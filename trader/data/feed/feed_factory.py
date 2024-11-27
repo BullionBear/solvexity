@@ -1,9 +1,9 @@
 from dependency import ServiceFactory
-from .historical_provider import HistoricalProvider
-from .realtime_provider import RealtimeProvider
+from .offline_feed import HistoricalProvider
+from .online_feed import RealtimeProvider
 
 
-def create_historical_provider(services: ServiceFactory, config: dict) -> HistoricalProvider:
+def create_offline_feed(services: ServiceFactory, config: dict) -> HistoricalProvider:
     redis_instance = services[config["redis"].split(".")[1]]
     sql_engine = services[config["sql_engine"].split(".")[1]]
     return HistoricalProvider(
@@ -18,7 +18,7 @@ def create_historical_provider(services: ServiceFactory, config: dict) -> Histor
     )
 
 
-def create_realtime_provider(services: ServiceFactory, config: dict) -> RealtimeProvider:
+def create_online_feed(services: ServiceFactory, config: dict) -> RealtimeProvider:
     redis_instance = services[config["redis"].split(".")[1]]
     return RealtimeProvider(
         redis=redis_instance,
@@ -30,11 +30,11 @@ def create_realtime_provider(services: ServiceFactory, config: dict) -> Realtime
 
 # Register providers in a registry
 DATA_PROVIDER_FACTORY_REGISTRY = {
-    "historical": create_historical_provider,
-    "realtime": create_realtime_provider
+    "offline": create_offline_feed,
+    "online": create_online_feed
 }
 
-class DataProviderFactory:
+class FeedFactory:
     _instances = {}
     def __init__(self, services: ServiceFactory, provider_config: dict):
         self.provider_config = provider_config

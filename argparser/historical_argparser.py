@@ -25,7 +25,7 @@ def handle_shutdown_signal(signum, frame):
     shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
-    provider = config_loader["feeds"]["historical_provider_short"]
+    provider = config_loader["feeds"]["offline_btc_easy"]
 
     # Start provider in a controlled loop
     try:

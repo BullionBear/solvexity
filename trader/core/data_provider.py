@@ -10,6 +10,6 @@ class DataProvider(ABC):
         pass
 
     @abstractmethod
-    def stop():
+    def close():
         pass
     

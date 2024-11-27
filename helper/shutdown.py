@@ -62,3 +62,10 @@ class Shutdown:
         :return: True if shutdown has been triggered, False otherwise.
         """
         return self.shutdown_event.is_set()
+    
+    def set(self):
+        """
+        Trigger the shutdown process.
+        """
+        self.shutdown_event.set()
+        logger.info("Shutdown event set.")

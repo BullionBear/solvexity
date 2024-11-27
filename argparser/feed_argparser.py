@@ -1,6 +1,6 @@
 import argparse
 import helper.logging as logging
-import threading
+from helper import Shutdown
 import signal
 import traceback
 from trader.config import ConfigLoader
@@ -8,7 +8,6 @@ from trader.config import ConfigLoader
 
 logging.setup_logging()
 logger = logging.getLogger("feed")
-shutdown_event = threading.Event()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")
@@ -22,18 +21,19 @@ def parse_arguments():
 
 def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
-    shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
+    shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
     provider = config_loader["feeds"]["online_btc"]
     # Start provider in a controlled loop
     try:
         for data in provider.send():
-            if shutdown_event.is_set():
+            if shutdown.is_set():
                 break
             logger.info(f"Publish kline data: {data}")
     finally:
-        provider.stop()
+        shutdown.set()
+        provider.close()
 
     logger.info("Trading process terminated gracefully.")
 

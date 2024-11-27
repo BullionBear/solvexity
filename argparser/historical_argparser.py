@@ -34,7 +34,7 @@ def main(config_loader: ConfigLoader):
                 break
             logger.info(f"Publish kline data: {data}")
     finally:
-        provider.stop()
+        provider.close()
 
     logger.info("Trading process terminated gracefully.")
 

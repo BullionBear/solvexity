@@ -1,10 +1,11 @@
 import helper.logging as logging
-import random
-import string
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import pymongo
+from trader.config import ConfigLoader
 from typing import List
 from app.core import settings
+import threading
 
 # Configure the logger
 logging.setup_logging()
@@ -21,8 +22,23 @@ connected_clients: List[WebSocket] = []
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup code
-    logger.info(f"Starting up..., mongo_uri: {settings.SOLVEXITY_MONGO_URI}")
-    logger.info(f"Service: {settings.SOLVEXITY_SERVICE}")
+    logger.info(f"Startup: {settings.SOLVEXITY_SERVICE}")
+    mongo_client = pymongo.MongoClient(settings.MONGO_URI)
+    # config_loader = ConfigLoader.from_db(mongo_client, "system")
+    db = mongo_client.get_database("solvexity")
+    collection = db['service']
+    service_config = collection.find_one({"name": settings.SOLVEXITY_SERVICE})
+    app.state.service_config = service_config
+    config_loader = ConfigLoader.from_db(mongo_client, service_config["ref"])
+    app.state.config_loader = config_loader
+    threads = []
+    if service_config["type"] == "trade":
+        from app.runtime.trade import trading_runtime
+        threads.append(threading.Thread(target=trading_runtime, args=(config_loader, service_config["trader"], service_config["feed"])))
+    elif service_config["type"] == "feed":
+        from app.runtime.feed import feed_runtime
+        threads.append(threading.Thread(target=feed_runtime, args=(config_loader, service_config["feed"])))
+    threads[0].start()
     yield
     # Shutdown code
     logger.info("Shutting down...")
@@ -30,23 +46,10 @@ async def lifespan(app: FastAPI):
         await websocket.close(code=1001)  # Normal closure
     connected_clients.clear()
     logger.info("All WebSocket connections closed.")
+    threads[0].join()
 
 # Initialize FastAPI with the lifespan function
 app = FastAPI(lifespan=lifespan)
-
-@app.middleware("http")
-async def log_requests(request, call_next):
-    idem = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    logger.info(f"rid={idem} start request path={request.url.path}")
-    start_time = time.time()
-
-    response = await call_next(request)
-
-    process_time = (time.time() - start_time) * 1000
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    logger.info(f"rid={idem} completed_in={formatted_process_time}ms status_code={response.status_code}")
-
-    return response
 
 # HTTP Endpoint
 @app.get("/")
@@ -70,4 +73,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=30819, log_config=logging.LOGGING_CONFIG)
+    uvicorn.run(app, host="0.0.0.0", port=30819)

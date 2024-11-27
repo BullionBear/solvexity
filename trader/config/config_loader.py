@@ -15,7 +15,7 @@ class ConfigLoader:
     def __getitem__(self, service_name: str):
         if service_name == "dependencies":
             return self.get_service_factory()
-        elif service_name == "data":
+        elif service_name == "feeds":
             return self.get_data_factory()
         elif service_name == "contexts":
             return self.get_context_factory()
@@ -33,7 +33,7 @@ class ConfigLoader:
     
     def get_data_factory(self):
         service_factory = self.get_service_factory()
-        return DataProviderFactory(service_factory, self.config["data"])
+        return DataProviderFactory(service_factory, self.config["feeds"])
     
     def get_context_factory(self):
         service_factory = self.get_service_factory()
@@ -51,6 +51,9 @@ class ConfigLoader:
         signal_factory = self.get_signal_factory()
         policy_factory = self.get_policy_factory()
         return StrategyFactory(signal_factory, policy_factory, self.config["strategies"])
+    
+    def get_config(self):
+        return self.config 
     
     @classmethod
     def from_file(cls, file_path: str):

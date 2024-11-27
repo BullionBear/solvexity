@@ -25,7 +25,7 @@ def handle_shutdown_signal(signum, frame):
     shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
-    provider = config_loader["data"]["realtime_provider"]
+    provider = config_loader["feeds"]["realtime_provider"]
     # Start provider in a controlled loop
     try:
         for data in provider.send():

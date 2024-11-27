@@ -89,7 +89,7 @@ LOGGING_CONFIG = {
             'handlers': ['console', 'file'],
             'propagate': False
         },
-        'data': {
+        'feed': {
             'level': 'INFO',
             'handlers': ['console', 'file'],
             'propagate': False

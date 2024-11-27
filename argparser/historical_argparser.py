@@ -7,7 +7,7 @@ import traceback
 from trader.config import ConfigLoader
 
 logging.setup_logging()
-logger = logging.getLogger("trading")
+logger = logging.getLogger("feed")
 shutdown_event = threading.Event()
 
 def parse_arguments():

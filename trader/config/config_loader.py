@@ -62,7 +62,7 @@ class ConfigLoader:
     
     @classmethod
     def from_db(cls, mongo_client: pymongo.MongoClient, name: str):
-        db = mongo_client.get_database()  # This will use 'db' from the connection string
+        db = mongo_client.get_database("solvexity")
         collection = db['system']
         config = collection.find_one({"name": name})
         return cls(config)

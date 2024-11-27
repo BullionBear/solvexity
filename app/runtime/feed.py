@@ -4,10 +4,10 @@ import helper.logging as logging
 import signal
 
 shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 def feed_runtime(config_loader: ConfigLoader, data_service: str):
-    provider = config_loader["data"][data_service]
+    provider = config_loader["feed"][data_service]
     # Start provider in a controlled loop
     try:
         for data in provider.send():

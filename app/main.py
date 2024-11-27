@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     db = mongo_client.get_database("solvexity")
     collection = db['service']
     logger.info(f"Service: {settings.SOLVEXITY_SERVICE}")
-    service_config = collection.find_one({"name": settings.SOLVEXITY_SERVICE})
+    service_config = collection.find_one({"name": settings.SOLVEXITY_SERVICE}, {"_id": 0})
     logger.info(f"Service config: {service_config}")
     app.state.service_config = service_config
     config_loader = ConfigLoader.from_db(mongo_client, service_config["ref"])

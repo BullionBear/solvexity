@@ -1,12 +1,14 @@
 {
-    "backtest": {
-
+    "trade_runtime_name": {
+        "ref": "reference_system",
+        "type": "feed",
+        "feed": "online_btc",
+        "strategy": "pythagoras_btc"
     },
-    "live": {
-
-    },
-    "feed": {
-        
+    "feed_runtime_name": {
+        "ref": "reference_system",
+        "type": "strategy",
+        "feed": "online_btc",
     }
 
 }

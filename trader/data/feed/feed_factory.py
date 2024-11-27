@@ -29,33 +29,33 @@ def create_online_feed(services: ServiceFactory, config: dict) -> RealtimeProvid
 
 
 # Register providers in a registry
-DATA_PROVIDER_FACTORY_REGISTRY = {
+FEED_FACTORY_REGISTRY = {
     "offline": create_offline_feed,
     "online": create_online_feed
 }
 
 class FeedFactory:
     _instances = {}
-    def __init__(self, services: ServiceFactory, provider_config: dict):
-        self.provider_config = provider_config
+    def __init__(self, services: ServiceFactory, feed_config: dict):
+        self.feed_config = feed_config
         self.services = services
 
-    def __getitem__(self, provider_name: str):
-        return self.get_provider(provider_name)
+    def __getitem__(self, feed_name: str):
+        return self.get_feed(feed_name)
 
-    def get_provider(self, provider_name: str):
-        if provider_name in self._instances:
-            return self._instances[provider_name]
+    def get_feed(self, feed_name: str):
+        if feed_name in self._instances:
+            return self._instances[feed_name]
 
-        provider_config = self.provider_config.get(provider_name)
-        if not provider_config:
-            raise ValueError(f"Provider '{provider_name}' not found in the configuration.")
+        feed_config = self.feed_config.get(feed_name)
+        if not feed_config:
+            raise ValueError(f"Provider '{feed_name}' not found in the configuration.")
 
-        factory_name = provider_config["factory"]
-        factory_function = DATA_PROVIDER_FACTORY_REGISTRY.get(factory_name)
+        factory_name = feed_config["factory"]
+        factory_function = FEED_FACTORY_REGISTRY.get(factory_name)
         if not factory_function:
-            raise ValueError(f"Factory '{factory_name}' not registered for provider '{provider_name}'.")
+            raise ValueError(f"Factory '{factory_name}' not registered for provider '{feed_name}'.")
 
-        instance = factory_function(self.services, provider_config)
-        self._instances[provider_name] = instance
+        instance = factory_function(self.services, feed_config)
+        self._instances[feed_name] = instance
         return instance

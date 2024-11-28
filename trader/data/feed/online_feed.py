@@ -123,7 +123,7 @@ class RealtimeProvider(DataProvider):
             batch_insert_klines(self.redis, key, klines)
 
     def close(self):
-        """Gracefully stop the Realtime provider."""
+        """Gracefully stop the Online Feed."""
         logger.info("OnlineFeed close() is called")
         self._stop_event = True  # stop all operations
 
@@ -143,4 +143,4 @@ class RealtimeProvider(DataProvider):
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
 
-        logger.info("RealtimeProvider stop() finished")
+        logger.info("OnlineFeed close() finished")

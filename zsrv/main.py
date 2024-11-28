@@ -5,6 +5,9 @@ import os
 import json
 from zsrv.zdependency import get_database_client, get_service_config, get_system_config
 import helper.logging as logging
+from helper import Shutdown
+import signal
+import threading
 from trader.config import ConfigLoader
 
 # Load environment variables from .env
@@ -23,25 +26,35 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def start_server(host, port, config_loader):
+def start_server(host, port, config_loader, shutdown):
     """Starts the ZeroMQ server."""
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     address = f"tcp://{host}:{port}"
     socket.bind(address)
+    socket.RCVTIMEO = 1000  # Set timeout to 1000 milliseconds (1 second)
     logger.info(f"Server started at {address}")
     
-    while True:
-        message = socket.recv_string()
-        logger.info(f"Received: {message}")
+    while not shutdown.is_set():
         try:
-            data = json.loads(message)
-            # Use `config_loader` if needed to process the data
-            logger.info(f"Data: {data}")
-            socket.send_string(json.dumps({"type": "success", "message": "Data received"}))
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON received")
-            socket.send_string(json.dumps({"type": "error", "message": "Invalid JSON format"}))
+            # Attempt to receive a message with a timeout
+            message = socket.recv_string()
+            logger.info(f"Received: {message}")
+            try:
+                data = json.loads(message)
+                # Process the data if needed
+                logger.info(f"Data: {data}")
+                socket.send_string(json.dumps({"type": "success", "message": "Data received"}))
+            except json.JSONDecodeError:
+                logger.error("Invalid JSON received")
+                socket.send_string(json.dumps({"type": "error", "message": "Invalid JSON format"}))
+        except zmq.Again:
+            # This exception occurs when a timeout happens
+            logger.debug("No message received (timeout).")
+            continue
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            break
 
 
 if __name__ == "__main__":
@@ -55,14 +68,23 @@ if __name__ == "__main__":
         srv_config = get_service_config(db, args.service)
         system_name = srv_config["ref"]
         system_config = get_system_config(db, system_name)
-
+        shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
         # Initialize ConfigLoader
         config_loader = ConfigLoader(system_config)
-
+        thread = None
+        if srv_config["runtime"] == "feed":
+            # Start the feed runtime
+            from zsrv.runtime.feed import feed_runtime
+            feed_args = srv_config["arguments"]
+            thread = threading.Thread(target=feed_runtime, args=(config_loader, shutdown, feed_args["feed"]))
+        
+        thread.start()
         # Start the server
-        start_server(srv_config["host"], srv_config["port"], config_loader)
+        start_server(srv_config["host"], srv_config["port"], config_loader, shutdown)
     except Exception as e:
         logger.error(f"Error during startup: {e}")
     finally:
+        if 'thread' in locals():
+            thread.join()
         if 'client' in locals():
             client.close()

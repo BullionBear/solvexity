@@ -1,4 +1,4 @@
-websockets==13.0
+websockets
 python-binance
 numpy
 scipy
@@ -7,10 +7,7 @@ redis[hiredis]
 pydantic
 json5
 pymongo
-pydantic-settings
-fastapi[standard]
-uvicorn
-flask
+pyzmq
 # unittest
 pytest
 fakeredis

@@ -3,7 +3,7 @@ import argparse
 from dotenv import load_dotenv
 import os
 import json
-from .dependency import get_database_client, get_service_config, get_system_config
+from zsrv.zdependency import get_database_client, get_service_config, get_system_config
 import helper.logging as logging
 from trader.config import ConfigLoader
 

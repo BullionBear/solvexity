@@ -77,7 +77,14 @@ if __name__ == "__main__":
             from zsrv.runtime.feed import feed_runtime
             feed_args = srv_config["arguments"]
             thread = threading.Thread(target=feed_runtime, args=(config_loader, shutdown, feed_args["feed"]))
-        
+        elif srv_config["runtime"] == "trade":
+            # Start the trade runtime
+            from zsrv.runtime.trade import trading_runtime
+            trade_args = srv_config["arguments"]
+            thread = threading.Thread(target=trading_runtime, args=(config_loader, shutdown, trade_args["strategy"], trade_args["feed"]))
+        else:
+            logger.error("Invalid runtime specified")
+            raise ValueError("Invalid runtime specified")
         thread.start()
         # Start the server
         start_server(srv_config["host"], srv_config["port"], config_loader, shutdown)

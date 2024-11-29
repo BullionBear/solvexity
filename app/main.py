@@ -1,6 +1,7 @@
 from flask import Flask
 import atexit
 
+
 app = Flask(__name__)
 
 with app.app_context():

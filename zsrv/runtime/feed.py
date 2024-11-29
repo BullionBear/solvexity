@@ -1,4 +1,3 @@
-import asyncio
 from trader.config import ConfigLoader
 import helper.logging as logging
 from helper.shutdown import Shutdown

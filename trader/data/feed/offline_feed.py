@@ -9,7 +9,7 @@ from trader.data import get_key, get_klines, batch_insert_klines
 import helper
 import helper.logging as logging
 
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 
 class HistoricalProvider(DataProvider):

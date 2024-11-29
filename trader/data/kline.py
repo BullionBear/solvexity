@@ -5,7 +5,7 @@ from .utils import get_key
 from .model import KLine
 import helper.logging as logging 
 
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 def query_kline(redis: redis.Redis, symbol: str, granular: str, start_time: int, end_time: int) -> list[KLine]:
     """Get kline data from Redis

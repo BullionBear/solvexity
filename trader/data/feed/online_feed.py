@@ -13,7 +13,7 @@ import helper
 import helper.logging as logging
 import time
 
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 
 class RealtimeProvider(DataProvider):

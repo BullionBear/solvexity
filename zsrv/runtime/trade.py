@@ -1,13 +1,15 @@
 from trader.config import ConfigLoader
 import helper.logging as logging
-import signal
+from helper.shutdown import Shutdown
 
 logger = logging.getLogger("trade")
 
-def trading_runtime(config_loader: ConfigLoader, trade_service: str, data_service: str):
+def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str):
     try:
         strategy = config_loader["strategies"][trade_service]
-        provider = config_loader["feeds"][data_service]
+        shutdown.register(lambda signum: strategy.close())
+        provider = config_loader["feeds"][feed_service]
+        shutdown.register(lambda signum: provider.close())
         for _ in provider.receive():
             strategy.invoke()
     finally:

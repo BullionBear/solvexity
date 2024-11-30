@@ -112,12 +112,12 @@ LOGGING_CONFIG = {
         'trading': {
             'level': 'INFO',
             'handlers': ['console', 'redis'],  # Add Redis handler here
-            'propagate': False,
+            'propagate': True,
         },
         'feed': {
             'level': 'INFO',
             'handlers': ['console', 'redis'],  # Add Redis handler here
-            'propagate': False,
+            'propagate': True,
         }
     }
 }

@@ -8,7 +8,7 @@ import helper.logging as logging
 from helper import Shutdown
 import signal
 import threading
-from .command import CommandHandler
+from .dispatcher import CommandHandler, Command
 from trader.config import ConfigLoader
 
 # Load environment variables from .env
@@ -35,17 +35,15 @@ def start_server(host, port, config_loader, shutdown):
     socket.bind(address)
     socket.RCVTIMEO = 1000  # Set timeout to 1000 milliseconds (1 second)
     logger.info(f"Server started at {address}")
+
     handler = CommandHandler(config_loader)
-    
     while not shutdown.is_set():
         try:
             # Attempt to receive a message with a timeout
             message = socket.recv_string()
             logger.info(f"Received: {message}")
             try:
-                data = json.loads(message)
-                # Process the data if needed
-                logger.info(f"Data: {data}")
+                response = Command.from_string(message).execute(handler)
                 socket.send_string(json.dumps({"type": "success", "message": "Data received"}))
             except json.JSONDecodeError:
                 logger.error("Invalid JSON received")

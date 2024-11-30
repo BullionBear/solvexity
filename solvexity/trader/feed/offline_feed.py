@@ -1,7 +1,7 @@
 import time
 from solvexity.trader.core import Feed
 from redis import Redis
-from threading import Thread, Lock, Event
+from threading import Thread, Lock
 from sqlalchemy.engine import Engine
 from queue import Queue, Empty, Full
 import json
@@ -16,7 +16,7 @@ class OfflineFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 
-    def __init__(self, redis: Redis, sql_engine: Engine, symbol: str, granular: str, start: int, end: int, limit: int, sleep_time: int):
+    def __init__(self, redis: Redis, sql_engine: Engine, channels: list[str], sleep_time: int):
         """
         Args:
             redis (Redis): Redis client instance.
@@ -31,11 +31,7 @@ class OfflineFeed(Feed):
         super().__init__()
         self.redis = redis
         self.sql_engine = sql_engine
-        self.symbol = symbol
-        self.granular = granular
-        self.start = start
-        self.end = end
-        self.limit = limit
+        self.channels = channels
         self.sleep_time = sleep_time
 
         self._buffer = Queue(maxsize=1)

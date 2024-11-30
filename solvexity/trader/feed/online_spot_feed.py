@@ -16,25 +16,21 @@ import time
 logger = logging.getLogger("feed")
 
 
-class OnlineFeed(Feed):
+class OnlineSpotFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 
-    def __init__(self, redis: Redis, symbol: str, granular: str, limit: int):
+    def __init__(self, redis: Redis, *symbols):
         """
         Args:
             redis (Redis): Redis client instance.
-            symbol (str): The symbol to get kline data for.
-            granular (str): The granularity of the kline data.
-            limit (int): The maximum number of kline data to get.
+            symbols (str): Listen symbols
         """
         super().__init__()
         self.redis = redis
         self.client = BinanceClient()
 
-        self.symbol = symbol
-        self.granular = granular
-        self.limit = limit
+        self.symbols = symbols
 
         self._buffer = Queue(maxsize=1)
         self._stop_event = False
@@ -124,7 +120,7 @@ class OnlineFeed(Feed):
 
     def close(self):
         """Gracefully stop the Online Feed."""
-        logger.info("OnlineFeed close() is called")
+        logger.info("OnlineSpotFeed close() is called")
         self._stop_event = True  # stop all operations
 
         try:
@@ -143,4 +139,4 @@ class OnlineFeed(Feed):
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
 
-        logger.info("OnlineFeed close() finished")
+        logger.info("OnlineSpotFeed close() finished")

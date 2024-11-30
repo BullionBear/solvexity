@@ -31,6 +31,8 @@ class OnlineSpotFeed(Feed):
             interval: helper.to_unixtime_interval(interval) * 1000
             for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
         }
+
+        self.current_time = -1
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False
@@ -52,6 +54,7 @@ class OnlineSpotFeed(Feed):
                 if kline is None:
                     logger.warning("Online feed recv stop signal.")
                     raise StopIteration
+                self.current_time = kline.open_time
                 for granular, granular_ms in self._granulars.items():
                     if kline.is_close and kline.open_time % granular_ms == 0:
                         event = json.dumps({"E": "kline_update", "granular": granular})
@@ -86,6 +89,12 @@ class OnlineSpotFeed(Feed):
                 logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                 self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
         return total_klines
+    
+    def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
+        granular_ms = self._grandulars[granular]
+        end_time = self.current_time // granular_ms * granular_ms
+        start_time = end_time - granular_ms * limit
+        return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 
     def receive(self, granular: str):
         """

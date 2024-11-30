@@ -35,6 +35,7 @@ class OfflineSpotFeed(Feed):
         self.sql_engine: Engine = sql_engine
         self.sleep_time = sleep_time
 
+        self.current_time = -1
         self._buffer = Queue(maxsize=1)
         self._cache_keys = set()
         self._grandulars = {
@@ -54,6 +55,7 @@ class OfflineSpotFeed(Feed):
                 if kline is None:
                     logger.warning("Offline feed recv stop signal.")
                     raise StopIteration
+                self.current_time = kline.event_time
                 for granular, granular_ms in self._granulars.items():
                     if kline.is_close and kline.open_time % granular_ms == 0:
                         event = json.dumps({"E": "kline_update", "granular": granular})
@@ -65,6 +67,13 @@ class OfflineSpotFeed(Feed):
 
         logger.info("OfflineSpotFeed stopped send()")
 
+    def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
+        granular_ms = self._grandulars[granular]
+        end_time = self.current_time // granular_ms * granular_ms
+        start_time = end_time - granular_ms * limit
+        return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
+
+    
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
         """
         Get kline data from the SQL database.

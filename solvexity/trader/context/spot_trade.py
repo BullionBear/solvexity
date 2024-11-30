@@ -3,11 +3,11 @@ import redis
 from solvexity.trader.core import TradeContext
 from typing import Optional
 from solvexity.dependency.notification import Notification, Color
-from solvexity.trader.data import query_latest_kline, KLine, query_kline, Trade
+from solvexity.trader.model import KLine, Trade
 import solvexity.helper.logging as logging
 import binance.client as BinanceClient
 from solvexity.dependency.notification import Notification
-import solvexity.helper
+import solvexity.helper as helper
 
 logger = logging.getLogger("trading")
 

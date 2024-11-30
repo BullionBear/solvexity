@@ -1,7 +1,7 @@
 import solvexity.helper as helper
 import pymongo
 from solvexity.dependency import ServiceFactory
-from solvexity.trader.data.feed import FeedFactory
+from solvexity.trader.feed import FeedFactory
 from solvexity.trader.context import ContextFactory
 from solvexity.trader.signal import SignalFactory
 from solvexity.trader.policy import PolicyFactory

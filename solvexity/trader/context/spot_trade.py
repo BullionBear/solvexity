@@ -1,6 +1,7 @@
 from decimal import Decimal
 import redis
 from solvexity.trader.core import TradeContext
+from solvexity.trader.core import Feed
 from typing import Optional
 from solvexity.dependency.notification import Notification, Color
 from solvexity.trader.model import KLine, Trade
@@ -12,10 +13,10 @@ import solvexity.helper as helper
 logger = logging.getLogger("trading")
 
 class SpotTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, redis: redis.Redis, notification: Notification, granular: str):
+    def __init__(self, client: BinanceClient, feed: Feed, notification: Notification, granular: str):
         self.granular = granular
         self.client = client
-        self.redis = redis
+        self.feed = feed
         self.notification = notification
         self.balance = self._get_balance()
         self.trade: dict[int, Trade] = {}
@@ -68,14 +69,7 @@ class SpotTradeContext(TradeContext):
 
 
     def get_klines(self, symbol, limit) -> list[KLine]:
-        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
-        if not lastest_kline:
-            raise ValueError("No kline data found")
-        ts = lastest_kline.close_time
-        grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
-        end_ts = ts // grandular_ts * grandular_ts
-        start_ts = end_ts - grandular_ts * limit
-        klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
+        klines = self.feed.latest_n_klines(symbol, self.granular, limit)
         return klines
     
     def get_trades(self, symbol, limit) -> list[Trade]:

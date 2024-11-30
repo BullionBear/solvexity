@@ -54,7 +54,7 @@ class OnlineSpotFeed(Feed):
                 if kline is None:
                     logger.warning("Online feed recv stop signal.")
                     raise StopIteration
-                self.current_time = kline.open_time
+                self.current_time = kline.event_time
                 for granular, granular_ms in self._granulars.items():
                     if kline.is_close and kline.open_time % granular_ms == 0:
                         event = json.dumps({"E": "kline_update", "granular": granular})

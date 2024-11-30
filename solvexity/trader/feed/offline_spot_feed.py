@@ -7,6 +7,7 @@ import json
 from solvexity.trader.model import KLine
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
+from threading import Thread
 from bisect import bisect_left, bisect_right
 import pandas as pd
 
@@ -35,20 +36,21 @@ class OfflineSpotFeed(Feed):
         self.sql_engine: Engine = sql_engine
         self.sleep_time = sleep_time
 
-        self.current_time = -1
-        self._buffer = Queue(maxsize=1)
         self._cache_keys = set()
-        self._grandulars = {
-            interval: helper.to_unixtime_interval(interval) * 1000
-            for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
-        }
         self._stop_event = False
 
     def send(self):
         """
         Stream klines from the buffer and publish them to Redis.
         """
-        self._thread.start()
+        granular_ms = helper.to_unixtime_interval(self.granular) * 1000
+        while not self._stop_event:
+            # self.current_time = open_time + granular_ms
+            event = json.dumps({"E": "kline_update", "granular": self.granular})
+            self.redis.publish(f"spot.{self.granular}.offline", event)
+            yield event
+            time.sleep(self.sleep_time / 1000)
+
         while not self._stop_event:
             try:
                 kline = self._buffer.get(block=True, timeout=2)
@@ -56,11 +58,11 @@ class OfflineSpotFeed(Feed):
                     logger.warning("Offline feed recv stop signal.")
                     raise StopIteration
                 self.current_time = kline.event_time
-                for granular, granular_ms in self._granulars.items():
-                    if kline.is_close and kline.open_time % granular_ms == 0:
-                        event = json.dumps({"E": "kline_update", "granular": granular})
-                        self.redis.publish(f"spot.{granular}.offline", event)
-                        yield event
+                granular_ms = helper.to_unixtime_interval(self.granular) * 1000
+                if kline.is_close and kline.open_time % granular_ms == 0:
+                    event = json.dumps({"E": "kline_update", "granular": self.granular})
+                    self.redis.publish(f"spot.{self.granular}.offline", event)
+                    yield event
                 yield kline
             except Empty:
                 continue
@@ -198,6 +200,7 @@ class OfflineSpotFeed(Feed):
         df = pd.read_sql(query, self.engine)
         res = df.values.tolist()
         return [KLine.from_rest(r, interval) for r in res]
+        
     
     @staticmethod
     def find_missing_intervals(x, start, end):

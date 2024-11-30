@@ -1,5 +1,5 @@
 import time
-from solvexity.trader.core import DataProvider
+from solvexity.trader.core import Feed
 from redis import Redis
 from threading import Thread, Lock, Event
 from sqlalchemy.engine import Engine
@@ -12,7 +12,7 @@ import solvexity.helper.logging as logging
 logger = logging.getLogger("feed")
 
 
-class HistoricalProvider(DataProvider):
+class HistoricalProvider(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 

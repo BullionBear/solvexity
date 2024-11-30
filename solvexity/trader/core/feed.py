@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class DataProvider(ABC):
+class Feed(ABC):
     @abstractmethod
     def send():
         pass

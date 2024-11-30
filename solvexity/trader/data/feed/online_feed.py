@@ -1,4 +1,4 @@
-from solvexity.trader.core import DataProvider
+from solvexity.trader.core import Feed
 from redis import Redis
 from threading import Lock, Event
 from binance.client import Client as BinanceClient
@@ -16,7 +16,7 @@ import time
 logger = logging.getLogger("feed")
 
 
-class RealtimeProvider(DataProvider):
+class RealtimeProvider(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 

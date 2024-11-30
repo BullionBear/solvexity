@@ -1,12 +1,12 @@
 from solvexity.dependency import ServiceFactory
-from .offline_feed import HistoricalProvider
-from .online_feed import RealtimeProvider
+from .offline_feed import OfflineFeed
+from .online_feed import OnlineFeed
 
 
-def create_offline_feed(services: ServiceFactory, config: dict) -> HistoricalProvider:
+def create_offline_feed(services: ServiceFactory, config: dict) -> OfflineFeed:
     redis_instance = services[config["redis"].split(".")[1]]
     sql_engine = services[config["sql_engine"].split(".")[1]]
-    return HistoricalProvider(
+    return OfflineFeed(
         redis=redis_instance,
         sql_engine=sql_engine,
         symbol=config["symbol"],
@@ -18,9 +18,9 @@ def create_offline_feed(services: ServiceFactory, config: dict) -> HistoricalPro
     )
 
 
-def create_online_feed(services: ServiceFactory, config: dict) -> RealtimeProvider:
+def create_online_feed(services: ServiceFactory, config: dict) -> OnlineFeed:
     redis_instance = services[config["redis"].split(".")[1]]
-    return RealtimeProvider(
+    return OnlineFeed(
         redis=redis_instance,
         symbol=config["symbol"],
         granular=config["granular"],

@@ -16,7 +16,7 @@ import time
 logger = logging.getLogger("feed")
 
 
-class RealtimeProvider(Feed):
+class OnlineFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 

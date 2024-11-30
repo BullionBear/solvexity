@@ -12,7 +12,7 @@ import solvexity.helper.logging as logging
 logger = logging.getLogger("feed")
 
 
-class HistoricalProvider(Feed):
+class OfflineFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 

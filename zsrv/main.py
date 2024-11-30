@@ -2,14 +2,13 @@ import zmq
 import argparse
 from dotenv import load_dotenv
 import os
-import json
 from zsrv.zdependency import get_database_client, get_service_config, get_system_config
-import helper.logging as logging
-from helper import Shutdown
+import solvexity.helper.logging as logging
+from solvexity.helper import Shutdown
 import signal
 import threading
-from .dispatcher.command import CommandHandler, Command
-from trader.config import ConfigLoader
+from zsrv.dispatcher.command import CommandHandler, Command
+from solvexity.trader.config import ConfigLoader
 
 # Load environment variables from .env
 load_dotenv()
@@ -27,7 +26,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def start_server(host, port, handler, shutdown):
+def start_server(host: str, port: int, handler: CommandHandler, shutdown: Shutdown):
     """Starts the ZeroMQ server."""
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -65,27 +64,33 @@ if __name__ == "__main__":
         shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
         # Initialize ConfigLoader
         config_loader = ConfigLoader(system_config)
-        thread = None
+        handler = None
         if srv_config["runtime"] == "feed":
             # Start the feed runtime
             from zsrv.runtime.feed import feed_runtime
             feed_args = srv_config["arguments"]
             thread = threading.Thread(target=feed_runtime, args=(config_loader, shutdown, feed_args["feed"]))
+            from zsrv.dispatcher.handler.feed_handler import FeedHandler
+            handler = FeedHandler(config_loader)
         elif srv_config["runtime"] == "trade":
             # Start the trade runtime
             from zsrv.runtime.trade import trading_runtime
             trade_args = srv_config["arguments"]
             thread = threading.Thread(target=trading_runtime, args=(config_loader, shutdown, trade_args["strategy"], trade_args["feed"]))
+            from zsrv.dispatcher.handler.trade_handler import TradeHandler
+            handler = TradeHandler(config_loader)
         else:
             logger.error("Invalid runtime specified")
             raise ValueError("Invalid runtime specified")
         thread.start()
         # Start the server
-        start_server(srv_config["host"], srv_config["port"], config_loader, shutdown)
+        start_server(srv_config["host"], srv_config["port"], handler, shutdown)
     except Exception as e:
-        logger.error(f"Error during startup: {e}")
+        import traceback
+        full_traceback = traceback.format_exc()
+        logger.error(f"Error starting up: {e}\n{full_traceback}")
     finally:
-        if 'thread' in locals():
+        if 'thread' in locals() and thread.is_alive():
             thread.join()
         if 'client' in locals():
             client.close()

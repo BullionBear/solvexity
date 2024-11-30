@@ -1,9 +1,9 @@
 import argparse
-import helper.logging as logging
-from helper import Shutdown
+import solvexity.helper.logging as logging
+from solvexity.helper import Shutdown
 import signal
 import traceback
-from trader.config import ConfigLoader
+from solvexity.trader.config import ConfigLoader
 
 
 logging.setup_logging()

@@ -1,5 +1,5 @@
-from trader.config import ConfigLoader
-import helper.logging as logging
+from solvexity.trader.config import ConfigLoader
+import solvexity.helper.logging as logging
 
 logger = logging.getLogger("trade")
 

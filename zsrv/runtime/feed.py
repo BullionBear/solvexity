@@ -1,6 +1,6 @@
-from trader.config import ConfigLoader
-import helper.logging as logging
-from helper.shutdown import Shutdown
+from solvexity.trader.config import ConfigLoader
+import solvexity.helper.logging as logging
+from solvexity.helper.shutdown import Shutdown
 
 logger = logging.getLogger("feed")
 

@@ -1,4 +1,4 @@
-from trader.config import ConfigLoader
+from solvexity.trader.config import ConfigLoader
 import zsrv.dispatcher.command as command
 from zsrv.dispatcher.const import ERROR, TRADE_METHOD
 

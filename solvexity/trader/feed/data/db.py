@@ -1,5 +1,5 @@
 from sqlalchemy.engine import Engine
-import solvexity.helper
+import solvexity.helper as helper
 import pandas as pd
 from .model import KLine
 

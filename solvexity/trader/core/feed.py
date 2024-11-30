@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Iterable
-from .data import Kline
+from solvexity.trader.model import KLine
 
 class Feed(ABC):
     @abstractmethod
@@ -12,7 +12,7 @@ class Feed(ABC):
         pass
 
     @abstractmethod
-    def get_klines(start: int, end: int, symbol: str, granular: str) -> list[Kline]:
+    def get_klines(start: int, end: int, symbol: str, granular: str) -> list[KLine]:
         pass
 
     @abstractmethod

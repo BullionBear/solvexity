@@ -5,15 +5,60 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: FastAPI",
+            "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
+        },
+        {
+            "name": "Python Debugger: Run backtest argument parser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/backtest_argparser.py",
             "args": [
-                "app.main:app",
-                "--reload"
+                "-c",
+                "config/strategy_test.json5"
             ],
-            "jinja": true
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
+        },
+        {
+            "name": "Python Debugger: Run feed argument parser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/feed_argparser.py",
+            "args": [
+                "-c",
+                "config/system/local_test.json5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
+        },
+        {
+            "name": "Python Debugger: Run historical arguement parser",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/argparser/historical_argparser.py",
+            "args": [
+                "-c",
+                "config/system/local_test.json5"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
         },
         {
             "name": "Python Debugger: Run backtest argument parser with history",

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
-from solvexity.trader.data import KLine, Trade
+from solvexity.trader.model import KLine, Trade
 from solvexity.dependency.notification import Color
 from typing import Optional
 import solvexity.helper.logging as logging

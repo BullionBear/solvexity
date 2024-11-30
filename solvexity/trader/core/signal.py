@@ -1,7 +1,7 @@
 import os
 from typing import Type
 from abc import ABC, abstractmethod
-from solvexity.trader.data import KLine
+from solvexity.trader.model import KLine
 from .trade_context import TradeContext
 import solvexity.helper.logging as logging
 import pandas as pd

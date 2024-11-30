@@ -1,12 +1,12 @@
 from solvexity.dependency import ServiceFactory
-from .offline_feed import OfflineFeed
+from .offline_spot_feed import OfflineSpotFeed
 from .online_spot_feed import OnlineSpotFeed
 
 
-def create_offline_feed(services: ServiceFactory, config: dict) -> OfflineFeed:
+def create_offline_spot_feed(services: ServiceFactory, config: dict) -> OfflineSpotFeed:
     redis_instance = services[config["redis"].split(".")[1]]
     sql_engine = services[config["sql_engine"].split(".")[1]]
-    return OfflineFeed(
+    return OfflineSpotFeed(
         redis=redis_instance,
         sql_engine=sql_engine,
         symbol=config["symbol"],
@@ -30,7 +30,7 @@ def create_online_spot_feed(services: ServiceFactory, config: dict) -> OnlineSpo
 
 # Register providers in a registry
 FEED_FACTORY_REGISTRY = {
-    "offline": create_offline_feed,
+    "offline_spot": create_offline_spot_feed,
     "online_spot": create_online_spot_feed
 }
 

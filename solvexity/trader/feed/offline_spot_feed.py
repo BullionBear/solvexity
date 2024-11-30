@@ -5,18 +5,17 @@ from threading import Thread, Lock
 from sqlalchemy.engine import Engine
 from queue import Queue, Empty, Full
 import json
-from solvexity.trader.data import get_key, get_klines, batch_insert_klines
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
 logger = logging.getLogger("feed")
 
 
-class OfflineFeed(Feed):
+class OfflineSpotFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 
-    def __init__(self, redis: Redis, sql_engine: Engine, channels: list[str], sleep_time: int):
+    def __init__(self, redis: Redis, sql_engine: Engine, symbols: list[str], start_time: int, end_time: int, sleep_time: int):
         """
         Args:
             redis (Redis): Redis client instance.
@@ -29,9 +28,11 @@ class OfflineFeed(Feed):
             sleep_time (int): The sleep interval (millisecond) between each batch of kline data.
         """
         super().__init__()
-        self.redis = redis
-        self.sql_engine = sql_engine
-        self.channels = channels
+        self.redis: Redis = redis
+        self.sql_engine: Engine = sql_engine
+        self.symbols = symbols
+        self.start = start_time
+        self.end = end_time
         self.sleep_time = sleep_time
 
         self._buffer = Queue(maxsize=1)
@@ -40,7 +41,9 @@ class OfflineFeed(Feed):
         self._index = 0
         self._thread = Thread(target=self._stream_data)
         self._thread.daemon = False  # Allow thread to exit with main program
-        
+    
+    def _get_key(self, symbol: str, granular: str) -> str:
+        return f"feed.{symbol}.{granular}.spot"
 
     def send(self):
         """
@@ -49,7 +52,7 @@ class OfflineFeed(Feed):
         self._thread.start()
         while not self._stop_event:
             try:
-                key = get_key(self.symbol, self.granular)
+                key = self._get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
                     logger.warning("No kline data available.")
@@ -59,19 +62,24 @@ class OfflineFeed(Feed):
                 if self.redis.zcard(key) > self.MAX_SZ:
                     logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                     self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
-                event = json.dumps({"x": kline.is_closed, "t": kline.open_time, "E": kline.event_time})
+                event = json.dumps({
+                        "E": "kline_closed", 
+                        "data": {
+                            "open_time": kline.open_time
+                        }
+                    })
                 self.redis.publish(key, event)
                 yield kline
             except Empty:
                 continue
 
-        logger.info("Historical provider stopped streaming.")
+        logger.info("OfflineSpotFeed stopped streaming.")
 
     def receive(self):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = get_key(self.symbol, self.granular)
+        key = self._get_key(self.symbol, self.granular)
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 
@@ -134,7 +142,7 @@ class OfflineFeed(Feed):
         """Main method to stream data."""
         try:
             granular_ms = helper.to_unixtime_interval(self.granular) * 1000
-            key = get_key(self.symbol, self.granular)
+            # key = self._get_key(self.symbol, self.granular)
 
             self.start = self.start // granular_ms * granular_ms
             self.end = self.end // granular_ms * granular_ms

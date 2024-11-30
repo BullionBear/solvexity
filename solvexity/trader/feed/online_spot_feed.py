@@ -1,40 +1,40 @@
 from solvexity.trader.core import Feed
 from redis import Redis
-from threading import Lock, Event
+from threading import Lock
 from binance.client import Client as BinanceClient
 from binance import ThreadedWebsocketManager
 from queue import Queue, Empty, Full
 import json
-from solvexity.trader.data import (
-    get_key, query_latest_kline, query_kline, batch_insert_klines,
-    KLine
-)
+from solvexity.trader.model import KLine
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
 import time
+from bisect import bisect_left, bisect_right
+
 
 logger = logging.getLogger("feed")
 
 
 class OnlineSpotFeed(Feed):
-    BATCH_SZ = 128
-    MAX_SZ = 1024
+    MAX_SZ = 1024 # Maintain the latest 1024 klines in Redis for each symbol and granularity
 
-    def __init__(self, redis: Redis, *symbols):
+    def __init__(self, redis: Redis):
         """
         Args:
             redis (Redis): Redis client instance.
-            symbols (str): Listen symbols
+            granulars (tuple[str]): The granularities of the kline data.
         """
         super().__init__()
-        self.redis = redis
-        self.client = BinanceClient()
+        self.redis: Redis = redis
+        self.client: BinanceClient = BinanceClient()
 
-        self.symbols = symbols
-
-        self._buffer = Queue(maxsize=1)
+        self._grandulars = {
+            interval: helper.to_unixtime_interval(interval) * 1000
+            for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
+        }
+        self._cache_keys = set()
+        self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False
-        self._lock = Lock()
         self._index = 0
         self._thread = ThreadedWebsocketManager()
 
@@ -44,31 +44,55 @@ class OnlineSpotFeed(Feed):
         """
         self._thread.start()  # Start the WebSocket manager
         self._thread.start_kline_socket(
-            symbol=self.symbol,
-            interval=self.granular,
+            symbol="BTCUSDT",
+            interval="1m",
             callback=self._kline_helper
         )
         while not self._stop_event:
             try:
-                key = get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
-                    logger.warning("Unable to retrieve kline data.")
-                    return
-
-                event = json.dumps({"x": kline.is_closed, "E": kline.event_time})
-                self.redis.publish(key, event)
-                yield kline
+                    raise StopIteration
+                for granular, granular_ms in self._granulars.items():
+                    if kline.is_close and kline.open_time % granular_ms == 0:
+                        event = json.dumps({"E": "kline_update", "granular": granular})
+                        self.redis.publish(f"spot.{granular}", event)
+                        yield event
             except Empty:
                 continue
 
-        logger.info("Historical provider stopped.")
+        logger.info("OnlineSpotFeed stopped.")
 
-    def receive(self):
+    def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+        key = f"spot.{symbol}.{granular}"
+        self._cache_keys.add(key)
+        granular_ms = self._grandulars[granular]
+        byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
+        total_klines = [KLine(**json.loads(byte_kline.decode('utf-8'))) for byte_kline in byte_klines]
+        kline_dict = {k.open_time: k for k in total_klines}
+        open_times = [open_time // granular_ms for open_time in sorted(kline_dict.keys())]
+        missing_intervals = self.find_missing_intervals(open_times, start_time // granular_ms, end_time // granular_ms)
+        for start, end in missing_intervals:
+            klines = self.client.get_klines(symbol=symbol, interval=granular, startTime=start * granular_ms, endTime=end * granular_ms)
+            klines = [KLine.from_rest(kline, granular) for kline in klines]
+            total_klines.extend(klines)
+            with self.redis.pipeline() as pipe:
+                for k in klines:
+                    score = k.open_time  # Use open_time as the score
+                    # Queue the insertion command with JSON serialization
+                    pipe.zadd(key, {k.model_dump_json(): score})
+                # Execute all commands at once
+                pipe.execute()
+            if self.redis.zcard(key) > self.MAX_SZ:
+                logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
+                self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
+        return total_klines
+
+    def receive(self, granular: str):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = get_key(self.symbol, self.granular)
+        key = f"spot.{granular}"
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 
@@ -78,7 +102,6 @@ class OnlineSpotFeed(Feed):
             while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
-                    logger.info(f"Received message: {message}")
                     yield message
         finally:
             logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
@@ -87,36 +110,8 @@ class OnlineSpotFeed(Feed):
 
     def _kline_helper(self, msg: dict):
         if msg.get('e', '') == 'kline':
-            key = get_key(self.symbol, self.granular)
             kline = KLine.from_ws(msg['k'], msg['E'])
             self._buffer.put(kline)
-            score = kline.open_time
-            latest_kline = query_latest_kline(self.redis, self.symbol, self.granular)
-            logger.info(f"Latest kline from cache {key}: {latest_kline}")
-            if latest_kline is not None and latest_kline.open_time == score:
-                logger.info(f"Received kline is duplicate with latest kline: {kline}")
-                with self.redis.pipeline() as pipe:
-                    pipe.zrem(key, latest_kline.model_dump_json())
-                    pipe.zadd(key, {kline.model_dump_json(): score})
-                    pipe.execute()
-            else:
-                logger.info(f"New kline data received: {kline}")
-                self.redis.zadd(key, {kline.model_dump_json(): score})
-
-        if self._index == 0:
-            self._index += 1
-            klines = query_kline(self.redis, self.symbol, self.granular, 0, int(time.time() * 1000))
-            first_kline = klines[0]  # the first kline exists and is the oldest
-            ts_granular = helper.to_unixtime_interval(self.granular)
-            historical_klines = BinanceClient().get_klines(**{
-                "symbol": self.symbol,
-                "interval": self.granular,
-                "startTime": first_kline.open_time - ts_granular * self.limit * 1000,
-                "endTime": first_kline.open_time - 1
-            })
-            logger.info(f"Fetch {len(historical_klines)} historical klines")
-            klines = [KLine.from_rest(kline, self.granular) for kline in historical_klines]
-            batch_insert_klines(self.redis, key, klines)
 
     def close(self):
         """Gracefully stop the Online Feed."""
@@ -134,9 +129,37 @@ class OnlineSpotFeed(Feed):
         # Delete Redis key safely
         try:
             time.sleep(1)
-            key = get_key(self.symbol, self.granular)
-            self.redis.delete(key)
+            for cache_key in self._cache_keys:
+                self.redis.delete(cache_key)
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
 
         logger.info("OnlineSpotFeed close() finished")
+
+    @staticmethod
+    def find_missing_intervals(x, start, end):
+        # Initialize the result list
+        missing_intervals = []
+
+        # Use binary search to find the starting point within the range
+        left = bisect_left(x, start)
+        right = bisect_right(x, end)
+
+        # Add the first missing interval if necessary
+        if left == 0 or x[left - 1] < start:
+            current_start = start
+        else:
+            current_start = x[left - 1] + 1
+
+        # Traverse only relevant portion of the list
+        for i in range(left, right):
+            if x[i] > current_start:
+                missing_intervals.append([current_start, x[i] - 1])
+            current_start = x[i] + 1
+
+        # Add the final missing interval, if necessary
+        if current_start <= end:
+            missing_intervals.append([current_start, end])
+
+        return missing_intervals
+

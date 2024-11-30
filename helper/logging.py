@@ -88,13 +88,6 @@ LOGGING_CONFIG = {
             'formatter': 'readable',  # Human-readable format for console
             'stream': 'ext://sys.stdout',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'level': 'INFO',
-            'formatter': 'json',  # JSON format for file output
-            'filename': './log/process.log',
-            'mode': 'a',
-        },
         'redis': {
             '()': RedisPubSubHandler,  # Use the custom Redis handler
             'level': 'INFO',

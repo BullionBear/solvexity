@@ -8,6 +8,7 @@ import helper.logging as logging
 from helper import Shutdown
 import signal
 import threading
+from .command import CommandHandler
 from trader.config import ConfigLoader
 
 # Load environment variables from .env
@@ -34,6 +35,7 @@ def start_server(host, port, config_loader, shutdown):
     socket.bind(address)
     socket.RCVTIMEO = 1000  # Set timeout to 1000 milliseconds (1 second)
     logger.info(f"Server started at {address}")
+    handler = CommandHandler(config_loader)
     
     while not shutdown.is_set():
         try:

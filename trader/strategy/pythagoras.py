@@ -33,7 +33,7 @@ class Pythagoras(Strategy):
             self.signal.visualize(self.output_dir)
             self.signal.export(self.output_dir)
     
-    def stop(self):
+    def close(self):
         self.policy.notify("OnTradingFinish", f"**Trade ID**: {self.id}", 0x00FF00) # Green
         if self.verbose:
             self.report.export(self.output_dir)

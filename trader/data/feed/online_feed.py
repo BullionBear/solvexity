@@ -13,7 +13,7 @@ import helper
 import helper.logging as logging
 import time
 
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 
 class RealtimeProvider(DataProvider):
@@ -37,7 +37,7 @@ class RealtimeProvider(DataProvider):
         self.limit = limit
 
         self._buffer = Queue(maxsize=1)
-        self._stop_event = Event()
+        self._stop_event = False
         self._lock = Lock()
         self._index = 0
         self._thread = ThreadedWebsocketManager()
@@ -52,7 +52,7 @@ class RealtimeProvider(DataProvider):
             interval=self.granular,
             callback=self._kline_helper
         )
-        while not self._stop_event.is_set():
+        while not self._stop_event:
             try:
                 key = get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
@@ -79,7 +79,7 @@ class RealtimeProvider(DataProvider):
         logger.info(f"Subscribed to Redis Pub/Sub key: {key}")
 
         try:
-            while not self._stop_event.is_set():
+            while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
                     logger.info(f"Received message: {message}")
@@ -122,10 +122,10 @@ class RealtimeProvider(DataProvider):
             klines = [KLine.from_rest(kline, self.granular) for kline in historical_klines]
             batch_insert_klines(self.redis, key, klines)
 
-    def stop(self):
-        """Gracefully stop the Realtime provider."""
-        logger.info("RealtimeProvider stop() is called")
-        self._stop_event.set()  # Signal to stop all operations
+    def close(self):
+        """Gracefully stop the Online Feed."""
+        logger.info("OnlineFeed close() is called")
+        self._stop_event = True  # stop all operations
 
         try:
             self._buffer.put(None, timeout=1)  # Unblock any waiting threads
@@ -143,4 +143,4 @@ class RealtimeProvider(DataProvider):
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
 
-        logger.info("RealtimeProvider stop() finished")
+        logger.info("OnlineFeed close() finished")

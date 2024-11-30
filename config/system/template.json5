@@ -41,7 +41,7 @@
             "db": "YOUR_MONGO_DB"
         }
     },
-    "data": {
+    "feeds": {
         "historical_provider": {
             "factory": "historical",
             "redis": "services.redis",

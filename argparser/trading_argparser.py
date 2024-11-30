@@ -23,9 +23,9 @@ def parse_arguments():
 def main(config_loader: ConfigLoader):
     # Retrieve a strategy
     pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
-    provider = config_loader["data"]["historical_provider"]
-    shutdown.register(lambda signum: provider.stop())
-    shutdown.register(lambda signum: pythagoras_btc.stop())
+    provider = config_loader["feeds"]["offline_btc_easy"]
+    shutdown.register(lambda signum: provider.close())
+    shutdown.register(lambda signum: pythagoras_btc.close())
 
     try:
         for _ in provider.receive():

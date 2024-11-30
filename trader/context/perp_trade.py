@@ -3,14 +3,14 @@ import redis
 import time
 from trader.core import PerpTradeContext
 from typing import Optional
-from service.notification import Notification, Color
+from dependency.notification import Notification, Color
 from trader.data import (
     query_latest_kline, query_kline, 
     KLine, Trade, Position
 )
 import helper.logging as logging
 import binance.client as BinanceClient
-from service.notification import Notification
+from dependency.notification import Notification
 import helper
 
 logger = logging.getLogger("trading")

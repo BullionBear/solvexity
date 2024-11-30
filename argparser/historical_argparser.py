@@ -7,7 +7,7 @@ import traceback
 from trader.config import ConfigLoader
 
 logging.setup_logging()
-logger = logging.getLogger("trading")
+logger = logging.getLogger("feed")
 shutdown_event = threading.Event()
 
 def parse_arguments():
@@ -25,7 +25,7 @@ def handle_shutdown_signal(signum, frame):
     shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
-    provider = config_loader["data"]["historical_provider_short"]
+    provider = config_loader["feeds"]["offline_btc_easy"]
 
     # Start provider in a controlled loop
     try:
@@ -34,7 +34,7 @@ def main(config_loader: ConfigLoader):
                 break
             logger.info(f"Publish kline data: {data}")
     finally:
-        provider.stop()
+        provider.close()
 
     logger.info("Trading process terminated gracefully.")
 

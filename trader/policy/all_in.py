@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Type
 from trader.core import Policy, TradeContext
 from trader.data import Trade
-from service.notification import Color
+from dependency.notification import Color
 import pandas as pd
 import helper
 import helper.logging as logging

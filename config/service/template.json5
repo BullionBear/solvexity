@@ -1,0 +1,13 @@
+{
+    "trade_runtime_name": {
+        "ref": "reference_system",
+        "runtime": "feed",
+        "feed": "online_btc",
+        "strategy": "pythagoras_btc"
+    },
+    "feed_runtime_name": {
+        "ref": "reference_system",
+        "runtime": "strategy",
+        "feed": "online_btc",
+    }
+}

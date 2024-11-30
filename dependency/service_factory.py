@@ -62,7 +62,7 @@ class ServiceFactory:
 
         service_config = self.services_config.get(service_name)
         if not service_config:
-            raise ValueError(f"Service '{service_name}' not found in the configuration.")
+            raise ValueError(f"Dependency '{service_name}' not found in the configuration.")
 
         # Extract the factory and specific config
         factory_name = service_config["factory"]

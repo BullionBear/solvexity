@@ -1,7 +1,7 @@
 import helper
 import pymongo
-from service import ServiceFactory
-from trader.data.provider import DataProviderFactory
+from dependency import ServiceFactory
+from trader.data.feed import FeedFactory
 from trader.context import ContextFactory
 from trader.signal import SignalFactory
 from trader.policy import PolicyFactory
@@ -13,9 +13,9 @@ class ConfigLoader:
         self.config = config
 
     def __getitem__(self, service_name: str):
-        if service_name == "services":
+        if service_name == "dependencies":
             return self.get_service_factory()
-        elif service_name == "data":
+        elif service_name == "feeds":
             return self.get_data_factory()
         elif service_name == "contexts":
             return self.get_context_factory()
@@ -29,11 +29,11 @@ class ConfigLoader:
             raise ValueError(f"Service '{service_name}' not supported. Available services: {list(self.config.keys())}")
     
     def get_service_factory(self):
-        return ServiceFactory(self.config["services"])
+        return ServiceFactory(self.config["dependencies"])
     
     def get_data_factory(self):
         service_factory = self.get_service_factory()
-        return DataProviderFactory(service_factory, self.config["data"])
+        return FeedFactory(service_factory, self.config["feeds"])
     
     def get_context_factory(self):
         service_factory = self.get_service_factory()
@@ -52,6 +52,9 @@ class ConfigLoader:
         policy_factory = self.get_policy_factory()
         return StrategyFactory(signal_factory, policy_factory, self.config["strategies"])
     
+    def get_config(self):
+        return self.config 
+    
     @classmethod
     def from_file(cls, file_path: str):
         config = helper.load_config(file_path)
@@ -59,8 +62,8 @@ class ConfigLoader:
     
     @classmethod
     def from_db(cls, mongo_client: pymongo.MongoClient, name: str):
-        db = mongo_client.get_database()  # This will use 'db' from the connection string
-        collection = db['config']
-        config = collection.find_one({"name": "test"})
+        db = mongo_client.get_database("solvexity")
+        collection = db['system']
+        config = collection.find_one({"name": name}, {"_id": 0})
         return cls(config)
     

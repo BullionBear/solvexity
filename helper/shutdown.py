@@ -1,7 +1,6 @@
 import signal
 import threading
-
-from . import logging
+import logging
 
 logger = logging.getLogger()
 
@@ -28,15 +27,14 @@ class Shutdown:
         :param signum: The signal number received.
         :param frame: The current stack frame (unused here).
         """
-        logger.info(f"Signal received: {signum}. Executing shutdown callbacks.")
+        logger.info(f"Signal received: {signum}. Number of callbacks: {len(self.callbacks)} is executing.")
         with self.lock:
             for callback in self.callbacks:
                 try:
                     callback(signum)
                 except Exception as e:
-                    import traceback
-                    full_traceback = traceback.format_exc()
-                    logger.error(f"Error invoking strategy: {e}\n{full_traceback}")
+                    logger.error(f"Error invoking shutdown callback: {e}", exc_info=True)
+        logger.info("All callbacks executed.")
         self.shutdown_event.set()  # Signal that shutdown is complete
 
     def register(self, callback):
@@ -47,12 +45,15 @@ class Shutdown:
         """
         with self.lock:
             self.callbacks.append(callback)
+        logger.info("Callback registered.")
 
     def wait_for_shutdown(self):
         """
         Block the main thread until a shutdown signal is received and callbacks complete.
         """
+        logger.info("Waiting for shutdown signal...")
         self.shutdown_event.wait()
+        logger.info("Shutdown signal received, proceeding with shutdown.")
 
     def is_set(self):
         """
@@ -61,4 +62,10 @@ class Shutdown:
         :return: True if shutdown has been triggered, False otherwise.
         """
         return self.shutdown_event.is_set()
-
+    
+    def set(self):
+        """
+        Trigger the shutdown process.
+        """
+        self.shutdown_event.set()
+        logger.info("Shutdown event set.")

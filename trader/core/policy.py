@@ -1,5 +1,5 @@
 from typing import Type
-from service.notification import Color
+from dependency.notification import Color
 from abc import ABC, abstractmethod
 from .trade_context import TradeContext
 import helper

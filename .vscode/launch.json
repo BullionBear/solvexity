@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload"
+            ],
+            "jinja": true
+        },
+        {
             "name": "Python Debugger: Run backtest argument parser with history",
             "type": "debugpy",
             "request": "launch",
@@ -20,13 +31,13 @@
             }
         },
         {
-            "name": "Python Debugger: Run datastream argument parser with realtime",
+            "name": "Python Debugger: Run feed argument parser with realtime",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/datastream_argparser.py",
+            "program": "${workspaceFolder}/argparser/feed_argparser.py",
             "args": [
                 "-c",
-                "config/datastream_realtime_test.json5"
+                "config/system/local_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -41,7 +52,7 @@
             "program": "${workspaceFolder}/argparser/historical_argparser.py",
             "args": [
                 "-c",
-                "config/strategy_test.json5"
+                "config/system/local_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -49,20 +60,5 @@
                 "PYTHONPATH": "${workspaceFolder}",
             }
         },
-        {
-            "name": "Python Debugger: Run paper trade arguement parser",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/argparser/trading_argparser.py",
-            "args": [
-                "-c",
-                "config/strategy_test.json5"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}",
-            }
-        }
     ]
 }

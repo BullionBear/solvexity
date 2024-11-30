@@ -4,7 +4,7 @@ import requests
 import helper.logging as logging
 
 
-logger = logging.getLogger("data")
+logger = logging.getLogger()
 
 
 def send_notification(webhook_url, content, username, embed=None):

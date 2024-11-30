@@ -9,7 +9,7 @@ from trader.data import get_key, get_klines, batch_insert_klines
 import helper
 import helper.logging as logging
 
-logger = logging.getLogger("data")
+logger = logging.getLogger("feed")
 
 
 class HistoricalProvider(DataProvider):
@@ -39,7 +39,7 @@ class HistoricalProvider(DataProvider):
         self.sleep_time = sleep_time
 
         self._buffer = Queue(maxsize=1)
-        self._stop_event = Event()
+        self._stop_event = False
         self._lock = Lock()
         self._index = 0
         self._thread = Thread(target=self._stream_data)
@@ -51,7 +51,7 @@ class HistoricalProvider(DataProvider):
         Stream klines from the buffer and publish them to Redis.
         """
         self._thread.start()
-        while not self._stop_event.is_set():
+        while not self._stop_event:
             try:
                 key = get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
@@ -82,7 +82,7 @@ class HistoricalProvider(DataProvider):
         logger.info(f"Subscribed to Redis Pub/Sub key: {key}")
 
         try:
-            while not self._stop_event.is_set():
+            while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
                     logger.info(f"Received message: {message}")
@@ -107,7 +107,7 @@ class HistoricalProvider(DataProvider):
         key = get_key(self.symbol, self.granular)
 
         while current_ts < self.end:
-            if self._stop_event.is_set():
+            if self._stop_event:
                 logger.info("Receive stop event signal.")
                 break
 
@@ -116,7 +116,7 @@ class HistoricalProvider(DataProvider):
             klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
 
             for kline in klines:
-                if self._stop_event.is_set():
+                if self._stop_event:
                     return
                 self._put_to_buffer(kline)
                 if self.sleep_time > 0:
@@ -127,7 +127,7 @@ class HistoricalProvider(DataProvider):
 
     def _put_to_buffer(self, kline):
         """Put a kline into the buffer, handling the case where the buffer is full."""
-        while not self._stop_event.is_set():
+        while not self._stop_event:
             try:
                 self._buffer.put(kline, block=True, timeout=2)
                 break
@@ -151,12 +151,12 @@ class HistoricalProvider(DataProvider):
         except Exception as e:
             logger.error(f"Error in _stream_data: {e}", exc_info=True)
         finally:
-            self._stop_event.set()
+            self._stop_event = True
 
-    def stop(self):
+    def close(self):
         """Signal the provider to stop streaming data."""
         with self._lock:
-            self._stop_event.set()
+            self._stop_event = True
         if self._thread.is_alive():
             self._thread.join()
         try:

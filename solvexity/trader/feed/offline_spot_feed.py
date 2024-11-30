@@ -1,12 +1,15 @@
 import time
 from solvexity.trader.core import Feed
 from redis import Redis
-from threading import Thread, Lock
 from sqlalchemy.engine import Engine
 from queue import Queue, Empty, Full
 import json
+from solvexity.trader.model import KLine
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
+from bisect import bisect_left, bisect_right
+import pandas as pd
+
 
 logger = logging.getLogger("feed")
 
@@ -15,7 +18,7 @@ class OfflineSpotFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 
-    def __init__(self, redis: Redis, sql_engine: Engine, symbols: list[str], start_time: int, end_time: int, sleep_time: int):
+    def __init__(self, redis: Redis, sql_engine: Engine, sleep_time: int):
         """
         Args:
             redis (Redis): Redis client instance.
@@ -30,20 +33,15 @@ class OfflineSpotFeed(Feed):
         super().__init__()
         self.redis: Redis = redis
         self.sql_engine: Engine = sql_engine
-        self.symbols = symbols
-        self.start = start_time
-        self.end = end_time
         self.sleep_time = sleep_time
 
         self._buffer = Queue(maxsize=1)
+        self._cache_keys = set()
+        self._grandulars = {
+            interval: helper.to_unixtime_interval(interval) * 1000
+            for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
+        }
         self._stop_event = False
-        self._lock = Lock()
-        self._index = 0
-        self._thread = Thread(target=self._stream_data)
-        self._thread.daemon = False  # Allow thread to exit with main program
-    
-    def _get_key(self, symbol: str, granular: str) -> str:
-        return f"feed.{symbol}.{granular}.spot"
 
     def send(self):
         """
@@ -52,34 +50,63 @@ class OfflineSpotFeed(Feed):
         self._thread.start()
         while not self._stop_event:
             try:
-                key = self._get_key(self.symbol, self.granular)
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
-                    logger.warning("No kline data available.")
-                    return
-                self.redis.zadd(key, {json.dumps(kline.dict()): kline.open_time})
-                logger.info(f"Insert kline data: {kline}")
-                if self.redis.zcard(key) > self.MAX_SZ:
-                    logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
-                    self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
-                event = json.dumps({
-                        "E": "kline_closed", 
-                        "data": {
-                            "open_time": kline.open_time
-                        }
-                    })
-                self.redis.publish(key, event)
+                    logger.warning("Offline feed recv stop signal.")
+                    raise StopIteration
+                for granular, granular_ms in self._granulars.items():
+                    if kline.is_close and kline.open_time % granular_ms == 0:
+                        event = json.dumps({"E": "kline_update", "granular": granular})
+                        self.redis.publish(f"spot.{granular}.offline", event)
+                        yield event
                 yield kline
             except Empty:
                 continue
 
-        logger.info("OfflineSpotFeed stopped streaming.")
+        logger.info("OfflineSpotFeed stopped send()")
 
-    def receive(self):
+    def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+        """
+        Get kline data from the SQL database.
+
+        Args:
+            start_time (int): The start time of the kline data in ms.
+            end_time (int): The end time of the kline data in ms.
+            symbol (str): The symbol to get kline data for.
+            granular (str): The granularity of the kline data.
+
+        Returns:
+            list[KLine]: The kline data.
+        """
+        key = f"spot.{symbol}.{granular}.offline"
+        self._cache_keys.add(key)
+        granular_ms = self._grandulars[granular]
+        byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
+        total_klines = [KLine(**json.loads(byte_kline.decode('utf-8'))) for byte_kline in byte_klines]
+        kline_dict = {k.open_time: k for k in total_klines}
+        open_times = [open_time // granular_ms for open_time in sorted(kline_dict.keys())]
+        missing_intervals = self.find_missing_intervals(open_times, start_time // granular_ms, end_time // granular_ms)
+        for start, end in missing_intervals:
+            klines = self._get_klines(symbol, granular, start * granular_ms, end * granular_ms)
+            klines = [KLine.from_rest(kline, granular) for kline in klines]
+            total_klines.extend(klines)
+            with self.redis.pipeline() as pipe:
+                for k in klines:
+                    score = k.open_time  # Use open_time as the score
+                    # Queue the insertion command with JSON serialization
+                    pipe.zadd(key, {k.model_dump_json(): score})
+                # Execute all commands at once
+                pipe.execute()
+            if self.redis.zcard(key) > self.MAX_SZ:
+                logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
+                self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
+        return total_klines
+
+    def receive(self, granular: str):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = self._get_key(self.symbol, self.granular)
+        key = f"spot.{granular}.offline"
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 
@@ -89,85 +116,103 @@ class OfflineSpotFeed(Feed):
             while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
-                    logger.info(f"Received message: {message}")
                     yield message
         finally:
             logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
             pubsub.unsubscribe()
             pubsub.close()
 
-    def _fetch_and_store_prestart_data(self, granular_ms: int, key: str):
-        """Fetch and store historical data before the start time."""
-        prestart_ts = (self.start - granular_ms * self.limit) // granular_ms * granular_ms
-        preend_ts = (self.start - granular_ms) // granular_ms * granular_ms - 1
-
-        klines = get_klines(self.sql_engine, self.symbol, self.granular, prestart_ts, preend_ts)
-        logger.info(f"Storing pre-start data: from {klines[0].open_time} to {klines[-1].open_time}")
-        batch_insert_klines(self.redis, key, klines)
-
-    def _fetch_and_stream_klines(self, granular_ms: int):
-        """Fetch and stream klines in batches."""
-        current_ts = self.start + granular_ms * self.BATCH_SZ * self._index
-        key = get_key(self.symbol, self.granular)
-
-        while current_ts < self.end:
-            if self._stop_event:
-                logger.info("Receive stop event signal.")
-                break
-
-            next_ts = min(current_ts + granular_ms * self.BATCH_SZ - 1, self.end)
-
-            klines = get_klines(self.sql_engine, self.symbol, self.granular, current_ts, next_ts)
-
-            for kline in klines:
-                if self._stop_event:
-                    return
-                self._put_to_buffer(kline)
-                if self.sleep_time > 0:
-                    time.sleep(self.sleep_time / 1000)
-
-            self._index += 1
-            current_ts = next_ts + 1
-
-    def _put_to_buffer(self, kline):
-        """Put a kline into the buffer, handling the case where the buffer is full."""
-        while not self._stop_event:
-            try:
-                self._buffer.put(kline, block=True, timeout=2)
-                break
-            except Full:
-                logger.warning("Buffer is full, retrying...")
-
-    def _stream_data(self):
-        """Main method to stream data."""
-        try:
-            granular_ms = helper.to_unixtime_interval(self.granular) * 1000
-            # key = self._get_key(self.symbol, self.granular)
-
-            self.start = self.start // granular_ms * granular_ms
-            self.end = self.end // granular_ms * granular_ms
-
-            if self._index == 0:
-                self._fetch_and_store_prestart_data(granular_ms, key)
-
-            self._fetch_and_stream_klines(granular_ms)
-
-        except Exception as e:
-            logger.error(f"Error in _stream_data: {e}", exc_info=True)
-        finally:
-            self._stop_event = True
 
     def close(self):
-        """Signal the provider to stop streaming data."""
-        with self._lock:
-            self._stop_event = True
-        if self._thread.is_alive():
-            self._thread.join()
+        """Gracefully stop the Online Feed."""
+        logger.info("OfflinepotFeed close() is called")
+        self._stop_event = True  # stop all operations
+        try:
+            self._buffer.put(None, timeout=1)  # Unblock any waiting threads
+        except Full:
+            pass
+
+        # Delete Redis key safely
         try:
             time.sleep(1)
-            key = get_key(self.symbol, self.granular)
-            logger.info(f"Deleting Redis key: {key}")
-            self.redis.delete(key)
+            for cache_key in self._cache_keys:
+                self.redis.delete(cache_key)
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
-        logger.info("Historical stop() finish.")
+
+        logger.info("OfflineSpotFeed close() finished")
+
+    def _get_klines(self, symbol: str, interval: str, start: int, end: int) -> list[KLine]:
+        granular_ms = helper.to_unixtime_interval(interval) * 1000
+        query = f"""
+        SELECT 
+            MAX(CASE WHEN row_num_asc = 1 THEN open_time END) AS open_time,               -- Kline open time
+            MAX(CASE WHEN row_num_asc = 1 THEN open_px END) AS open_px,                  -- Open price
+            MAX(high_px) AS high_px,                                                    -- High price
+            MIN(low_px) AS low_px,                                                      -- Low price
+            MAX(CASE WHEN row_num_desc = 1 THEN close_px END) AS close_px,              -- Close price
+            SUM(base_asset_volume) AS base_asset_volume,                                -- Volume
+            MAX(CASE WHEN row_num_desc = 1 THEN close_time END) AS close_time,          -- Kline close time
+            SUM(quote_asset_volume) AS quote_asset_volume,                              -- Quote asset volume
+            SUM(number_of_trades) AS number_of_trades,                                  -- Number of trades
+            SUM(taker_buy_base_asset_volume) AS taker_buy_base_asset_volume,            -- Taker buy base asset volume
+            SUM(taker_buy_quote_asset_volume) AS taker_buy_quote_asset_volume,          -- Taker buy quote asset volume
+            '0' AS unused_field                                                         -- Unused field
+        FROM (
+            SELECT 
+                FLOOR(open_time / {granular_ms}) AS grandular,
+                open_time,
+                close_time,
+                open_px,
+                high_px,
+                low_px,
+                close_px,
+                number_of_trades,
+                base_asset_volume,
+                taker_buy_base_asset_volume,
+                quote_asset_volume,
+                taker_buy_quote_asset_volume,
+                ROW_NUMBER() OVER (PARTITION BY FLOOR(open_time / {granular_ms}) ORDER BY open_time ASC) AS row_num_asc,
+                ROW_NUMBER() OVER (PARTITION BY FLOOR(open_time / {granular_ms}) ORDER BY open_time DESC) AS row_num_desc
+            FROM 
+                kline
+            WHERE 
+                symbol = '{symbol}' 
+                AND open_time >= {start} 
+                AND open_time < {end}
+        ) AS ranked_kline
+        GROUP BY 
+            grandular
+        ORDER BY 
+            grandular;
+        """
+        df = pd.read_sql(query, self.engine)
+        res = df.values.tolist()
+        return [KLine.from_rest(r, interval) for r in res]
+    
+    @staticmethod
+    def find_missing_intervals(x, start, end):
+        # Initialize the result list
+        missing_intervals = []
+
+        # Use binary search to find the starting point within the range
+        left = bisect_left(x, start)
+        right = bisect_right(x, end)
+
+        # Add the first missing interval if necessary
+        if left == 0 or x[left - 1] < start:
+            current_start = start
+        else:
+            current_start = x[left - 1] + 1
+
+        # Traverse only relevant portion of the list
+        for i in range(left, right):
+            if x[i] > current_start:
+                missing_intervals.append([current_start, x[i] - 1])
+            current_start = x[i] + 1
+
+        # Add the final missing interval, if necessary
+        if current_start <= end:
+            missing_intervals.append([current_start, end])
+
+        return missing_intervals

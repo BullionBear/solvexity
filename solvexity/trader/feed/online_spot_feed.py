@@ -1,6 +1,5 @@
 from solvexity.trader.core import Feed
 from redis import Redis
-from threading import Lock
 from binance.client import Client as BinanceClient
 from binance import ThreadedWebsocketManager
 from queue import Queue, Empty, Full
@@ -35,7 +34,6 @@ class OnlineSpotFeed(Feed):
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False
-        self._index = 0
         self._thread = ThreadedWebsocketManager()
 
     def send(self):
@@ -52,6 +50,7 @@ class OnlineSpotFeed(Feed):
             try:
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
+                    logger.warning("Online feed recv stop signal.")
                     raise StopIteration
                 for granular, granular_ms in self._granulars.items():
                     if kline.is_close and kline.open_time % granular_ms == 0:
@@ -61,10 +60,10 @@ class OnlineSpotFeed(Feed):
             except Empty:
                 continue
 
-        logger.info("OnlineSpotFeed stopped.")
+        logger.info("OnlineSpotFeed stopped send()")
 
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
-        key = f"spot.{symbol}.{granular}"
+        key = f"spot.{symbol}.{granular}.online"
         self._cache_keys.add(key)
         granular_ms = self._grandulars[granular]
         byte_klines = self.redis.zrangebyscore(key, start_time, end_time)

@@ -6,7 +6,7 @@ from sqlalchemy.engine import Engine
 from queue import Queue, Empty, Full
 import json
 from solvexity.trader.data import get_key, get_klines, batch_insert_klines
-import solvexity.helper
+import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
 logger = logging.getLogger("feed")

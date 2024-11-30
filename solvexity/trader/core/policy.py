@@ -2,7 +2,7 @@ from typing import Type
 from solvexity.dependency.notification import Color
 from abc import ABC, abstractmethod
 from .trade_context import TradeContext
-import solvexity.helper
+import solvexity.helper as helper
 
 class Policy(ABC):
     """

@@ -1,6 +1,6 @@
 import argparse
 import signal
-import solvexity.helper
+import solvexity.helper as helper
 import solvexity.helper.logging as logging
 from solvexity.trader.config import ConfigLoader
 

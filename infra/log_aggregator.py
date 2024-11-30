@@ -1,121 +1,102 @@
+import argparse
 import redis
-import json
 import os
 import gzip
-import shutil
-import argparse
-from datetime import datetime
+import json
+import datetime
+import threading
 
 class LogAggregator:
-    """
-    Log aggregator to consume logs from a Redis PubSub channel and manage log files with batch writing.
-    """
-    def __init__(self, redis_host='localhost', redis_port=6379, channel='log_channel', log_dir='/var/log', batch_size=100):
-        self.redis_client = redis.StrictRedis(host=redis_host, port=redis_port, decode_responses=True)
+    def __init__(self, redis_host, redis_port, channel, log_dir):
+        self.redis_host = redis_host
+        self.redis_port = redis_port
         self.channel = channel
         self.log_dir = log_dir
-        self.current_date = datetime.now().strftime('%Y%m%d')
-        self.batch_size = batch_size
-        self.log_batches = {}  # Dictionary to store logs by file
+        self.running = True
+
+        # Ensure the log directory exists
+        os.makedirs(self.log_dir, exist_ok=True)
+
+        # Redis connection
+        self.redis_client = redis.StrictRedis(host=self.redis_host, port=self.redis_port, decode_responses=True)
+        self.pubsub = self.redis_client.pubsub()
+
+        # Subscribe to the channel
+        self.pubsub.subscribe(self.channel)
+
+        # Current date for tracking log file rotation
+        self.current_date = datetime.date.today()
 
     def start(self):
-        """
-        Starts listening to the Redis PubSub channel for logs.
-        """
-        pubsub = self.redis_client.pubsub()
-        pubsub.subscribe(self.channel)
+        print(f"Starting log aggregator for channel: {self.channel}")
+        threading.Thread(target=self._compress_logs_daily, daemon=True).start()
+        self._process_logs()
 
-        print(f"Listening for logs on Redis channel: {self.channel}")
-        try:
-            for message in pubsub.listen():
-                if message['type'] == 'message':
-                    log_data = message['data']
-                    self.process_log(log_data)
-                self.check_date_rollover()
-        except KeyboardInterrupt:
-            print("\nLog aggregator stopped.")
-        finally:
-            pubsub.close()
-            self.flush_all_batches()  # Ensure all remaining logs are written
+    def _process_logs(self):
+        for message in self.pubsub.listen():
+            if not self.running:
+                break
 
-    def process_log(self, log_data):
+            if message["type"] == "message":
+                log_data = message["data"]
+                self._write_log(log_data)
+
+    def _write_log(self, log_data):
         """
-        Processes and batches the log data.
+        Write the log data (JSON format) to a file.
         """
         try:
+            # Parse the JSON log data
             log_record = json.loads(log_data)
-            log_time = log_record.get('time', datetime.now().isoformat())
-            
-            # Preprocess the timestamp to replace ',' with '.' for compatibility
-            log_time = log_time.replace(',', '.')
-            log_date = datetime.fromisoformat(log_time).strftime('%Y%m%d')
-            
-            logger_name = log_record.get('name', 'unknown')
-            process_id = log_record.get('process_id', 'unknown')
 
-            log_file_name = f"{logger_name}_{log_date}_{process_id}.log"
-            log_file_path = os.path.join(self.log_dir, log_file_name)
+            logger_name = log_record.get("name", "unknown_logger")
+            process_id = log_record.get("process_id", "unknown_process")
+            log_date = datetime.date.today().strftime("%Y_%m_%d")
+            log_filename = f"{logger_name}_{log_date}_{process_id}.log"
+            log_filepath = os.path.join(self.log_dir, log_filename)
 
-            # Add the log record to the batch
-            if log_file_path not in self.log_batches:
-                self.log_batches[log_file_path] = []
+            # Write the log message to the file
+            with open(log_filepath, 'a') as log_file:
+                log_file.write(json.dumps(log_record) + "\n")
 
-            self.log_batches[log_file_path].append(json.dumps(log_record))
-
-            # Flush the batch to file if it exceeds the batch size
-            if len(self.log_batches[log_file_path]) >= self.batch_size:
-                self.flush_batch(log_file_path)
-        except json.JSONDecodeError:
-            print(f"Invalid log data received: {log_data}")
-        except ValueError as e:
-            print(f"Error processing log timestamp: {e}. Log data: {log_data}")
-
-    def flush_batch(self, file_path):
-        """
-        Flushes a batch of logs to the specified file.
-        """
-        try:
-            logs = self.log_batches.get(file_path, [])
-            if logs:
-                os.makedirs(self.log_dir, exist_ok=True)  # Ensure the log directory exists
-                with open(file_path, 'a') as log_file:
-                    log_file.write("\n".join(logs) + "\n")
-                self.log_batches[file_path] = []  # Clear the batch after writing
         except Exception as e:
-            print(f"Failed to write logs to {file_path}: {e}")
+            print(f"Error writing log: {e}")
 
-    def flush_all_batches(self):
+    def _compress_logs_daily(self):
         """
-        Flushes all remaining log batches to their respective files.
+        Compress all log files of the day at the end of the day.
         """
-        for file_path in list(self.log_batches.keys()):
-            self.flush_batch(file_path)
+        while self.running:
+            now = datetime.datetime.now()
+            midnight = datetime.datetime.combine(now.date(), datetime.time.min) + datetime.timedelta(days=1)
+            seconds_until_midnight = (midnight - now).total_seconds()
 
-    def check_date_rollover(self):
-        """
-        Checks if the date has changed and handles log rotation.
-        """
-        new_date = datetime.now().strftime('%Y%m%d')
-        if new_date != self.current_date:
-            print(f"Date rollover detected: {self.current_date} -> {new_date}")
-            self.flush_all_batches()
-            self.compress_logs(self.current_date)
-            self.current_date = new_date
+            threading.Event().wait(seconds_until_midnight)  # Wait until the end of the day
 
-    def compress_logs(self, date):
+            self._compress_logs_for_date(self.current_date)
+            self.current_date = datetime.date.today()
+
+    def _compress_logs_for_date(self, log_date):
         """
-        Compresses all log files for the specified date into a single .gz archive.
+        Compress all log files for the given date into a .gz file.
         """
-        archive_name = os.path.join(self.log_dir, f"{date}.gz")
-        with gzip.open(archive_name, 'wb') as archive:
-            for file_name in os.listdir(self.log_dir):
-                if file_name.endswith(f"_{date}.log"):
-                    file_path = os.path.join(self.log_dir, file_name)
-                    print(f"Adding {file_path} to {archive_name}")
-                    with open(file_path, 'rb') as log_file:
-                        shutil.copyfileobj(log_file, archive)
-                    os.remove(file_path)  # Remove the original log file
-        print(f"Compressed logs into {archive_name}")
+        date_str = log_date.strftime("%Y_%m_%d")
+        compressed_filename = os.path.join(self.log_dir, f"{date_str}.gz")
+
+        with gzip.open(compressed_filename, 'wb') as compressed_file:
+            for log_file in os.listdir(self.log_dir):
+                if log_file.endswith(".log") and date_str in log_file:
+                    log_file_path = os.path.join(self.log_dir, log_file)
+                    with open(log_file_path, 'rb') as f:
+                        compressed_file.write(f.read())
+                    os.remove(log_file_path)  # Delete the original log file
+
+    def stop(self):
+        """
+        Gracefully stop the log aggregator.
+        """
+        self.running = False
+        self.pubsub.close()
 
 def parse_arguments():
     """
@@ -136,4 +117,7 @@ if __name__ == "__main__":
         channel=args.channel,
         log_dir=args.log_dir
     )
-    aggregator.start()
+    try:
+        aggregator.start()
+    except KeyboardInterrupt:
+        aggregator.stop()

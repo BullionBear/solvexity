@@ -8,7 +8,7 @@ import helper.logging as logging
 from helper import Shutdown
 import signal
 import threading
-from .dispatcher import CommandHandler, Command
+from .dispatcher.command import CommandHandler, Command
 from trader.config import ConfigLoader
 
 # Load environment variables from .env
@@ -27,7 +27,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def start_server(host, port, config_loader, shutdown):
+def start_server(host, port, handler, shutdown):
     """Starts the ZeroMQ server."""
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -35,19 +35,13 @@ def start_server(host, port, config_loader, shutdown):
     socket.bind(address)
     socket.RCVTIMEO = 1000  # Set timeout to 1000 milliseconds (1 second)
     logger.info(f"Server started at {address}")
-
-    handler = CommandHandler(config_loader)
     while not shutdown.is_set():
         try:
             # Attempt to receive a message with a timeout
-            message = socket.recv_string()
+            message = socket.recv_json()
             logger.info(f"Received: {message}")
-            try:
-                response = Command.from_string(message).execute(handler)
-                socket.send_string(json.dumps({"type": "success", "message": "Data received"}))
-            except json.JSONDecodeError:
-                logger.error("Invalid JSON received")
-                socket.send_string(json.dumps({"type": "error", "message": "Invalid JSON format"}))
+            response = Command.from_dict(message).execute(handler)
+            socket.send_json(response.to_dict())
         except zmq.Again:
             # This exception occurs when a timeout happens
             logger.debug("No message received (timeout).")

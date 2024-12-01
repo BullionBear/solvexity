@@ -24,23 +24,28 @@ def main(config_loader: ConfigLoader):
     # Retrieve a strategy
     shutdown = helper.Shutdown(signal.SIGINT, signal.SIGTERM)
     provider = config_loader["feeds"]["offline_spot"]
-    shutdown.register(lambda frame: provider.close())
+    shutdown.register(lambda signum: provider.close())
     pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
     shutdown.register(lambda signum: pythagoras_btc.close())
-
     try:
         for tigger in provider.send():
             if shutdown.is_set():
                 break
             trigger_message = json.loads(tigger)
-            logger.info(f"Trigger: {trigger_message}")
+            # logger.info(f"Trigger: {trigger_message}")
             if trigger_message["data"]["granular"] == "1h":
-                recv_message =  next(provider.receive("1h"))
-                logger.info(f"Received: {recv_message}")
-                # pythagoras_btc.invoke()
+                # Fetch only one message
+                try:
+                    recv_message = next(provider.receive("1h"))
+                    logger.info(f"Received: {recv_message}")
+                    pythagoras_btc.invoke()
+                except StopIteration:
+                    logger.warning("No message received for 1h granular.")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}", exc_info=True)
     finally:
+        shutdown.trigger_callbacks()  # Ensure all callbacks are executed
         logger.info("Trading process terminated gracefully.")
-    
 
 
 if __name__ == "__main__":

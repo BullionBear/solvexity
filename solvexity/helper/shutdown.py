@@ -29,7 +29,7 @@ class Shutdown:
         """
         logger.info(f"Signal received: {signum}. Number of callbacks: {len(self.callbacks)} is executing.")
         with self.lock:
-            for callback in self.callbacks[::-1]: # first in, last out
+            for callback in reversed(self.callbacks):  # Execute in LIFO order
                 try:
                     callback(signum)
                 except Exception as e:
@@ -69,3 +69,15 @@ class Shutdown:
         """
         self.shutdown_event.set()
         logger.info("Shutdown event set.")
+
+    def trigger_callbacks(self):
+        """
+        Trigger registered callbacks manually, useful for programmatic shutdowns.
+        """
+        logger.info("Triggering shutdown callbacks explicitly.")
+        with self.lock:
+            for callback in reversed(self.callbacks):
+                try:
+                    callback(None)
+                except Exception as e:
+                    logger.error(f"Error invoking manual shutdown callback: {e}", exc_info=True)

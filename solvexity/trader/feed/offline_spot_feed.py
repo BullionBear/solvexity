@@ -7,7 +7,7 @@ import json
 from solvexity.trader.model import KLine
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
-from threading import Thread
+from threading import Thread, Condition
 from bisect import bisect_left, bisect_right
 import pandas as pd
 
@@ -16,52 +16,57 @@ logger = logging.getLogger("feed")
 
 
 class OfflineSpotFeed(Feed):
-    BATCH_SZ = 128
-    MAX_SZ = 1024
-
+    MAX_SZ = 1024  # Maintain the latest 1024 klines in Redis for each symbol and granularity
     def __init__(self, redis: Redis, sql_engine: Engine, start: int, end: int, sleep_time: int):
-        """
-        Args:
-            redis (Redis): Redis client instance.
-            sql_engine (Engine): SQL Alchemy engine instance.
-            sleep_time (int): The sleep interval (millisecond) between each batch of kline data.
-        """
         super().__init__()
-        self.redis: Redis = redis
-        self.sql_engine: Engine = sql_engine
-
+        self.redis = redis
+        self.sql_engine = sql_engine
         self.start = start
-        self.end = end   
-
+        self.end = end
+        self.sleep_time = sleep_time
         self._GRANDULARS = {
             interval: helper.to_unixtime_interval(interval) * 1000
             for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
         }
-        self.sleep_time = sleep_time
-        self._current_time = start // self._GRANDULARS['1m'] * self._GRANDULARS['1m'] # Round down to the nearest minute
+        self._current_time = start // self._GRANDULARS['1m'] * self._GRANDULARS['1m']
         self._cache_keys = set()
+        self._queues = {granular: Queue(maxsize=10) for granular in self._GRANDULARS}  # Separate queues for granulars
         self._stop_event = False
-        self._queue = Queue(maxsize=1)
+        self._condition = Condition()  # Condition variable for signaling
         self._thread = Thread(target=self._subscribe)
+        self._thread.start()
 
     def _get_key(self, symbol: str, granular: str) -> str:
         return f"spot:{symbol}:{granular}:offline"
+    
+    def _subscribe(self):
+        logger.info("OfflineSpotFeed started _subscribe()")
+        pubsub = self.redis.pubsub()
+        pubsub.psubscribe(f"spot:*:offline")
+        try:
+            while not self._stop_event:
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message and message['type'] == 'pmessage':
+                    channel = message['channel'].decode('utf-8')
+                    granular = channel.split(":")[1]
+                    data = json.loads(message['data'].decode('utf-8'))
+                    with self._condition:  # Synchronize access to queues
+                        if granular in self._queues and not self._queues[granular].full():
+                            self._queues[granular].put(data)
+                            self._condition.notify_all()  # Notify waiting threads
+        finally:
+            pubsub.punsubscribe()
+            pubsub.close()
 
     def send(self):
-        """
-        Stream klines from the buffer and publish them to Redis.
-        """
-        self._thread.start()
         while self._current_time < self.end:
             if self._stop_event:
                 return
-            # self.current_time = open_time + granular_ms
             self._current_time += self._GRANDULARS['1m']
             for granular, granular_ms in self._GRANDULARS.items():
                 if self._current_time % granular_ms == 0:
                     event = json.dumps({"E": "kline_update", "data": {
-                            "granular": granular, "current_time": self._current_time}
-                            })
+                        "granular": granular, "current_time": self._current_time}})
                     self.redis.publish(f"spot:{granular}:offline", event)
                     yield event
             if self.sleep_time > 0:
@@ -112,32 +117,17 @@ class OfflineSpotFeed(Feed):
                 self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
         return total_klines
     
-    def _subscribe(self):
+    def receive(self, granular: str, timeout: float = 5.0):
         """
-        Subscribe to Redis Pub/Sub messages and update the current time.
+        Wait for and return the next message for the specified granular.
         """
-        logger.info("OfflineSpotFeed started _subscribe()")
-        pubsub = self.redis.pubsub()
-        pubsub.subscribe(f"spot:*:offline")
-        try:
-            while not self._stop_event:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message and message['type'] == 'message':
-                    if self._queue.full():
-                        self._queue.get(block=True, timeout=1.0)
-                    self._queue.put(message['data'], block=True)
-        finally:
-            pubsub.unsubscribe()
-            pubsub.close()
-
-    def receive(self, granular: str):
-        """
-        Listen to Redis Pub/Sub messages for the current key and yield them.
-        """
-        while not self._stop_event:
-            message =  self._queue.get(block=True)
-            if message and message['data']['granular'] == granular:
-                yield message
+        start_time = time.time()
+        with self._condition:  # Wait for a relevant message
+            while time.time() - start_time < timeout:
+                if not self._queues[granular].empty():
+                    yield self._queues[granular].get()
+                self._condition.wait(timeout=timeout)  # Wait until notified
+        raise TimeoutError(f"No message received for granular {granular} within timeout")
 
 
     def close(self):

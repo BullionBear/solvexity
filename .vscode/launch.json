@@ -22,7 +22,7 @@
             "program": "${workspaceFolder}/argparser/backtest_argparser.py",
             "args": [
                 "-c",
-                "config/strategy_test.json5"
+                "config/system/local_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

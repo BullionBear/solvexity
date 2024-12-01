@@ -51,7 +51,7 @@ class OfflineSpotFeed(Feed):
         """
         while self._current_time < self.end:
             if self._stop_event:
-                raise StopIteration
+                return
             # self.current_time = open_time + granular_ms
             self._current_time += self._GRANDULARS['1m']
             for granular, granular_ms in self._GRANDULARS.items():
@@ -59,7 +59,8 @@ class OfflineSpotFeed(Feed):
                     event = json.dumps({"E": "kline_update", "granular": granular})
                     self.redis.publish(f"spot.{granular}.offline", event)
                     yield event
-            time.sleep(self.sleep_time / 1000)
+            if self.sleep_time > 0:
+                time.sleep(self.sleep_time / 1000)
 
         logger.info("OfflineSpotFeed stopped send()")
 
@@ -132,11 +133,6 @@ class OfflineSpotFeed(Feed):
         """Gracefully stop the Online Feed."""
         logger.info("OfflinepotFeed close() is called")
         self._stop_event = True  # stop all operations
-        try:
-            self._buffer.put(None, timeout=1)  # Unblock any waiting threads
-        except Full:
-            pass
-
         # Delete Redis key safely
         try:
             time.sleep(1)

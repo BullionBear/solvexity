@@ -9,6 +9,8 @@ def create_offline_spot_feed(services: ServiceFactory, config: dict) -> OfflineS
     return OfflineSpotFeed(
         redis=redis_instance,
         sql_engine=sql_engine,
+        start=config["start"],
+        end=config["end"],
         sleep_time=config["sleep_time"]
     )
 
@@ -16,9 +18,7 @@ def create_offline_spot_feed(services: ServiceFactory, config: dict) -> OfflineS
 def create_online_spot_feed(services: ServiceFactory, config: dict) -> OnlineSpotFeed:
     redis_instance = services[config["redis"].split(".")[1]]
     return OnlineSpotFeed(
-        redis=redis_instance,
-        symbol=config["symbol"],
-        limit=config["limit"]
+        redis=redis_instance
     )
 
 

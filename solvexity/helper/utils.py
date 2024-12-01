@@ -4,6 +4,7 @@ import random
 import string
 from decimal import Decimal, ROUND_DOWN
 from binance.client import Client as BinanceClient
+from datetime import datetime, timezone
 from functools import lru_cache
 
 logger = logging.getLogger()
@@ -43,7 +44,9 @@ def to_unixtime_interval(interval_str: str) -> int:
     
     except (ValueError, IndexError):
         raise ValueError("Invalid interval format. Please use formats like '1s', '5m', '1h', '5d'.")
-    
+
+def to_isoformat(timestamp: int) -> str:
+    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc).isoformat()
 
 def generate_random_id(length=8):
     characters = string.ascii_letters + string.digits

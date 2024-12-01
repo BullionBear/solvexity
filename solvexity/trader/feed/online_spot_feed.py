@@ -27,12 +27,12 @@ class OnlineSpotFeed(Feed):
         self.redis: Redis = redis
         self.client: BinanceClient = BinanceClient()
 
-        self._grandulars = {
+        self._GRANULARS = {
             interval: helper.to_unixtime_interval(interval) * 1000
             for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
         }
 
-        self.current_time = -1
+        self._current_time = -1
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False
@@ -53,11 +53,13 @@ class OnlineSpotFeed(Feed):
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
                     logger.warning("Online feed recv stop signal.")
-                    raise StopIteration
-                self.current_time = kline.event_time
-                for granular, granular_ms in self._granulars.items():
-                    if kline.is_close and kline.open_time % granular_ms == 0:
-                        event = json.dumps({"E": "kline_update", "granular": granular})
+                    return
+                self._current_time = kline.event_time
+                for granular, granular_ms in self._GRANULARS.items():
+                    if kline.is_closed and kline.open_time % granular_ms == 0:
+                        event = json.dumps({"E": "kline_update", "data": {
+                            "granular": granular, "current_time": self._current_time}
+                            })
                         self.redis.publish(f"spot.{granular}", event)
                         yield event
             except Empty:

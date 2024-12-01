@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: FastAPI",
+            "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "app.main:app",
-                "--reload"
-            ],
-            "jinja": true
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+            }
         },
         {
             "name": "Python Debugger: Run backtest argument parser with history",
@@ -22,7 +22,7 @@
             "program": "${workspaceFolder}/argparser/backtest_argparser.py",
             "args": [
                 "-c",
-                "config/strategy_test.json5"
+                "config/system/local_test.json5"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -46,10 +46,10 @@
             }
         },
         {
-            "name": "Python Debugger: Run historical arguement parser",
+            "name": "Python Debugger: Run trading arguement parser",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/argparser/historical_argparser.py",
+            "program": "${workspaceFolder}/argparser/trading_argparser.py",
             "args": [
                 "-c",
                 "config/system/local_test.json5"

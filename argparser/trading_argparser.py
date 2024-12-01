@@ -3,6 +3,7 @@ import solvexity.helper as helper
 import solvexity.helper.logging as logging
 import signal
 import traceback
+import json
 from solvexity.trader.config import ConfigLoader
 
 logging.setup_logging()
@@ -23,14 +24,18 @@ def parse_arguments():
 def main(config_loader: ConfigLoader):
     # Retrieve a strategy
     pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
-    provider = config_loader["feeds"]["offline_btc_easy"]
+    provider = config_loader["feeds"]["offline_spot"]
     shutdown.register(lambda signum: provider.close())
     shutdown.register(lambda signum: pythagoras_btc.close())
 
     try:
-        for _ in provider.receive():
+        for trigger in provider.receive("1h"):
             if shutdown.is_set():
                 break
+            trigger_message = json.loads(trigger)
+            logger.info(f"Trigger: {trigger_message}")
+            logger.info(f"Datetime: {helper.to_isoformat(trigger_message["data"]["current_time"])}")
+
             pythagoras_btc.invoke()
     finally:
         logger.info("Trading process terminated gracefully.")

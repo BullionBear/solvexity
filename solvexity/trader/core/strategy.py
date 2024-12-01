@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from solvexity.trader.data import KLine
+from solvexity.trader.model import KLine
 
-import solvexity.helper
+import solvexity.helper as helper
 
 
 class Strategy(ABC):

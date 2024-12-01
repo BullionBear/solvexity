@@ -1,10 +1,10 @@
 from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
-from solvexity.trader.data import Trade
+from solvexity.trader.model import Trade
 from solvexity.dependency.notification import Color
 import pandas as pd
-import solvexity.helper
+import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
 logger = logging.getLogger("trading")

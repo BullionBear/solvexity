@@ -1,14 +1,14 @@
 import argparse
-import solvexity.helper
 import solvexity.helper.logging as logging
-import threading
+from solvexity.helper import Shutdown, to_isoformat
 import signal
 import traceback
+import json
 from solvexity.trader.config import ConfigLoader
+
 
 logging.setup_logging()
 logger = logging.getLogger("feed")
-shutdown_event = threading.Event()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")
@@ -22,27 +22,24 @@ def parse_arguments():
 
 def handle_shutdown_signal(signum, frame):
     logger.info("Shutdown signal received. Shutting down gracefully...")
-    shutdown_event.set()
 
 def main(config_loader: ConfigLoader):
-    provider = config_loader["feeds"]["offline_btc_easy"]
-
+    shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
+    provider = config_loader["feeds"]["offline_spot"]
+    shutdown.register(lambda frame: provider.close())
     # Start provider in a controlled loop
     try:
-        for data in provider.send():
-            if shutdown_event.is_set():
-                break
-            logger.info(f"Publish kline data: {data}")
+        for trigger in provider.send():
+            trigger_message = json.loads(trigger)
+            logger.info(f"Trigger: {trigger_message}")
+            logger.info(f"Datetime: {to_isoformat(trigger_message["data"]["current_time"])}")
+
     finally:
-        provider.close()
+        shutdown.set()
 
     logger.info("Trading process terminated gracefully.")
 
 if __name__ == "__main__":
-    # Register signal handler for graceful shutdown
-    signal.signal(signal.SIGINT, handle_shutdown_signal)
-    signal.signal(signal.SIGTERM, handle_shutdown_signal)
-    
     args = parse_arguments()
     try:
         config = ConfigLoader.from_file(args.config)

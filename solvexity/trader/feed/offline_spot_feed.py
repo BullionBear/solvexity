@@ -19,53 +19,47 @@ class OfflineSpotFeed(Feed):
     BATCH_SZ = 128
     MAX_SZ = 1024
 
-    def __init__(self, redis: Redis, sql_engine: Engine, sleep_time: int):
+    def __init__(self, redis: Redis, sql_engine: Engine, start: int, end: int, sleep_time: int):
         """
         Args:
             redis (Redis): Redis client instance.
             sql_engine (Engine): SQL Alchemy engine instance.
-            symbol (str): The symbol to get kline data for.
-            granular (str): The granularity of the kline data.
-            start (int): The start time of the kline data in ms.
-            end (int): The end time of the kline data in ms.
-            limit (int): The maximum number of kline data to get.
             sleep_time (int): The sleep interval (millisecond) between each batch of kline data.
         """
         super().__init__()
         self.redis: Redis = redis
         self.sql_engine: Engine = sql_engine
-        self.sleep_time = sleep_time
 
+        self.start = start
+        self.end = end   
+
+        self._GRANDULARS = {
+            interval: helper.to_unixtime_interval(interval) * 1000
+            for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
+        }
+        self.sleep_time = sleep_time
+        self._current_time = start // self._GRANDULARS['1m'] * self._GRANDULARS['1m'] # Round down to the nearest minute
         self._cache_keys = set()
         self._stop_event = False
+
+    def _get_key(self, symbol: str, granular: str) -> str:
+        return f"spot.{symbol}.{granular}.offline"
 
     def send(self):
         """
         Stream klines from the buffer and publish them to Redis.
         """
-        granular_ms = helper.to_unixtime_interval(self.granular) * 1000
-        while not self._stop_event:
+        while self._current_time < self.end:
+            if self._stop_event:
+                raise StopIteration
             # self.current_time = open_time + granular_ms
-            event = json.dumps({"E": "kline_update", "granular": self.granular})
-            self.redis.publish(f"spot.{self.granular}.offline", event)
-            yield event
-            time.sleep(self.sleep_time / 1000)
-
-        while not self._stop_event:
-            try:
-                kline = self._buffer.get(block=True, timeout=2)
-                if kline is None:
-                    logger.warning("Offline feed recv stop signal.")
-                    raise StopIteration
-                self.current_time = kline.event_time
-                granular_ms = helper.to_unixtime_interval(self.granular) * 1000
-                if kline.is_close and kline.open_time % granular_ms == 0:
-                    event = json.dumps({"E": "kline_update", "granular": self.granular})
-                    self.redis.publish(f"spot.{self.granular}.offline", event)
+            self._current_time += self._GRANDULARS['1m']
+            for granular, granular_ms in self._GRANDULARS.items():
+                if self._current_time % granular_ms == 0:
+                    event = json.dumps({"E": "kline_update", "granular": granular})
+                    self.redis.publish(f"spot.{granular}.offline", event)
                     yield event
-                yield kline
-            except Empty:
-                continue
+            time.sleep(self.sleep_time / 1000)
 
         logger.info("OfflineSpotFeed stopped send()")
 
@@ -89,7 +83,7 @@ class OfflineSpotFeed(Feed):
         Returns:
             list[KLine]: The kline data.
         """
-        key = f"spot.{symbol}.{granular}.offline"
+        key = self._get_key(symbol, granular)
         self._cache_keys.add(key)
         granular_ms = self._grandulars[granular]
         byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
@@ -117,7 +111,7 @@ class OfflineSpotFeed(Feed):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = f"spot.{granular}.offline"
+        key = self._get_key(granular)
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 
@@ -200,7 +194,6 @@ class OfflineSpotFeed(Feed):
         df = pd.read_sql(query, self.engine)
         res = df.values.tolist()
         return [KLine.from_rest(r, interval) for r in res]
-        
     
     @staticmethod
     def find_missing_intervals(x, start, end):

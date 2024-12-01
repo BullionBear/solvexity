@@ -2,8 +2,8 @@ from typing import Optional
 from decimal import Decimal
 import redis
 from solvexity.dependency.notification import Notification, Color
-from solvexity.trader.core import TradeContext
-from solvexity.trader.data import query_latest_kline, KLine, query_kline, Trade
+from solvexity.trader.core import TradeContext, Feed
+from solvexity.trader.model import KLine, Trade
 import solvexity.helper.logging as logging
 from datetime import datetime, timezone
 import solvexity.helper as helper
@@ -14,7 +14,7 @@ class PaperTradeContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """
-    def __init__(self, redis: redis.Redis, notification: Notification,  init_balance: dict[str, str], granular: str):
+    def __init__(self, feed: Feed, notification: Notification,  init_balance: dict[str, str], granular: str):
         """
         Args:
             init_balance (dict): The initial balance for the backtest context, e.g. {"BTC": '1', "USDT": '10000'}
@@ -24,7 +24,7 @@ class PaperTradeContext(TradeContext):
         self.granular = granular
         self.balance = {k: {"free": Decimal(v), "locked": Decimal('0')} for k, v in init_balance.items()}
         logger.info(f"Initial balance: {self.balance}\t Granular: {self.granular}")
-        self.redis = redis
+        self.feed: Feed = feed
         self.notification = notification
         self._trade_id = 1
         self.trade: list[Trade] = []
@@ -84,34 +84,19 @@ class PaperTradeContext(TradeContext):
         return self.balance[token]['free']
 
     def _get_time(self, symbol: str) -> int:
-        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
-        if not lastest_kline:
-            raise ValueError(f"No kline data found: {symbol}:{self.granular}")
+        lastest_kline = self.feed.latest_n_klines(symbol, self.granular, 1)[0]
         return lastest_kline.event_time
         
     
     def get_askbid(self, symbol: str) -> tuple[Decimal, Decimal]:
-        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
-        if not lastest_kline:
-            raise ValueError(f"No kline data found: {symbol}:{self.granular}")
-        ts = lastest_kline.close_time
-        close_dt = datetime.fromtimestamp(ts // 1000, tz=timezone.utc)
-        logger.info(f"Latest time: {close_dt.strftime('%Y-%m-%d %H:%M:%S')}, close: {lastest_kline.close}")
+        lastest_kline = self.feed.latest_n_klines(symbol, self.granular, 1)[0]
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
     
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         self.notification.notify(username, title, content, color)
 
     def get_klines(self, symbol, limit) -> list[KLine]:
-        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
-        if not lastest_kline:
-            logger.error(f"No kline data found: {symbol}:{self.granular}")
-            return []
-        end_ts = lastest_kline.close_time
-        grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
-        start_ts = end_ts - grandular_ts * limit
-        klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
-        return klines
+        return self.feed.latest_n_klines(symbol, self.granular, limit)
     
     def get_trades(self, symbol, limit) -> list[Trade]:
         trades = filter(lambda x: x.symbol == symbol, self.trade)

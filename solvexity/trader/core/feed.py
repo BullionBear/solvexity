@@ -19,7 +19,6 @@ class Feed(ABC):
     def latest_n_klines(symbol: str, granular: str, limit: int) -> list[KLine]:
         pass
 
-
     @abstractmethod
     def close():
         pass

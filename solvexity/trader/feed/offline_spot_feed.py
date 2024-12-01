@@ -95,7 +95,7 @@ class OfflineSpotFeed(Feed):
         open_times = [open_time // granular_ms for open_time in sorted(kline_dict.keys())]
         missing_intervals = self.find_missing_intervals(open_times, start_time // granular_ms, end_time // granular_ms)
         for start, end in missing_intervals:
-            klines = self._get_klines(symbol, granular, start * granular_ms, end * granular_ms)
+            klines = self._get_klines(symbol, granular, start * granular_ms, (end + 1) * granular_ms - 1)
             total_klines.extend(klines)
             with self.redis.pipeline() as pipe:
                 for k in klines:
@@ -122,8 +122,8 @@ class OfflineSpotFeed(Feed):
         try:
             while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message:
-                    yield message
+                if message and message['type'] == 'message':
+                    yield message['data']
         finally:
             logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
             pubsub.unsubscribe()

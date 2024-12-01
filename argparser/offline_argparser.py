@@ -30,11 +30,10 @@ def main(config_loader: ConfigLoader):
     # Start provider in a controlled loop
     try:
         for trigger in provider.send():
-            
             trigger_message = json.loads(trigger)
             logger.info(f"Trigger: {trigger_message}")
+            logger.info(f"Datetime: {to_isoformat(trigger_message["data"]["current_time"])}")
             # logger.info(f"Datetime: {to_isoformat(trigger_message["data"]["current_time"])}")
-
     finally:
         shutdown.set()
 

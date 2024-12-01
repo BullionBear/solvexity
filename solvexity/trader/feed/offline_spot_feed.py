@@ -41,14 +41,17 @@ class OfflineSpotFeed(Feed):
         self._current_time = start // self._GRANDULARS['1m'] * self._GRANDULARS['1m'] # Round down to the nearest minute
         self._cache_keys = set()
         self._stop_event = False
+        self._queue = Queue(maxsize=1)
+        self._thread = Thread(target=self._subscribe)
 
     def _get_key(self, symbol: str, granular: str) -> str:
-        return f"spot.{symbol}.{granular}.offline"
+        return f"spot:{symbol}:{granular}:offline"
 
     def send(self):
         """
         Stream klines from the buffer and publish them to Redis.
         """
+        self._thread.start()
         while self._current_time < self.end:
             if self._stop_event:
                 return
@@ -59,11 +62,11 @@ class OfflineSpotFeed(Feed):
                     event = json.dumps({"E": "kline_update", "data": {
                             "granular": granular, "current_time": self._current_time}
                             })
-                    self.redis.publish(f"spot.{granular}.offline", event)
+                    self.redis.publish(f"spot:{granular}:offline", event)
                     yield event
             if self.sleep_time > 0:
                 time.sleep(self.sleep_time / 1000)
-
+        self._stop_event = True
         logger.info("OfflineSpotFeed stopped send()")
 
     def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
@@ -108,32 +111,41 @@ class OfflineSpotFeed(Feed):
                 logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                 self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
         return total_klines
+    
+    def _subscribe(self):
+        """
+        Subscribe to Redis Pub/Sub messages and update the current time.
+        """
+        logger.info("OfflineSpotFeed started _subscribe()")
+        pubsub = self.redis.pubsub()
+        pubsub.subscribe(f"spot:*:offline")
+        try:
+            while not self._stop_event:
+                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message and message['type'] == 'message':
+                    if self._queue.full():
+                        self._queue.get(block=True, timeout=1.0)
+                    self._queue.put(message['data'], block=True)
+        finally:
+            pubsub.unsubscribe()
+            pubsub.close()
 
     def receive(self, granular: str):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = f"spot.{granular}.offline"
-        pubsub = self.redis.pubsub()
-        pubsub.subscribe(key)
-
-        logger.info(f"Subscribed to Redis Pub/Sub key: {key}")
-
-        try:
-            while not self._stop_event:
-                message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message and message['type'] == 'message':
-                    yield message['data']
-        finally:
-            logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
-            pubsub.unsubscribe()
-            pubsub.close()
+        while not self._stop_event:
+            message =  self._queue.get(block=True)
+            if message and message['data']['granular'] == granular:
+                yield message
 
 
     def close(self):
         """Gracefully stop the Online Feed."""
         logger.info("OfflinepotFeed close() is called")
         self._stop_event = True  # stop all operations
+        if self._thread.is_alive():
+            self._thread.join()
         # Delete Redis key safely
         try:
             time.sleep(1)

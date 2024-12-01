@@ -84,7 +84,7 @@ class OnlineSpotFeed(Feed):
         return False
 
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
-        key = f"spot.{symbol}.{granular}.online"
+        key = f"spot:{symbol}:{granular}:online"
         self._cache_keys.add(key)
         granular_ms = self._grandulars[granular]
         byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
@@ -118,7 +118,7 @@ class OnlineSpotFeed(Feed):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = f"spot.{granular}"
+        key = f"spot:{granular}:online"
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 

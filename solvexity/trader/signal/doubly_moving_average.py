@@ -85,6 +85,7 @@ class DoublyMovingAverage(Signal):
             ylabel='Price',
             ylabel_lower='Volume',
             mav=(self.fast_period, self.slow_period),  # Moving averages
+            mavcolors=['red', 'blue'],  # Apply the custom colors here
             figsize=(12, 8),
             show_nontrading=True,
             savefig=target_dest

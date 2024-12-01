@@ -3,6 +3,7 @@ import solvexity.helper.logging as logging
 from solvexity.helper import Shutdown, to_isoformat
 import signal
 import traceback
+import json
 from solvexity.trader.config import ConfigLoader
 
 
@@ -29,8 +30,9 @@ def main(config_loader: ConfigLoader):
     # Start provider in a controlled loop
     try:
         for trigger in provider.send():
-            logger.info(f"Trigger: {trigger}")
-            logger.info(f"Datetime: {to_isoformat(trigger["data"]["current_time"])}")
+            trigger_message = json.loads(trigger)
+            logger.info(f"Trigger: {trigger_message}")
+            logger.info(f"Datetime: {to_isoformat(trigger_message["data"]["current_time"])}")
 
     finally:
         shutdown.set()

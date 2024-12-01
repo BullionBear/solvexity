@@ -29,7 +29,7 @@ class Shutdown:
         """
         logger.info(f"Signal received: {signum}. Number of callbacks: {len(self.callbacks)} is executing.")
         with self.lock:
-            for callback in self.callbacks:
+            for callback in self.callbacks[::-1]: # first in, last out
                 try:
                     callback(signum)
                 except Exception as e:

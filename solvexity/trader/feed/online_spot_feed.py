@@ -32,6 +32,11 @@ class OnlineSpotFeed(Feed):
             for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
         }
 
+        self._granular_tc = {
+            interval: int(time.time() * 1000) // self._GRANULARS[interval]
+            for interval in self._GRANULARS
+        }
+
         self._current_time = -1
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
@@ -55,8 +60,8 @@ class OnlineSpotFeed(Feed):
                     logger.warning("Online feed recv stop signal.")
                     return
                 self._current_time = kline.event_time
-                for granular, granular_ms in self._GRANULARS.items():
-                    if kline.is_closed and kline.open_time % granular_ms == 0:
+                for granular in self._GRANULARS:
+                    if self._is_ts_closed(granular):
                         event = json.dumps({"E": "kline_update", "data": {
                             "granular": granular, "current_time": self._current_time}
                             })
@@ -64,8 +69,19 @@ class OnlineSpotFeed(Feed):
                         yield event
             except Empty:
                 continue
+            except Exception as e:
+                logger.error(f"Error in OnlineSpotFeed: {e}", exc_info=True)
+                continue
 
         logger.info("OnlineSpotFeed stopped send()")
+
+    def _is_ts_closed(self, granular: str) -> bool:
+        granular_ms = self._GRANULARS[granular]
+        current_tc = self._current_time // granular_ms
+        if current_tc > self._granular_tc[granular]:
+            self._granular_tc[granular] = current_tc
+            return True
+        return False
 
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
         key = f"spot.{symbol}.{granular}.online"

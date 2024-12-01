@@ -1,28 +1,29 @@
+from solvexity.trader.feed import FeedFactory
 from solvexity.dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
-from .paper_trade import PaperTradeContext
+from .paper_trade import PaperTradeSpotContext
 
-def create_spot_trade_context(config: dict, services: ServiceFactory) -> SpotTradeContext:
+def create_spot_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> SpotTradeContext:
     # Resolve services
     binance_client = services[config["binance_client"].split(".")[1]]
-    redis_instance = services[config["redis"].split(".")[1]]
-    notification_service = services[config["notification"].split(".")[1]]
-
+    # redis_instance = services[config["redis"].split(".")[1]]
+    notification_instance = services[config["notification"].split(".")[1]]
+    feed_instance = feed_factory[config["feed"].split(".")[1]]
     # Create and return the context
     return SpotTradeContext(
         client=binance_client,
-        redis=redis_instance,
-        notification=notification_service,
+        feed=feed_instance,
+        notification=notification_instance,
         granular=config["granular"]
     )
 
-def create_paper_trade_context(config: dict, services: ServiceFactory) -> PaperTradeContext:
+def create_spot_paper_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> PaperTradeSpotContext:
     # Resolve services
-    redis_instance = services[config["redis"].split(".")[1]]
+    feed = feed_factory[config["feed"].split(".")[1]]
     notification_instance = services[config["notification"].split(".")[1]]
     # Create and return the context
-    return PaperTradeContext(
-        redis=redis_instance,
+    return PaperTradeSpotContext(
+        feed=feed,
         notification=notification_instance,
         init_balance=config["init_balance"],
         granular=config["granular"]
@@ -31,14 +32,15 @@ def create_paper_trade_context(config: dict, services: ServiceFactory) -> PaperT
 # Register factories
 CONTEXT_FACTORY_REGISTRY = {
     "spot_trade": create_spot_trade_context,
-    "paper_trade": create_paper_trade_context
+    "spot_paper_trade": create_spot_paper_trade_context
 }
 
 class ContextFactory:
     _instances = {}
-    def __init__(self, services: ServiceFactory, contexts_config: dict):
+    def __init__(self, services: ServiceFactory, feeds: FeedFactory, contexts_config: dict):
         self.contexts_config = contexts_config
         self.services = services 
+        self.feeds = feeds
 
     def __getitem__(self, context_name: str):
         return self.get_context(context_name)
@@ -57,6 +59,6 @@ class ContextFactory:
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for context '{context_name}'.")
 
-        instance = factory_function(context_config, self.services)
+        instance = factory_function(context_config, self.services, self.feeds)
         self._instances[context_name] = instance
         return instance

@@ -56,7 +56,9 @@ class OfflineSpotFeed(Feed):
             self._current_time += self._GRANDULARS['1m']
             for granular, granular_ms in self._GRANDULARS.items():
                 if self._current_time % granular_ms == 0:
-                    event = json.dumps({"E": "kline_update", "granular": granular})
+                    event = json.dumps({"E": "kline_update", "data": {
+                            "granular": granular, "current_time": self._current_time}
+                            })
                     self.redis.publish(f"spot.{granular}.offline", event)
                     yield event
             if self.sleep_time > 0:
@@ -65,8 +67,8 @@ class OfflineSpotFeed(Feed):
         logger.info("OfflineSpotFeed stopped send()")
 
     def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
-        granular_ms = self._grandulars[granular]
-        end_time = self.current_time // granular_ms * granular_ms
+        granular_ms = self._GRANDULARS[granular]
+        end_time = self._current_time // granular_ms * granular_ms
         start_time = end_time - granular_ms * limit
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 
@@ -86,7 +88,7 @@ class OfflineSpotFeed(Feed):
         """
         key = self._get_key(symbol, granular)
         self._cache_keys.add(key)
-        granular_ms = self._grandulars[granular]
+        granular_ms = self._GRANDULARS[granular]
         byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
         total_klines = [KLine(**json.loads(byte_kline.decode('utf-8'))) for byte_kline in byte_klines]
         kline_dict = {k.open_time: k for k in total_klines}
@@ -94,7 +96,6 @@ class OfflineSpotFeed(Feed):
         missing_intervals = self.find_missing_intervals(open_times, start_time // granular_ms, end_time // granular_ms)
         for start, end in missing_intervals:
             klines = self._get_klines(symbol, granular, start * granular_ms, end * granular_ms)
-            klines = [KLine.from_rest(kline, granular) for kline in klines]
             total_klines.extend(klines)
             with self.redis.pipeline() as pipe:
                 for k in klines:
@@ -112,7 +113,7 @@ class OfflineSpotFeed(Feed):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
-        key = self._get_key(granular)
+        key = f"spot.{granular}.offline"
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)
 
@@ -187,7 +188,7 @@ class OfflineSpotFeed(Feed):
         ORDER BY 
             grandular;
         """
-        df = pd.read_sql(query, self.engine)
+        df = pd.read_sql(query, self.sql_engine)
         res = df.values.tolist()
         return [KLine.from_rest(r, interval) for r in res]
     

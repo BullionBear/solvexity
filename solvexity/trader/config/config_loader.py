@@ -16,7 +16,7 @@ class ConfigLoader:
         if service_name == "dependencies":
             return self.get_service_factory()
         elif service_name == "feeds":
-            return self.get_data_factory()
+            return self.get_feed_factory()
         elif service_name == "contexts":
             return self.get_context_factory()
         elif service_name == "signals":
@@ -31,13 +31,14 @@ class ConfigLoader:
     def get_service_factory(self):
         return ServiceFactory(self.config["dependencies"])
     
-    def get_data_factory(self):
+    def get_feed_factory(self):
         service_factory = self.get_service_factory()
         return FeedFactory(service_factory, self.config["feeds"])
     
     def get_context_factory(self):
         service_factory = self.get_service_factory()
-        return ContextFactory(service_factory, self.config["contexts"])
+        feed_factory = self.get_feed_factory()
+        return ContextFactory(service_factory, feed_factory, self.config["contexts"])
     
     def get_signal_factory(self):
         context_factory = self.get_context_factory()

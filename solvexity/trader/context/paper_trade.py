@@ -10,7 +10,7 @@ import solvexity.helper as helper
 
 logger = logging.getLogger("trading")
 
-class PaperTradeContext(TradeContext):
+class PaperTradeSpotContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """

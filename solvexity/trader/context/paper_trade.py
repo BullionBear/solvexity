@@ -58,7 +58,7 @@ class PaperTradeSpotContext(TradeContext):
         size, bid = helper.symbol_filter(symbol, size, bid)
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base]['free'] -= size
-        self.balance[quote]['locked'] += size * bid
+        self.balance[quote]['free'] += size * bid
         # self.notify("OnMarketSell", f"Symbol: {symbol}\n size: {size}\n price: {bid}", Color.BLUE)
         logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")

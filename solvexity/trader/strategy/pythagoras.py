@@ -24,6 +24,7 @@ class Pythagoras(Strategy):
     def invoke(self):
         self.report.invoke() # Invoke report before executing the strategy
         s = self.signal.solve()
+        logger.info(f"Signal: {s}")
         if s == SignalType.BUY:
             self.policy.buy()
         elif s == SignalType.SELL:

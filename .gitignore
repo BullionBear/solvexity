@@ -1,3 +1,4 @@
+log
 *.log
 venv
 *.pyc
@@ -7,3 +8,4 @@ verbose
 *test.json*
 .DS_Store
 .env
+*.http

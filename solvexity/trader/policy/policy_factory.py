@@ -1,9 +1,9 @@
 from solvexity.trader.context import ContextFactory
-from .all_in import AllIn
+from .all_in_spot_policy import AllInSpotPolicy
 
 # Registry for available policies
 POLICY_FACTORY_REGISTRY = {
-    "all_in": lambda context, config: AllIn(
+    "all_in_spot_policy": lambda context, config: AllInSpotPolicy(
         trade_context=context,
         symbol=config["symbol"],
         trade_id=config["trade_id"]

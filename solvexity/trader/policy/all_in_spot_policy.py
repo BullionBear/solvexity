@@ -9,7 +9,7 @@ import solvexity.helper.logging as logging
 
 logger = logging.getLogger("trading")
 
-class AllIn(Policy):
+class AllInSpotPolicy(Policy):
     """
         A policy that buys all available balance of the quote asset.
     """

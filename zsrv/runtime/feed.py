@@ -1,19 +1,23 @@
 from solvexity.trader.config import ConfigLoader
 import solvexity.helper.logging as logging
 from solvexity.helper.shutdown import Shutdown
+import solvexity.helper as helper
+import json
 
 logger = logging.getLogger("feed")
 
 def feed_runtime(config_loader: ConfigLoader, shutdown: Shutdown, feed_service: str):
 
     provider = config_loader["feeds"][feed_service]
-    shutdown.register(lambda signum: provider.close())
+    shutdown.register(lambda frame: provider.close())
     # Start provider in a controlled loop
     try:
-        for data in provider.send():
-            if shutdown.is_set():
-                break
-            logger.info(f"Publish kline data: {data}")
+        for trigger in provider.send():
+            trigger_message = json.loads(trigger)
+            logger.info(f"Trigger: {trigger_message}")
+            logger.info(f"Datetime: {helper.to_isoformat(trigger_message["data"]["current_time"])}")
+
     finally:
         shutdown.set()
-        logger.info("Feed process terminated gracefully.")
+
+    logger.info("Trading process terminated gracefully.")

@@ -25,7 +25,7 @@ def handle_shutdown_signal(signum, frame):
 
 def main(config_loader: ConfigLoader):
     shutdown = Shutdown(signal.SIGINT, signal.SIGTERM)
-    provider = config_loader["feeds"]["offline_spot"]
+    provider = config_loader["feeds"]["online_spot"]
     shutdown.register(lambda frame: provider.close())
     # Start provider in a controlled loop
     try:

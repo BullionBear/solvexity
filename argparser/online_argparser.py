@@ -32,6 +32,8 @@ def main(config_loader: ConfigLoader):
         for trigger in provider.send():
             trigger_message = json.loads(trigger)
             logger.info(f"Trigger: {trigger_message}")
+            current_time = trigger_message["data"]["current_time"]
+            logger.info(f"Datetime: {helper.to_isoformat(current_time)}")
             logger.info(f"Datetime: {to_isoformat(trigger_message["data"]["current_time"])}")
 
     finally:

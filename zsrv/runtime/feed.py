@@ -14,9 +14,8 @@ def feed_runtime(config_loader: ConfigLoader, shutdown: Shutdown, feed_service: 
     try:
         for trigger in provider.send():
             trigger_message = json.loads(trigger)
-            logger.info(f"Trigger: {trigger_message}")
-            logger.info(f"Datetime: {helper.to_isoformat(trigger_message["data"]["current_time"])}")
-
+            current_time = trigger_message["data"]["current_time"]
+            logger.info(f"Datetime: {helper.to_isoformat(current_time)}")
     finally:
         shutdown.set()
 

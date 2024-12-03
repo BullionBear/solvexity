@@ -84,7 +84,7 @@ if __name__ == "__main__":
             raise ValueError("Invalid runtime specified")
         thread.start()
         # Start the server
-        start_server(srv_config["host"], srv_config["port"], handler, shutdown)
+        start_server("0.0.0.0", srv_config["port"], handler, shutdown)
     except Exception as e:
         import traceback
         full_traceback = traceback.format_exc()

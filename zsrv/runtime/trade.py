@@ -7,17 +7,15 @@ import json
 logger = logging.getLogger("trading")
 
 def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str, granular: str):
+    strategy = config_loader["strategies"][trade_service]
+    provider = config_loader["feeds"][feed_service]
+    shutdown.register(lambda signum: provider.close())
+    shutdown.register(lambda signum: strategy.close())
     try:
-        
-        strategy = config_loader["strategies"][trade_service]
-        shutdown.register(lambda signum: strategy.close())
-        provider = config_loader["feeds"][feed_service]
-        shutdown.register(lambda signum: provider.close())
         for trigger in provider.receive(granular):
             if shutdown.is_set():
                 break
-            trigger_message = json.loads(trigger)
-            logger.info(f"Trigger: {helper.to_isoformat(trigger_message["data"]["current_time"])}")
+            logger.info(f"Trigger Datetime: {helper.to_isoformat(trigger["data"]["current_time"])}")
             strategy.invoke()
     finally:
         logger.info("Trading process terminated gracefully.")

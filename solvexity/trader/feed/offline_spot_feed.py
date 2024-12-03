@@ -33,13 +33,14 @@ class OfflineSpotFeed(Feed):
         self._queues = {granular: Queue(maxsize=10) for granular in self._GRANDULARS}  # Separate queues for granulars
         self._stop_event = False
         self._condition = Condition()  # Condition variable for signaling
-        self._thread = Thread(target=self._subscribe)
-        self._thread.start()
+        self._thread = None
 
     def _get_key(self, symbol: str, granular: str) -> str:
         return f"spot:{symbol}:{granular}:offline"
     
     def _subscribe(self):
+        self._thread = Thread(target=self._subscribe)
+        self._thread.start()
         logger.info("OfflineSpotFeed started _subscribe()")
         pubsub = self.redis.pubsub()
         pubsub.psubscribe(f"spot:*:offline")
@@ -118,33 +119,31 @@ class OfflineSpotFeed(Feed):
         total_klines.sort(key=lambda x: x.open_time, reverse=False)
         return total_klines
     
-    def receive(self, granular: str, timeout: float = 5.0):
+    def receive(self, granular: str):
         """
-        Wait for and return the next message for the specified granular.
+        Wait indefinitely for the next message for the specified granular unless the process is stopped.
         """
-        start_time = time.time()
-        with self._condition:  # Wait for a relevant message
-            while time.time() - start_time < timeout:
+        while not self._stop_event:  # Keep waiting until explicitly stopped
+            with self._condition:
                 if not self._queues[granular].empty():
-                    yield self._queues[granular].get()
-                self._condition.wait(timeout=timeout)  # Wait until notified
-        raise TimeoutError(f"No message received for granular {granular} within timeout")
+                    yield self._queues[granular].get()  # Return the message if available
+                self._condition.wait(timeout=1.0)  # Wait for notification or timeout for periodic checks
 
 
     def close(self):
-        """Gracefully stop the Online Feed."""
-        logger.info("OfflinepotFeed close() is called")
-        self._stop_event = True  # stop all operations
+        """Gracefully stop the Offline Feed."""
+        logger.info("OfflineSpotFeed close() is called")
+        self._stop_event = True  # Signal stop
+        with self._condition:
+            self._condition.notify_all()  # Wake up any waiting threads
         if self._thread.is_alive():
             self._thread.join()
-        # Delete Redis key safely
+        # Clean up Redis keys
         try:
-            time.sleep(1)
             for cache_key in self._cache_keys:
                 self.redis.delete(cache_key)
         except Exception as e:
             logger.error(f"Error cleaning up Redis key: {e}")
-
         logger.info("OfflineSpotFeed close() finished")
 
     def _get_klines(self, symbol: str, interval: str, start: int, end: int) -> list[KLine]:

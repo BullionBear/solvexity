@@ -65,7 +65,7 @@ class OnlineSpotFeed(Feed):
                         event = json.dumps({"E": "kline_update", "data": {
                             "granular": granular, "current_time": self._current_time}
                             })
-                        self.redis.publish(f"spot.{granular}", event)
+                        self.redis.publish(f"spot:{granular}:online", event)
                         yield event
             except Empty:
                 continue
@@ -127,8 +127,11 @@ class OnlineSpotFeed(Feed):
         try:
             while not self._stop_event:
                 message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                if message:
-                    yield message
+                if message and message['type'] == 'message':
+                    channel = message['channel'].decode('utf-8')
+                    granular = channel.split(":")[1]
+                    data = json.loads(message['data'].decode('utf-8'))
+                    yield data
         finally:
             logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")
             pubsub.unsubscribe()
@@ -149,8 +152,9 @@ class OnlineSpotFeed(Feed):
         except Full:
             pass
 
-        if self._thread.is_alive():
+        if self._thread and self._thread.is_alive():
             self._thread.stop()  # Stop the WebSocket manager
+            self._thread.join()
 
         # Delete Redis key safely
         try:

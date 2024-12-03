@@ -24,23 +24,24 @@ def parse_arguments():
 def main(config_loader: ConfigLoader):
     # Retrieve a strategy
     pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
-    provider = config_loader["feeds"]["offline_spot"]
+    provider = config_loader["feeds"]["online_spot"]
     shutdown.register(lambda signum: provider.close())
     shutdown.register(lambda signum: pythagoras_btc.close())
 
     try:
-        for trigger in provider.receive("1h"):
+        for trigger in provider.receive("1m"):
             if shutdown.is_set():
                 break
-            trigger_message = json.loads(trigger)
-            logger.info(f"Trigger: {trigger_message}")
-            logger.info(f"Datetime: {helper.to_isoformat(trigger_message["data"]["current_time"])}")
+
+            logger.info(f"Trigger: {trigger}, type: {type(trigger)}")
+            # trigger_message = json.loads(trigger["data"].decode("utf-8"))
+            # logger.info(f"Trigger Message: {trigger_message}")
+            logger.info(f"Datetime: {helper.to_isoformat(trigger["data"]["current_time"])}")
 
             pythagoras_btc.invoke()
     finally:
         logger.info("Trading process terminated gracefully.")
-
-
+        # After some time, check which threads are running)
 
 if __name__ == "__main__":
     args = parse_arguments()

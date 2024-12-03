@@ -76,7 +76,7 @@ if __name__ == "__main__":
             # Start the trade runtime
             from zsrv.runtime.trade import trading_runtime
             trade_args = srv_config["arguments"]
-            thread = threading.Thread(target=trading_runtime, args=(config_loader, shutdown, trade_args["strategy"], trade_args["feed"]))
+            thread = threading.Thread(target=trading_runtime, args=(config_loader, shutdown, trade_args["strategy"], trade_args["feed"], trade_args["granular"]))
             from zsrv.dispatcher.handler.trade_handler import TradeHandler
             handler = TradeHandler(config_loader)
         else:

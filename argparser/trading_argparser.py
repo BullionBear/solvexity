@@ -24,12 +24,12 @@ def parse_arguments():
 def main(config_loader: ConfigLoader):
     # Retrieve a strategy
     pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
-    provider = config_loader["feeds"]["online_spot"]
+    provider = config_loader["feeds"]["offline_spot"]
     shutdown.register(lambda signum: provider.close())
     shutdown.register(lambda signum: pythagoras_btc.close())
 
     try:
-        for trigger in provider.receive("1m"):
+        for trigger in provider.receive("1h"):
             if shutdown.is_set():
                 break
 

@@ -39,8 +39,6 @@ class OfflineSpotFeed(Feed):
         return f"spot:{symbol}:{granular}:offline"
     
     def _subscribe(self):
-        self._thread = Thread(target=self._subscribe)
-        self._thread.start()
         logger.info("OfflineSpotFeed started _subscribe()")
         pubsub = self.redis.pubsub()
         pubsub.psubscribe(f"spot:*:offline")
@@ -123,6 +121,8 @@ class OfflineSpotFeed(Feed):
         """
         Wait indefinitely for the next message for the specified granular unless the process is stopped.
         """
+        self._thread = Thread(target=self._subscribe)
+        self._thread.start()
         while not self._stop_event:  # Keep waiting until explicitly stopped
             with self._condition:
                 if not self._queues[granular].empty():

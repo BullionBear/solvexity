@@ -109,7 +109,7 @@ class OnlineSpotFeed(Feed):
     
     def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
         granular_ms = self._GRANULARS[granular]
-        end_time = self.current_time // granular_ms * granular_ms
+        end_time = self._current_time // granular_ms * granular_ms
         start_time = end_time - granular_ms * limit
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 

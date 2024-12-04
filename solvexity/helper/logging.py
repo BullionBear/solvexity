@@ -102,6 +102,11 @@ LOGGING_CONFIG = {
             'level': 'INFO',
             'handlers': ['console', 'redis'],
         },
+        'config': {
+            'level': 'INFO',
+            'handlers': ['console', 'redis'],
+            'propagate': True,
+        },
         'trading': {
             'level': 'INFO',
             'handlers': ['console', 'redis'],

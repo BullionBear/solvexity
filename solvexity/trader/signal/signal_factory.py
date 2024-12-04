@@ -1,7 +1,8 @@
-from solvexity.trader.core import SignalType
+import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
 
+logger = logging.getLogger("config")
 
 def create_doubly_moving_average_signal(trade_context, config):
     return DoublyMovingAverage(
@@ -26,6 +27,7 @@ class SignalFactory:
         return self.get_signal(signal_name)
 
     def get_signal(self, signal_name: str):
+        logger.info(f"Getting signal '{signal_name}'")
         if signal_name in self._instances:
             return self._instances[signal_name]
 
@@ -46,7 +48,7 @@ class SignalFactory:
             )
         context_name = context_ref.split(".")[1]
         trade_context = self.context_factory.get_context(context_name)
-
+        logger.info(f"Creating signal '{signal_name}' with config '{signal_config}'")
         # Create and store the signal instance
         instance = factory_function(trade_context, signal_config)
         self._instances[signal_name] = instance

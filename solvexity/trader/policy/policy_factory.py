@@ -1,6 +1,9 @@
+import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .all_in_spot_policy import AllInSpotPolicy
 from .fix_quote_spot_policy import FixQuoteSpotPolicy
+
+logger = logging.getLogger("config")
 
 # Registry for available policies
 POLICY_FACTORY_REGISTRY = {
@@ -28,8 +31,10 @@ class PolicyFactory:
         return self.get_policy(policy_name)
 
     def get_policy(self, policy_name: str):
+        logger.info(f"Getting policy '{policy_name}'")
         # Check if the policy is already created
         if policy_name in self._instances:
+            logger.info(f"Policy '{policy_name}' already initialized.")
             return self._instances[policy_name]
 
         # Fetch the policy configuration by name
@@ -58,7 +63,7 @@ class PolicyFactory:
             )
         context_name = context_ref.split(".")[1]
         trade_context = self.context_factory.get_context(context_name)
-
+        logger.info(f"Creating policy '{policy_name}' with config '{policy_config}'")
         # Create the policy instance and cache it
         instance = factory_function(trade_context, policy_config)
         self._instances[policy_name] = instance

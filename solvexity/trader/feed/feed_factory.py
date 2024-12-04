@@ -1,7 +1,9 @@
+import solvexity.helper.logging as logging
 from solvexity.dependency import ServiceFactory
 from .offline_spot_feed import OfflineSpotFeed
 from .online_spot_feed import OnlineSpotFeed
 
+logger = logging.getLogger("config")
 
 def create_offline_spot_feed(services: ServiceFactory, config: dict) -> OfflineSpotFeed:
     redis_instance = services[config["redis"].split(".")[1]]
@@ -38,7 +40,9 @@ class FeedFactory:
         return self.get_feed(feed_name)
 
     def get_feed(self, feed_name: str):
+        logger.info(f"Getting feed '{feed_name}'")
         if feed_name in self._instances:
+            logger.info(f"Feed '{feed_name}' already initialized.")
             return self._instances[feed_name]
 
         feed_config = self.feed_config.get(feed_name)
@@ -49,7 +53,7 @@ class FeedFactory:
         factory_function = FEED_FACTORY_REGISTRY.get(factory_name)
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for provider '{feed_name}'.")
-
+        logger.info(f"Creating feed '{feed_name}' with config '{feed_config}'")
         instance = factory_function(self.services, feed_config)
         self._instances[feed_name] = instance
         return instance

@@ -1,7 +1,10 @@
+import solvexity.helper.logging as logging
 from solvexity.trader.feed import FeedFactory
 from solvexity.dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeSpotContext
+
+logger = logging.getLogger("config")
 
 def create_spot_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> SpotTradeContext:
     # Resolve services
@@ -46,7 +49,9 @@ class ContextFactory:
         return self.get_context(context_name)
 
     def get_context(self, context_name: str):
+        logger.info(f"Getting context '{context_name}'")
         if context_name in self._instances:
+            logger.info(f"Context '{context_name}' already initialized.")
             return self._instances[context_name]
 
         context_config = self.contexts_config.get(context_name)
@@ -58,7 +63,7 @@ class ContextFactory:
         factory_function = CONTEXT_FACTORY_REGISTRY.get(factory_name)
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for context '{context_name}'.")
-
+        logger.info(f"Initializing context '{context_name}' with config '{context_config}'")
         instance = factory_function(context_config, self.services, self.feeds)
         self._instances[context_name] = instance
         return instance

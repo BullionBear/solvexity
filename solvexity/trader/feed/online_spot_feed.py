@@ -92,6 +92,7 @@ class OnlineSpotFeed(Feed):
         open_times = [open_time // granular_ms for open_time in sorted(kline_dict.keys())]
         missing_intervals = self.find_missing_intervals(open_times, start_time // granular_ms, end_time // granular_ms)
         for start, end in missing_intervals:
+            logger.info(f"Fetching missing kline data for {symbol} from {start * granular_ms} to {end * granular_ms}")
             klines = self.client.get_klines(symbol=symbol, interval=granular, startTime=start * granular_ms, endTime=end * granular_ms)
             klines = [KLine.from_rest(kline, granular) for kline in klines]
             total_klines.extend(klines)

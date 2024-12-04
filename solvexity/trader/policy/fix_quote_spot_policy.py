@@ -13,6 +13,7 @@ class FixQuoteSpotPolicy(Policy):
     """
         A policy that buys all available balance of the quote asset.
     """
+    MAX_TRADE_SIZE = 65535
     def __init__(self, trade_context: Type[TradeContext], symbol: str, quote_size: float, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol

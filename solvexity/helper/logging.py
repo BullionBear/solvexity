@@ -100,18 +100,23 @@ LOGGING_CONFIG = {
     'loggers': {
         '': {  # Root logger
             'level': 'INFO',
-            'handlers': ['console', 'redis'],  # Add Redis handler here
+            'handlers': ['console', 'redis'],
         },
         'trading': {
             'level': 'INFO',
-            'handlers': ['console', 'redis'],  # Add Redis handler here
-            'propagate': False,
+            'handlers': ['console', 'redis'],
+            'propagate': True,
         },
         'feed': {
             'level': 'INFO',
-            'handlers': ['console', 'redis'],  # Add Redis handler here
-            'propagate': False,
-        }
+            'handlers': ['console', 'redis'],
+            'propagate': True,
+        },
+        'service': {
+            'level': 'INFO',
+            'handlers': ['console', 'redis'],
+            'propagate': True,
+        },
     }
 }
 

@@ -107,6 +107,7 @@ class OnlineSpotFeed(Feed):
             if self.redis.zcard(key) > self.MAX_SZ:
                 logger.info(f"Removing oldest kline data to keep only {self.MAX_SZ} items")
                 self.redis.zremrangebyrank(key, 0, -self.MAX_SZ - 1)
+        total_klines.sort(key=lambda x: x.open_time, reverse=False)
         return total_klines
     
     def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:

@@ -15,6 +15,10 @@ logger = logging.getLogger("feed")
 
 
 class OnlineSpotFeed(Feed):
+    _GRANULARS = {
+        interval: helper.to_unixtime_interval(interval) * 1000
+        for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
+    }
     MAX_SZ = 1024 # Maintain the latest 1024 klines in Redis for each symbol and granularity
 
     def __init__(self, redis: Redis):
@@ -26,11 +30,6 @@ class OnlineSpotFeed(Feed):
         super().__init__()
         self.redis: Redis = redis
         self.client: BinanceClient = BinanceClient()
-
-        self._GRANULARS = {
-            interval: helper.to_unixtime_interval(interval) * 1000
-            for interval in ("1m", "5m", "15m", "30m", "1h", "4h", "1d")
-        }
 
         self._granular_tc = {
             interval: int(time.time() * 1000) // self._GRANULARS[interval]
@@ -86,7 +85,7 @@ class OnlineSpotFeed(Feed):
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
         key = f"spot:{symbol}:{granular}:online"
         self._cache_keys.add(key)
-        granular_ms = self._grandulars[granular]
+        granular_ms = self._GRANULARS[granular]
         byte_klines = self.redis.zrangebyscore(key, start_time, end_time)
         total_klines = [KLine(**json.loads(byte_kline.decode('utf-8'))) for byte_kline in byte_klines]
         kline_dict = {k.open_time: k for k in total_klines}

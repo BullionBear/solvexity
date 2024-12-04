@@ -2,6 +2,9 @@ import logging
 import logging.config
 import json
 import redis
+import sys
+import traceback
+
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter to format logs in JSON format."""
@@ -16,16 +19,20 @@ class JSONFormatter(logging.Formatter):
             "process_id": record.process,
             "file_path": record.pathname,
         }
+        if record.exc_info:
+            # Include exception details if present
+            log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record)
+
 
 class ColorFormatter(logging.Formatter):
     """Custom formatter to add color to log levels in console output."""
     COLOR_CODES = {
         "DEBUG": "\033[37m",  # White
         "INFO": "\033[32m",   # Green
-        "WARNING": "\033[33m", # Yellow
+        "WARNING": "\033[33m",  # Yellow
         "ERROR": "\033[31m",  # Red
-        "CRITICAL": "\033[1;31m", # Bold Red
+        "CRITICAL": "\033[1;31m",  # Bold Red
     }
     RESET_CODE = "\033[0m"
 
@@ -36,23 +43,6 @@ class ColorFormatter(logging.Formatter):
         return super().format(record)
 
 
-class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter to format logs in JSON format."""
-
-    def format(self, record):
-        # Convert the log record to a dictionary
-        log_record = {
-            "time": self.formatTime(record),
-            "level": record.levelname,
-            "name": record.name,
-            "message": record.getMessage(),
-            "line": record.lineno,
-            "module": record.module,
-            "process_id": record.process,  # Add process ID
-            "file_path": record.pathname,  # Add file path
-        }
-        return json.dumps(log_record)  # Convert the dictionary to a JSON string
-    
 class RedisPubSubHandler(logging.Handler):
     """Custom handler to publish logs to a Redis PubSub channel."""
     def __init__(self, redis_host='localhost', redis_port=6379, channel='log_channel'):
@@ -68,6 +58,7 @@ class RedisPubSubHandler(logging.Handler):
             self.redis_client.publish(self.channel, message)
         except Exception as e:
             print(f"Failed to publish log to Redis: {e}")
+
 
 # Define a centralized logging configuration with JSON and readable formatters
 LOGGING_CONFIG = {
@@ -129,14 +120,33 @@ def setup_logging():
     """Sets up logging based on the configuration."""
     logging.config.dictConfig(LOGGING_CONFIG)
 
-def setup_logging():
-    """
-    Sets up logging based on the configuration.
-    """
-    logging.config.dictConfig(LOGGING_CONFIG)
+# Global exception hook
+def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
+    """Logs uncaught exceptions."""
+    logger = logging.getLogger()
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Ignore KeyboardInterrupt to allow graceful shutdown
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Unhandled exception occurred",
+                 exc_info=(exc_type, exc_value, exc_traceback))
+
+# Set up the logging and global exception hook
+setup_logging()
+sys.excepthook = log_uncaught_exceptions
 
 def getLogger(name=None):
     """
     Returns a logger instance with the specified name.
     """
     return logging.getLogger(name)
+
+# Example to test unhandled exceptions
+if __name__ == "__main__":
+    logger = getLogger("test")
+    try:
+        raise ValueError("Test exception for demonstration")
+    except Exception as e:
+        logger.exception("Handled exception occurred")
+    # Uncomment the following line to test unhandled exceptions
+    # raise RuntimeError("Unhandled exception for demonstration")

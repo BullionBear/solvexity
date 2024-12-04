@@ -23,7 +23,7 @@ class PaperTradeSpotContext(TradeContext):
         """
         self.granular = granular
         self.balance = {k: {"free": Decimal(v), "locked": Decimal('0')} for k, v in init_balance.items()}
-        logger.info(f"Initial balance: {self.balance}\t Granular: {self.granular}")
+        logger.info(f"Initial balance: {self.balance}")
         self.feed: Feed = feed
         self.notification = notification
         self._trade_id = 1

@@ -1,5 +1,5 @@
-from .signal_factory import SignalFactory, SignalType
+from .signal_factory import SignalFactory
 
 __all__ = [
-    "SignalFactory", "SignalType"
+    "SignalFactory"
 ] 

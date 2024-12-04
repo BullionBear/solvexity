@@ -83,7 +83,7 @@ class OnlineSpotFeed(Feed):
         return False
 
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
-        logger.info(f"Fetching kline data for {symbol} from {helper.to_isoformat(start_time)} to {helper.to_isoformat(end_time)}")
+        logger.info(f"Fetching kline data for {symbol} from {helper.to_isoformat(start_time)} to {helper.to_isoformat(end_time)} with granular {granular}")
         key = f"spot:{symbol}:{granular}:online"
         self._cache_keys.add(key)
         granular_ms = self._GRANULARS[granular]

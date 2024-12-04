@@ -27,7 +27,7 @@ class SpotTradeContext(TradeContext):
         for asset in user_assets:
             balance[asset['asset']] = {
                 "free": Decimal(asset['free']),
-                "lock": Decimal(asset['locked'])
+                "locked": Decimal(asset['locked'])
             }
         return balance
     

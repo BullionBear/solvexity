@@ -83,6 +83,7 @@ class OnlineSpotFeed(Feed):
         return False
 
     def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+        logger.info(f"Fetching kline data for {symbol} from {helper.to_isoformat(start_time)} to {helper.to_isoformat(end_time)}")
         key = f"spot:{symbol}:{granular}:online"
         self._cache_keys.add(key)
         granular_ms = self._GRANULARS[granular]
@@ -110,6 +111,7 @@ class OnlineSpotFeed(Feed):
     
     def latest_n_klines(self, symbol: str, granular: str, limit: int) -> list[KLine]:
         granular_ms = self._GRANULARS[granular]
+        logger.info(f"Latest {limit} klines , current time: {self._current_time}")
         end_time = self._current_time // granular_ms * granular_ms
         start_time = end_time - granular_ms * limit
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
@@ -131,6 +133,7 @@ class OnlineSpotFeed(Feed):
                     channel = message['channel'].decode('utf-8')
                     granular = channel.split(":")[1]
                     data = json.loads(message['data'].decode('utf-8'))
+                    self._current_time = data["data"]['current_time']
                     yield data
         finally:
             logger.info(f"Unsubscribing from Redis Pub/Sub key: {key}")

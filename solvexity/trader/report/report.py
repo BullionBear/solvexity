@@ -68,6 +68,9 @@ class Report:
             self.position[-1] = self._update_position(latest_kline)
 
     def export(self, output_dir: str):
+        if not self.market:
+            logger.warning("No market data to export.")
+            return
         start = self.market[0].open_time
         end = self.market[-1].close_time
         report = {

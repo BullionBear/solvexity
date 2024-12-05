@@ -43,3 +43,4 @@ def test_market_sell(spot_trade_context):
     updated_balance = spot_trade_context.get_balance("BTC")
     logger.info(f"Retrieved updated balance: {updated_balance}")
     assert updated_balance < initial_balance, "Balance should decrease after a market buy"
+    

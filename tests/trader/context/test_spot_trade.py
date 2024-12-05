@@ -27,3 +27,19 @@ def test_balance_retrieval(spot_trade_context):
     logger.info(f"Retrieved balance: {balance}")
     assert isinstance(balance, Decimal), "Balance should be a Decimal instance"
     assert balance >= Decimal('0'), "Balance should not be negative"
+
+def test_market_buy(spot_trade_context):
+    initial_balance = spot_trade_context.get_balance("BTC")
+    logger.info(f"Retrieved initial BTC: {initial_balance}")
+    spot_trade_context.market_buy(symbol="BTCUSDT", size=Decimal('0.00005')) # Buy 0.0001 BTC ~ 10 USDT
+    updated_balance = spot_trade_context.get_balance("BTC")
+    logger.info(f"Retrieved updated balance: {updated_balance}")
+    assert updated_balance > initial_balance, "Balance should increase after a market buy"
+
+def test_market_sell(spot_trade_context):
+    initial_balance = spot_trade_context.get_balance("BTC")
+    logger.info(f"Retrieved initial balance: {initial_balance}")
+    spot_trade_context.market_sell(symbol="BTCUSDT", size=Decimal('0.00005')) # Buy 0.0001 BTC ~ 10 USDT
+    updated_balance = spot_trade_context.get_balance("BTC")
+    logger.info(f"Retrieved updated balance: {updated_balance}")
+    assert updated_balance < initial_balance, "Balance should decrease after a market buy"

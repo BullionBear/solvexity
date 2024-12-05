@@ -40,16 +40,22 @@ class SpotTradeContext(TradeContext):
         return Decimal(self.balance.get(token, '0')['free'])
 
     def market_buy(self, symbol: str, size: Decimal):
-        self.client.order_market_buy(symbol=symbol, quantity=str(size))
-        logger.info(f"Market buy: {symbol}, size: {size}")
-        self.balance = self._get_balance()
-        logger.info(f"Current balance: {self.balance}")
+        try:
+            res = self.client.order_market_buy(symbol=symbol, quantity=str(size))
+            logger.info(f"Market buy: {symbol}, size: {size}, res: {res}")
+            self.balance = self._get_balance()
+            logger.info(f"Current balance: {self.balance}")
+        except Exception as e:
+            logger.error(f"Market buy failed: {e}", exc_info=True)
 
     def market_sell(self, symbol: str, size: Decimal):
-        self.client.order_market_sell(symbol=symbol, quantity=str(size))
-        logger.info(f"Market sell: {symbol}, size: {size}")
-        self.balance = self._get_balance()
-        logger.info(f"Current balance: {self.balance}")
+        try:
+            self.client.order_market_sell(symbol=symbol, quantity=str(size))
+            logger.info(f"Market sell: {symbol}, size: {size}")
+            self.balance = self._get_balance()
+            logger.info(f"Current balance: {self.balance}")
+        except Exception as e:
+            logger.error(f"Market sell failed: {e}", exc_info=True)
 
     def get_askbid(self, symbol: str):
         order_book = self.client.get_order_book(symbol=symbol, limit=1)

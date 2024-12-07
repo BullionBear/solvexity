@@ -42,6 +42,9 @@ class OnlineSpotFeed(Feed):
         self._stop_event = False
         self._thread = ThreadedWebsocketManager()
 
+    def time(self) -> int:
+        return self._current_time
+
     def send(self):
         """
         Retrieve kline data from the buffer and send it to Redis.

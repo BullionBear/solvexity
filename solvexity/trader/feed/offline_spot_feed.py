@@ -57,6 +57,9 @@ class OfflineSpotFeed(Feed):
             pubsub.punsubscribe()
             pubsub.close()
 
+    def time(self):
+        return self._current_time
+
     def send(self):
         while self._current_time < self.end:
             if self._stop_event:

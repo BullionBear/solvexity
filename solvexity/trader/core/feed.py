@@ -4,6 +4,10 @@ from solvexity.trader.model import KLine
 
 class Feed(ABC):
     @abstractmethod
+    def time()->int:
+        pass
+
+    @abstractmethod
     def send()->Iterable:
         pass
 

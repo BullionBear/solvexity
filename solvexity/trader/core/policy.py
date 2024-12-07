@@ -13,7 +13,7 @@ class Policy(ABC):
             self._id = trade_id
         else:
             self._id = helper.generate_random_id()
-        self.trade_context = trade_context  
+        self.trade_context: Type[TradeContext] = trade_context  
 
     @abstractmethod
     def buy(self):
@@ -24,7 +24,7 @@ class Policy(ABC):
         pass
 
     def notify(self, title: str, content: str, color: Color):
-        self.trade_context.notify(self.id, title, content, color)
+        self.trade_context.notify(self._id, title, content, color)
 
     @abstractmethod
     def export(self, output_dir: str):

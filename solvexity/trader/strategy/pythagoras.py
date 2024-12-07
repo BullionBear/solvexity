@@ -8,14 +8,15 @@ logger = logging.getLogger("trading")
 
 class Pythagoras(Strategy):
     REPORT_BUFFER_SIZE = 65535
-    def __init__(self, signal: Type[Signal], policy: Type[Policy], symbol: str, trade_id: str, verbose: bool = False):
+    def __init__(self, signal: Type[Signal], policy: Type[Policy], symbol: str, granular: str, trade_id: str, verbose: bool = False):
         super().__init__(trade_id)
         self.signal = signal
         self.policy = policy
         self.symbol = symbol
+        self.granular = granular
         self.verbose = verbose
         self.output_dir = os.path.join(os.getcwd(), "verbose", self.id)
-        self.report = Report(self.signal.get_context(), self.symbol, self.REPORT_BUFFER_SIZE)
+        self.report = Report(self.signal.get_context(), self.symbol, self.granular, self.REPORT_BUFFER_SIZE)
         if self.verbose:
             logger.info(f"Verbose mode is enabled. Output directory: {self.output_dir}")
             os.makedirs(self.output_dir, exist_ok=True)

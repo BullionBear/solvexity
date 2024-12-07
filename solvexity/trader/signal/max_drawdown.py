@@ -31,6 +31,7 @@ class MaxDrawdown(Signal):
         df = Signal.to_dataframe(klines)
         # Analyze the data to calculate moving averages
         self.df_analyze = self.analyze(df)
+        return SignalType.BUY
 
     def analyze(self, df: pd.DataFrame) -> pd.DataFrame:
         if len(df) < self.slow_period:

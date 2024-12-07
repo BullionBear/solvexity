@@ -16,8 +16,7 @@ def create_spot_trade_context(config: dict, services: ServiceFactory, feed_facto
     return SpotTradeContext(
         client=binance_client,
         feed=feed_instance,
-        notification=notification_instance,
-        granular=config["granular"]
+        notification=notification_instance
     )
 
 def create_spot_paper_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> PaperTradeSpotContext:
@@ -28,8 +27,7 @@ def create_spot_paper_trade_context(config: dict, services: ServiceFactory, feed
     return PaperTradeSpotContext(
         feed=feed,
         notification=notification_instance,
-        init_balance=config["init_balance"],
-        granular=config["granular"]
+        init_balance=config["init_balance"]
     )
 
 # Register factories

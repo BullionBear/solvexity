@@ -10,8 +10,10 @@ pymongo
 pyzmq
 python-dotenv
 # unittest
+mypy
 pytest
 fakeredis
+types-requests
 # Backtest
 sqlalchemy
 psycopg2-binary

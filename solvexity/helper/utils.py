@@ -19,9 +19,9 @@ def load_config(file_path):
     except FileNotFoundError:
         logger.error(f"Configuration file '{file_path}' not found.")
         raise
-    except json.JSONDecodeError:
-        logger.error(f"Configuration file '{file_path}' is not a valid JSON.")
-        raise
+    except Exception as e:
+        logger.error(f"Error loading configuration: {e}", exc_info=True)
+        raise 
 
 def to_unixtime_interval(interval_str: str) -> int:
     # Define mappings for time units to seconds

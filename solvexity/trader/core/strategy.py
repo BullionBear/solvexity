@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-from solvexity.trader.model import KLine
-
+from typing import Optional
 import solvexity.helper as helper
 
 
 class Strategy(ABC):
-    def __init__(self, trade_id: str = None):
+    def __init__(self, trade_id: Optional[str] = None):
         if trade_id:
             self._id = trade_id
         else:

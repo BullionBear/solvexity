@@ -12,18 +12,19 @@ pd.options.mode.copy_on_write = True
 
 class DoublyMovingAverage(Signal):
     NAME = "Double Moving Average"
-    def __init__(self, trade_context: Type[TradeContext], symbol: str, fast_period: int, slow_period: int, limit: int):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, fast_period: int, slow_period: int, granular: str, limit: int):
         super().__init__(trade_context)
         self.symbol: str = symbol
         self.fast_period: int = fast_period
         self.slow_period: int = slow_period
+        self.granular: str = granular
         self.limit: int = limit
 
         self.df_analyze: pd.DataFrame = None
 
     def solve(self) -> SignalType:
         # Retrieve historical market data
-        klines = self.trade_context.get_klines(self.symbol, self.limit)
+        klines = self.trade_context.get_klines(self.symbol, self.limit, self.granular)
         df = Signal.to_dataframe(klines)
         # Analyze the data to calculate moving averages
         self.df_analyze = self.analyze(df)

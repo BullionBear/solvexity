@@ -23,7 +23,7 @@ def parse_arguments():
 
 def main(config_loader: ConfigLoader):
     # Retrieve a strategy
-    pythagoras_btc = config_loader["strategies"]["pythagoras_btc"]
+    pythagoras_btc = config_loader["strategies"]["pythagoras_btc_live"]
     provider = config_loader["feeds"]["offline_spot"]
     shutdown.register(lambda signum: provider.close())
     shutdown.register(lambda signum: pythagoras_btc.close())

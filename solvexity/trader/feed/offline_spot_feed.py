@@ -49,6 +49,7 @@ class OfflineSpotFeed(Feed):
                     channel = message['channel'].decode('utf-8')
                     granular = channel.split(":")[1]
                     data = json.loads(message['data'].decode('utf-8'))
+                    self._current_time = data['data']['current_time']
                     with self._condition:  # Synchronize access to queues
                         if granular in self._queues and not self._queues[granular].full():
                             self._queues[granular].put(data)
@@ -56,6 +57,9 @@ class OfflineSpotFeed(Feed):
         finally:
             pubsub.punsubscribe()
             pubsub.close()
+
+    def time(self):
+        return self._current_time
 
     def send(self):
         while self._current_time < self.end:
@@ -80,7 +84,7 @@ class OfflineSpotFeed(Feed):
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 
     
-    def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+    def get_klines(self, start_time: int, end_time: int, symbol: str, granular: str) -> list[KLine]:
         """
         Get kline data from the SQL database.
 
@@ -136,7 +140,7 @@ class OfflineSpotFeed(Feed):
         self._stop_event = True  # Signal stop
         with self._condition:
             self._condition.notify_all()  # Wake up any waiting threads
-        if self._thread.is_alive():
+        if self._thread and self._thread.is_alive():
             self._thread.join()
         # Clean up Redis keys
         try:

@@ -42,6 +42,9 @@ class OnlineSpotFeed(Feed):
         self._stop_event = False
         self._thread = ThreadedWebsocketManager()
 
+    def time(self) -> int:
+        return self._current_time
+
     def send(self):
         """
         Retrieve kline data from the buffer and send it to Redis.
@@ -82,7 +85,7 @@ class OnlineSpotFeed(Feed):
             return True
         return False
 
-    def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+    def get_klines(self, start_time: int, end_time: int, symbol: str, granular: str) -> list[KLine]:
         logger.info(f"Fetching kline data for {symbol} from {helper.to_isoformat(start_time)} to {helper.to_isoformat(end_time)} with granular {granular}")
         key = f"spot:{symbol}:{granular}:online"
         self._cache_keys.add(key)

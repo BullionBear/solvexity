@@ -1,6 +1,7 @@
 import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
+from .max_drawdown import MaxDrawdown
 
 logger = logging.getLogger("config")
 
@@ -14,8 +15,18 @@ def create_doubly_moving_average_signal(trade_context, config):
         limit=config["limit"]
     )
 
+def create_max_drawdown_signal(trade_context, config):
+    return MaxDrawdown(
+        trade_context=trade_context,
+        symbol=config["symbol"],
+        rollback_period=config["rollback_period"],
+        granular=config["granular"],
+        threshold=config["threshold"]
+    )
+
 SIGNAL_FACTORY_REGISTRY = {
     "doubly_moving_average": create_doubly_moving_average_signal,
+    "max_drawdown": create_max_drawdown_signal,
 }
 
 class SignalFactory:

@@ -13,8 +13,7 @@ import solvexity.helper as helper
 logger = logging.getLogger("trading")
 
 class SpotTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, feed: Feed, notification: Notification, granular: str):
-        self.granular = granular
+    def __init__(self, client: BinanceClient, feed: Feed, notification: Notification):
         self.client = client
         self.feed = feed
         self.notification = notification
@@ -74,8 +73,8 @@ class SpotTradeContext(TradeContext):
         self.notification.notify(username, title, content, color)
 
 
-    def get_klines(self, symbol, limit) -> list[KLine]:
-        klines = self.feed.latest_n_klines(symbol, self.granular, limit)
+    def get_klines(self, symbol: str, limit: int, granular: str) -> list[KLine]:
+        klines = self.feed.latest_n_klines(symbol, granular, limit)
         return klines
     
     def get_trades(self, symbol, limit) -> list[Trade]:

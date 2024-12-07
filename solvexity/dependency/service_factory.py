@@ -1,8 +1,8 @@
 import redis
+from typing import Any
 from sqlalchemy.engine import Engine
 from binance.client import Client as BinanceClient
 from sqlalchemy import create_engine
-from .socket_argparser import SocketArgparser
 from .notification import Notification
 from pymongo import MongoClient
 
@@ -32,9 +32,6 @@ def create_notification(config: dict) -> Notification:
     return Notification(config["webhook"], config["enabled"])
 
 
-def create_tcp_socket(config: dict) -> SocketArgparser:
-    return SocketArgparser(config["host"], config["port"])
-
 
 # A registry of factory methods for dynamic service creation
 FACTORY_REGISTRY = {
@@ -42,14 +39,13 @@ FACTORY_REGISTRY = {
     "sqlengine": create_sql_engine,
     "binance": create_binance_client,
     "notify": create_notification,
-    "tcp": create_tcp_socket,
     "mongo": create_mongo_client
 }
 
 
 # Refactored ServiceFactory
 class ServiceFactory:
-    _instances = {}
+    _instances: dict[str, Any] = {}
     def __init__(self, services_config: dict):
         self.services_config = services_config
 

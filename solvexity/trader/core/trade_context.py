@@ -31,10 +31,6 @@ class TradeContext(ABC):
     @abstractmethod
     def get_klines(self, symbol: str, limit: int) -> list[KLine]:
         pass
-
-    @abstractmethod
-    def notify(self, title: str, content: Optional[str], color: Color):
-        pass
     
     @abstractmethod
     def get_trades(self, symbol: str, limit: int) -> list[Trade]:

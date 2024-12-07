@@ -139,7 +139,7 @@ class OfflineSpotFeed(Feed):
         self._stop_event = True  # Signal stop
         with self._condition:
             self._condition.notify_all()  # Wake up any waiting threads
-        if self._thread.is_alive():
+        if self._thread and self._thread.is_alive():
             self._thread.join()
         # Clean up Redis keys
         try:

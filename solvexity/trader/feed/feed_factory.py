@@ -1,3 +1,4 @@
+from typing import Any
 import solvexity.helper.logging as logging
 from solvexity.dependency import ServiceFactory
 from .offline_spot_feed import OfflineSpotFeed
@@ -31,7 +32,7 @@ FEED_FACTORY_REGISTRY = {
 }
 
 class FeedFactory:
-    _instances = {}
+    _instances: dict[str, Any] = {}
     def __init__(self, services: ServiceFactory, feed_config: dict):
         self.feed_config = feed_config
         self.services = services

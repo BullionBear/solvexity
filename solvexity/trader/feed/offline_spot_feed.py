@@ -83,7 +83,7 @@ class OfflineSpotFeed(Feed):
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 
     
-    def get_klines(self, start_time, end_time, symbol, granular) -> list[KLine]:
+    def get_klines(self, start_time: int, end_time: int, symbol: str, granular: str) -> list[KLine]:
         """
         Get kline data from the SQL database.
 

@@ -8,6 +8,7 @@ STRATEGY_FACTORY_REGISTRY = {
         signal=signal,
         policy=policy,
         symbol=config["symbol"],
+        granular=config["granular"],
         trade_id=config["trade_id"],
         verbose=config["verbose"],
     )

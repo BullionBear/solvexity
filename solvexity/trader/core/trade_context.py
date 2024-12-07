@@ -29,7 +29,7 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
-    def get_klines(self, symbol: str, limit: int) -> list[KLine]:
+    def get_klines(self, symbol: str, limit: int, granular: str) -> list[KLine]:
         pass
     
     @abstractmethod

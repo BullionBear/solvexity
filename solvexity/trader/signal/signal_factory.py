@@ -10,6 +10,7 @@ def create_doubly_moving_average_signal(trade_context, config):
         symbol=config["symbol"],
         fast_period=config["fast_period"],
         slow_period=config["slow_period"],
+        granular=config["granular"],
         limit=config["limit"]
     )
 

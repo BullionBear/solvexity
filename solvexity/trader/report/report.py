@@ -21,9 +21,10 @@ class INDEX(str, Enum):
     POSITION = "POSITION"
 
 class Report:
-    def __init__(self, context: Type[TradeContext], symbol: str, limit: int):
+    def __init__(self, context: Type[TradeContext], symbol: str, granular: str, limit: int):
         self.context = context
         self.symbol = symbol
+        self.granular = granular
         self.limit = limit
 
         self.position: list[KLine] = []
@@ -49,7 +50,7 @@ class Report:
         return kline
 
     def invoke(self):
-        klines = self.context.get_klines(self.symbol, 1)
+        klines = self.context.get_klines(self.symbol, 1, self.granular)
         if not klines:
             logger.warning(f"No kline data for {self.symbol}")
             return

@@ -28,6 +28,7 @@ class SpotTradeContext(TradeContext):
                 "free": Decimal(asset['free']),
                 "locked": Decimal(asset['locked'])
             }
+        logger.info(f"Current balance: {balance}")
         return balance
     
     def get_balance(self, token: str) -> Decimal:
@@ -40,19 +41,23 @@ class SpotTradeContext(TradeContext):
 
     def market_buy(self, symbol: str, size: Decimal):
         try:
+            _, bid = self.get_askbid(symbol)
+            size, bid = helper.symbol_filter(symbol, size, bid)
+            logger.info(f"Market buy: {symbol}, size: {size}")
             res = self.client.order_market_buy(symbol=symbol, quantity=str(size))
-            logger.info(f"Market buy: {symbol}, size: {size}, res: {res}")
+            logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
-            logger.info(f"Current balance: {self.balance}")
         except Exception as e:
             logger.error(f"Market buy failed: {e}", exc_info=True)
 
     def market_sell(self, symbol: str, size: Decimal):
         try:
-            self.client.order_market_sell(symbol=symbol, quantity=str(size))
-            logger.info(f"Market sell: {symbol}, size: {size}")
+            ask, _ = self.get_askbid(symbol)
+            size, ask = helper.symbol_filter(symbol, size, ask)
+            logger.info(f"Market sell: {symbol}, size: {size}, expected price: {ask}")
+            res = self.client.order_market_sell(symbol=symbol, quantity=str(size))
+            logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
-            logger.info(f"Current balance: {self.balance}")
         except Exception as e:
             logger.error(f"Market sell failed: {e}", exc_info=True)
 

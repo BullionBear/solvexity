@@ -49,6 +49,7 @@ class OfflineSpotFeed(Feed):
                     channel = message['channel'].decode('utf-8')
                     granular = channel.split(":")[1]
                     data = json.loads(message['data'].decode('utf-8'))
+                    self._current_time = data['data']['current_time']
                     with self._condition:  # Synchronize access to queues
                         if granular in self._queues and not self._queues[granular].full():
                             self._queues[granular].put(data)

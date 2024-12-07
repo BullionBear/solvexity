@@ -45,7 +45,7 @@ class PaperTradeSpotContext(TradeContext):
                                 quote_qty=float(size * ask), 
                                 commission=0, 
                                 commission_asset="BNB", 
-                                time=self._get_time(symbol), 
+                                time=self._get_time(), 
                                 is_buyer=True, 
                                 is_maker=False, 
                                 is_best_match=True))

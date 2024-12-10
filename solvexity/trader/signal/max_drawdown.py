@@ -31,19 +31,46 @@ class MaxDrawdown(Signal):
         df = Signal.to_dataframe(klines)
         # Analyze the data to calculate max drawdown
         self.df_analyze = self.analyze(df)
-        return SignalType.BUY
+        self.df_analyze.to_csv("max_drawdown.csv", index=False)
+        max_drawdown = self.df_analyze['drawdown'].min()
+        if max_drawdown < self.threshold:
+            return SignalType.BUY
+        return SignalType.HOLD
 
     def analyze(self, df: pd.DataFrame) -> pd.DataFrame:
         if len(df) < self.rollback_period:
             logger.warning(f"Insufficient data points for analysis. Expected at least {self.rollback_period} but receive {len(df)}.")
             return df
         df_analyze = df.copy()
-        df.to_csv("test.csv")
+        # Convert open_time to a readable datetime format
+        df_analyze['open_time'] = pd.to_datetime(df_analyze['open_time'], unit='ms')
+
+        # Calculate the cumulative max using the high prices and drawdown using the low prices
+        df_analyze['cumulative_high'] = df_analyze['high'].cummax()
+        df_analyze['drawdown'] = (df_analyze['low'] - df_analyze['cumulative_high']) / df['cumulative_high']
+        # Find the maximum drawdown
+        # max_drawdown = df['drawdown'].min()
+        # max_drawdown_row = df[df['drawdown'] == max_drawdown]
+
+        # # Identify the start of the drawdown (max cumulative high before the drawdown)
+        # drawdown_start_index = df.loc[:max_drawdown_row.index[0]]['high'].idxmax()
+        # drawdown_start_time = df.loc[drawdown_start_index, 'open_time']
+
+        # # Identify the end of the drawdown (minimum low during the drawdown period)
+        # drawdown_end_time = max_drawdown_row['open_time'].iloc[0]
+
+        # max_drawdown, drawdown_start_time, drawdown_end_time
+        # return {
+        #     "percentage": max_drawdown,
+        #     "start": int(drawdown_start_time.timestamp() * 1000),
+        #     "from": int(drawdown_end_time.timestamp() * 1000)
+        # }
+
         return df_analyze
     
     def get_filename(self) -> str:
         latest_time = self.df_analyze.iloc[-1].open_time
-        return f"{self.symbol}_{latest_time}"
+        return f"{self.symbol}_{latest_time}_mdd"
         
     
     def export(self, output_dir: str):

@@ -56,7 +56,7 @@ class DoublyMovingAverage(Signal):
     
     def get_filename(self) -> str:
         latest_time = self.df_analyze.iloc[-1].open_time
-        return f"{self.symbol}_{latest_time}"
+        return f"{self.symbol}_{latest_time}_dma"
         
     
     def export(self, output_dir: str):

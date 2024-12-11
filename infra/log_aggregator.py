@@ -5,14 +5,24 @@ import gzip
 import json
 import datetime
 import threading
+from solvexity.trader.config import ConfigLoader
+import pymongo
+import dotenv
+from solvexity.dependency.notification import Color
+
+dotenv.load_dotenv()
 
 class LogAggregator:
+    SOLVEXITY_MONGO_URI = os.getenv("SOLVEXITY_MONGO_URI")
     def __init__(self, redis_host, redis_port, channel, log_dir):
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.channel = channel
         self.log_dir = log_dir
         self.running = True
+        client = pymongo.MongoClient(self.SOLVEXITY_MONGO_URI)
+        config_loader = ConfigLoader.from_db(client, "test")
+        self.notification = config_loader["dependencies"]["notifydev"]
 
         # Ensure the log directory exists
         os.makedirs(self.log_dir, exist_ok=True)
@@ -49,15 +59,24 @@ class LogAggregator:
             # Parse the JSON log data
             log_record = json.loads(log_data)
 
-            logger_name = log_record.get("name", "unknown_logger")
             process_id = log_record.get("process_id", "unknown_process")
             log_date = datetime.date.today().strftime("%Y_%m_%d")
-            log_filename = f"{logger_name}_{log_date}_{process_id}.log"
+            log_filename = f"{log_date}_{process_id}.log"
             log_filepath = os.path.join(self.log_dir, log_filename)
 
             # Write the log message to the file
             with open(log_filepath, 'a') as log_file:
                 log_file.write(json.dumps(log_record) + "\n")
+
+            # Check for warning or error levels and send notification
+            level = log_record.get("level", "info").lower()
+            if level in ["warning", "error"]:
+                title = f"Log Level: {level.capitalize()}"
+                content = f"""
+Process ID: {process_id}
+Message: {log_record.get("message", "No message provided")}
+                """
+                self.notification.notify(username="LogAggregator", title=title, content=content, color=Color.RED if level == "error" else Color.YELLOW)
 
         except Exception as e:
             print(f"Error writing log: {e}")

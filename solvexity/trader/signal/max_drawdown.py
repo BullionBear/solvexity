@@ -74,7 +74,7 @@ class MaxDrawdown(Signal):
         peak = prices[0]
         max_dd = 0
         peak_index = 0
-        trough_index = 0
+        through_index = 0
         current_peak_index = 0
 
         for i in range(1, len(prices)):
@@ -85,8 +85,8 @@ class MaxDrawdown(Signal):
             if drawdown > max_dd:
                 max_dd = drawdown
                 peak_index = current_peak_index
-                trough_index = i
-        return max_dd * 100, (peak_index, trough_index)
+                through_index = i
+        return max_dd * 100, (peak_index, through_index)
         
     
     def export(self, output_dir: str):

@@ -30,10 +30,12 @@ class MaxDrawdown(Signal):
         klines = self.trade_context.get_klines(self.symbol, self.rollback_period, self.granular)
         df = Signal.to_dataframe(klines)
         # Analyze the data to calculate moving averages
-        self.df_analyze = self.analyze(df)
-        return SignalType.BUY
+        mdd = self.analyze(df)
+        if mdd > self.threshold:
+            return SignalType.BUY
+        return SignalType.HOLD
 
-    def analyze(self, df: pd.DataFrame) -> pd.DataFrame:
+    def analyze(self, df: pd.DataFrame) -> float:
         if len(df) < self.rollback_period:
             logger.warning(f"Insufficient data points for analysis. Expected at least {self.slow_period} but receive {len(df)}.")
             return df
@@ -46,16 +48,45 @@ class MaxDrawdown(Signal):
         low_data.rename(columns={'low': 'price'}, inplace=True)
         transformed_df = pd.concat([high_data, low_data], axis=0)
         transformed_df.sort_values(by=['open_time', 'is_high'], ascending=[True, False], inplace=True)
-        transformed_df['cumulative_max'] = transformed_df['price'].cummax()
-        transformed_df['drawdown'] = (transformed_df['cumulative_max'] - transformed_df['price']) / transformed_df['cumulative_max']
-
-        df_analyze['fast'] = df_analyze['close'].rolling(window=self.fast_period).mean()
-        df_analyze['slow'] = df_analyze['close'].rolling(window=self.slow_period).mean()
-        return df_analyze
+        self.df_analyze = transformed_df
+        mdd, _, _ = MaxDrawdown.max_drawdown(transformed_df['price'].values)
+        return mdd
     
     def get_filename(self) -> str:
         latest_time = self.df_analyze.iloc[-1].open_time
-        return f"{self.symbol}_{latest_time}"
+        return f"{self.symbol}_{latest_time}_MDD"
+    
+    @staticmethod
+    def max_drawdown(prices):
+        """
+        Calculate the Maximum Drawdown (MDD) of a list of prices.
+
+        Args:
+            prices (list or array-like): A list of prices (e.g., stock prices).
+
+        Returns:
+            float: The maximum drawdown as a percentage.
+            tuple: The indices of the peak and the trough during the max drawdown.
+        """
+        if len(prices) < 2:
+            return 0, None
+
+        peak = prices[0]
+        max_dd = 0
+        peak_index = 0
+        trough_index = 0
+        current_peak_index = 0
+
+        for i in range(1, len(prices)):
+            if prices[i] > peak:
+                peak = prices[i]
+                current_peak_index = i
+            drawdown = (peak - prices[i]) / peak
+            if drawdown > max_dd:
+                max_dd = drawdown
+                peak_index = current_peak_index
+                trough_index = i
+        return max_dd * 100, (peak_index, trough_index)
         
     
     def export(self, output_dir: str):
@@ -84,8 +115,6 @@ class MaxDrawdown(Signal):
             title='Candlestick Chart with Volume',
             ylabel='Price',
             ylabel_lower='Volume',
-            mav=(self.fast_period, self.slow_period),  # Moving averages
-            mavcolors=['red', 'blue'],  # Apply the custom colors here
             figsize=(12, 8),
             show_nontrading=True,
             savefig=target_dest

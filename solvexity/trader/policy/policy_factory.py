@@ -3,7 +3,7 @@ from solvexity.trader.context import ContextFactory
 from .all_in_spot_policy import AllInSpotPolicy
 from .fix_quote_spot_policy import FixQuoteSpotPolicy
 
-logger = logging.getLogger("config")
+logger = logging.getLogger()
 
 # Registry for available policies
 POLICY_FACTORY_REGISTRY = {

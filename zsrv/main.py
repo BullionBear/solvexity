@@ -14,7 +14,7 @@ from solvexity.trader.config import ConfigLoader
 load_dotenv()
 
 logging.setup_logging()
-logger = logging.getLogger("service")
+logger = logging.getLogger()
 
 SOLVEXITY_MONGO_URI = os.getenv("SOLVEXITY_MONGO_URI")
 

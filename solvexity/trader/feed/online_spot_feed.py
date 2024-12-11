@@ -11,7 +11,7 @@ import time
 from bisect import bisect_left, bisect_right
 
 
-logger = logging.getLogger("feed")
+logger = logging.getLogger()
 
 
 class OnlineSpotFeed(Feed):

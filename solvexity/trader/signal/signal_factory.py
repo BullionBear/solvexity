@@ -2,7 +2,7 @@ import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
 
-logger = logging.getLogger("config")
+logger = logging.getLogger()
 
 def create_doubly_moving_average_signal(trade_context, config):
     return DoublyMovingAverage(

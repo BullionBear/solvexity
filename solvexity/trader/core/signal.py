@@ -7,7 +7,7 @@ import solvexity.helper.logging as logging
 import pandas as pd
 import enum
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 class SignalType(enum.Enum):
     BUY = 'BUY'

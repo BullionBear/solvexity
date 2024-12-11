@@ -2,7 +2,7 @@ from solvexity.trader.config import ConfigLoader
 import solvexity.helper.logging as logging
 from solvexity.helper.shutdown import Shutdown
 
-logger = logging.getLogger("feed")
+logger = logging.getLogger()
 
 def feed_runtime(config_loader: ConfigLoader, shutdown: Shutdown, feed_service: str):
 

@@ -8,7 +8,7 @@ import solvexity.helper.logging as logging
 from datetime import datetime, timezone
 import solvexity.helper as helper
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 class PaperTradeSpotContext(TradeContext):
     """

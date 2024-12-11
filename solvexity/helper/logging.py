@@ -143,7 +143,7 @@ def getLogger(name=None):
 
 # Example to test unhandled exceptions
 if __name__ == "__main__":
-    logger = getLogger("test")
+    logger = getLogger()
     try:
         raise ValueError("Test exception for demonstration")
     except Exception as e:

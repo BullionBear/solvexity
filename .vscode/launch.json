@@ -5,26 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Pytest",
+            "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/trader/context/test_spot_trade.py",
+            "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "--log-cli-level=INFO",
-                "-k",
-                "test_market_buy"
-            ],
+            "justMyCode": true,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}",
             }
         },
         {
-            "name": "Python: Current File",
+            "name": "Python Debugger: Run BTCUSDT_DRYRUN service",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/zsrv/main.py",
+            "args": [
+                "-s",
+                "BTCUSDT_DRYRUN"
+            ],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

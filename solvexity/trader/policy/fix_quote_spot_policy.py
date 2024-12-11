@@ -28,14 +28,20 @@ class FixQuoteSpotPolicy(Policy):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
     def buy(self):
+        logger.info(f"Buying {self.quote_size} {self.quote} for {self.symbol}")
         total_quote_size = self.trade_context.get_avaliable_balance(self.quote)
         ask, _ = self.trade_context.get_askbid(self.symbol)
+
         if total_quote_size > self.quote_size:
             size, price = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
             self.notify("OnMarketBuy", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n **ref price**: {price}", Color.BLUE)
-            self.trade_context.market_buy(self.symbol, self.quote_size / ask)
+            res = self.trade_context.market_buy(self.symbol, self.quote_size / ask)
+            logger.info(f"Order response: {res}")
+        else:
+            logger.error(f"Insufficient quote size {total_quote_size} for {self.symbol}")
 
     def sell(self):
+        logger.info(f"Selling {self.quote_size} {self.quote} for {self.symbol}")
         total_base_size = self.trade_context.get_avaliable_balance(self.base)
         _, bid = self.trade_context.get_askbid(self.symbol)
         
@@ -43,7 +49,8 @@ class FixQuoteSpotPolicy(Policy):
             base_size = self.quote_size / bid
             size, price = helper.symbol_filter(self.symbol, base_size, bid)
             self.notify("OnMarketSell", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n**ref price**: {price}", Color.BLUE)
-            self.trade_context.market_sell(self.symbol, base_size)
+            res = self.trade_context.market_sell(self.symbol, base_size)
+            logger.info(f"Order response: {res}")
         else:
             logger.error(f"Insufficient base size {total_base_size} for {self.symbol}")
 

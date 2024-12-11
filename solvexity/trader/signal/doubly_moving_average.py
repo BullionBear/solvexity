@@ -1,6 +1,8 @@
 
 import os
 from typing import Type
+import mplfinance as mpf
+import matplotlib
 from solvexity.trader.core import TradeContext
 from solvexity.trader.core import Signal, SignalType
 import solvexity.helper.logging as logging
@@ -69,7 +71,8 @@ class DoublyMovingAverage(Signal):
     def visualize(self, output_dir: str):
         if not Signal.directory_validator(output_dir):
             return
-        import mplfinance as mpf
+        
+        matplotlib.use('Agg')  # Ensure a non-GUI backend is used
 
         ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume']]
         ohlc_data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'quote_asset_volume': 'Volume'}, inplace=True)

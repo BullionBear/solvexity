@@ -3,6 +3,7 @@ from solvexity.trader.feed import FeedFactory
 from solvexity.dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeSpotContext
+from .perp_trade import PerpTradeContext
 
 logger = logging.getLogger()
 
@@ -30,10 +31,26 @@ def create_spot_paper_trade_context(config: dict, services: ServiceFactory, feed
         init_balance=config["init_balance"]
     )
 
+def create_perp_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> PerpTradeContext:
+    feed = feed_factory[config["feed"].split(".")[1]]
+    notification_instance = services[config["notification"].split(".")[1]]
+    # Resolve services
+    binance_client = services[config["binance_client"].split(".")[1]]
+    # redis_instance = services[config["redis"].split(".")[1]]
+    notification_instance = services[config["notification"].split(".")[1]]
+    feed_instance = feed_factory[config["feed"].split(".")[1]]
+    # Create and return the context
+    return PerpTradeContext(
+        client=binance_client,
+        feed=feed_instance,
+        notification=notification_instance
+    )
+
 # Register factories
 CONTEXT_FACTORY_REGISTRY = {
     "spot_trade": create_spot_trade_context,
-    "spot_paper_trade": create_spot_paper_trade_context
+    "spot_paper_trade": create_spot_paper_trade_context,
+    "perp_trade": create_perp_trade_context
 }
 
 class ContextFactory:

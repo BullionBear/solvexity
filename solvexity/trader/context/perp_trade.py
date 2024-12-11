@@ -1,35 +1,24 @@
 from decimal import Decimal
-import redis
-import time
-from solvexity.trader.core import PerpTradeContext
+from solvexity.trader.core import TradeContext
+from solvexity.trader.core import Feed
 from typing import Optional
 from solvexity.dependency.notification import Notification, Color
-from solvexity.trader.data import (
-    query_latest_kline, query_kline, 
-    KLine, Trade, Position
-)
+from solvexity.trader.model import KLine, Trade, Position
 import solvexity.helper.logging as logging
-import binance.client as BinanceClient
+from binance.client import Client
 from solvexity.dependency.notification import Notification
-import solvexity.helper
+import solvexity.helper as helper
 
 logger = logging.getLogger()
 
-class PerpTradeContext(PerpTradeContext):
-    def __init__(self, client: BinanceClient, 
-                 redis: redis.Redis, 
-                 notification: Notification, 
-                 granular: str, 
-                 leverage: int):
-        self.granular = granular
+class PerpTradeContext(TradeContext):
+    def __init__(self, client: Client, feed: Feed, notification: Notification):
         self.client = client
-        self.redis = redis
+        self.feed = feed
         self.notification = notification
-        self.leverage = leverage
-        self._symbol_with_leverage = set()
         self.balance = self._get_balance()
+        self.positions: dict[str, Position] = {}
         self.trade: dict[int, Trade] = {}
-        self.position: dict[str, Position] = {}
         
 
     def _get_balance(self):
@@ -44,8 +33,21 @@ class PerpTradeContext(PerpTradeContext):
             }
         return balance
     
+    def _get_position(self):
+        position_info = self.client.futures_position_information()
+        positions = {}
+        for pos in position_info:
+            symbol = pos['symbol']
+            position = Position.from_perp_rest(pos)
+            positions[symbol] = position
+        return positions
+
+    
     def get_balance(self, token: str) -> Decimal:
         return Decimal(self.balance.get(token, '0'))
+    
+    def get_avaliable_balance(self, token):
+        return Decimal(self.balance.get(token, '0')['free'])
     
     def _set_leverage(self, symbol: str, leverage: int):
         if symbol in self._symbol_with_leverage:
@@ -54,20 +56,31 @@ class PerpTradeContext(PerpTradeContext):
         self._symbol_with_leverage.add(symbol)
         logger.info(f"Set leverage for {symbol} to {leverage}")
 
-
     def market_buy(self, symbol: str, size: Decimal):
-        self._set_leverage(symbol, self.leverage)
-        self.client.futures_create_order(symbol=symbol, side='BUY', type='MARKET', quantity=size)
-        logger.info(f"Market buy: {symbol}, size: {size}")
-        self.balance = self._get_balance()
-        logger.info(f"Current balance: {self.balance}")
+        try:
+            _, bid = self.get_askbid(symbol)
+            size, bid = helper.symbol_filter(symbol, size, bid)  # Use Spot's filter
+            logger.info(f"Market buy: {symbol}, size: {size}")
+            res = self.client.futures_create_order(symbol=symbol, side='BUY', type='MARKET', quantity=size)
+            logger.info(f"Order response: {res}")
+            self.balance = self._get_balance()
+            self.position = self._get_position()
+            logger.info(f"Current balance: {self.balance}")
+        except Exception as e:
+            logger.error(f"Market buy failed: {e}", exc_info=True)
 
     def market_sell(self, symbol: str, size: Decimal):
-        self._set_leverage(symbol, self.leverage)
-        self.client.futures_create_order(symbol=symbol, side='BUY', type='MARKET', quantity=size)
-        logger.info(f"Market sell: {symbol}, size: {size}")
-        self.balance = self._get_balance()
-        logger.info(f"Current balance: {self.balance}")
+        try:
+            ask, _ = self.get_askbid(symbol)
+            size, ask = helper.symbol_filter(symbol, size, ask)  # Use Spot's filter
+            logger.info(f"Market sell: {symbol}, size: {size}")
+            res = self.client.futures_create_order(symbol=symbol, side='SELL', type='MARKET', quantity=size)
+            logger.info(f"Order response: {res}")
+            self.balance = self._get_balance()
+            self.position = self._get_position()
+            logger.info(f"Current balance: {self.balance}")
+        except Exception as e:
+            logger.error(f"Market sell failed: {e}", exc_info=True)
 
     def get_askbid(self, symbol: str):
         order_book = self.client.futures_order_book(symbol=symbol, limit=1)
@@ -81,12 +94,6 @@ class PerpTradeContext(PerpTradeContext):
                 n_trade += 1
                 self.trade[trade['orderId']] = Trade.from_perp_rest(trade)
         logger.info(f"Updated {n_trade} new trades for {symbol}")
-
-    def _update_position(self):
-        positions = self.client.futures_position_information()
-        for position in positions:
-            symbol = position['symbol']
-            self.position[symbol] = Position.from_perp_rest(position)
     
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         self.notification.notify(username, title, content, color)

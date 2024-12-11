@@ -14,15 +14,15 @@ dotenv.load_dotenv()
 
 class LogAggregator:
     SOLVEXITY_MONGO_URI = os.getenv("SOLVEXITY_MONGO_URI")
-    def __init__(self, redis_host, redis_port, channel, log_dir):
+    def __init__(self, redis_host, redis_port, channel, log_dir, system, notify):
         self.redis_host = redis_host
         self.redis_port = redis_port
         self.channel = channel
         self.log_dir = log_dir
         self.running = True
         client = pymongo.MongoClient(self.SOLVEXITY_MONGO_URI)
-        config_loader = ConfigLoader.from_db(client, "test")
-        self.notification = config_loader["dependencies"]["notifydev"]
+        config_loader = ConfigLoader.from_db(client, system)
+        self.notification = config_loader["dependencies"][notify]
 
         # Ensure the log directory exists
         os.makedirs(self.log_dir, exist_ok=True)
@@ -126,6 +126,8 @@ def parse_arguments():
     parser.add_argument('--redis-host', type=str, default='localhost', help="Redis host")
     parser.add_argument('--redis-port', type=int, default=6379, help="Redis port")
     parser.add_argument('--channel', type=str, default='log_channel', help="Redis PubSub channel")
+    parser.add_argument('--system', type=str, default='test', help="System configuration")
+    parser.add_argument('--notify', type=str, default='notifydev', help="Notification configuration")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -134,7 +136,9 @@ if __name__ == "__main__":
         redis_host=args.redis_host,
         redis_port=args.redis_port,
         channel=args.channel,
-        log_dir=args.log_dir
+        log_dir=args.log_dir,
+        system=args.system,
+        notify=args.notify
     )
     try:
         aggregator.start()

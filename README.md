@@ -48,3 +48,10 @@ The core library providing abstracted components for building and executing cryp
 ## Usage
 
 The modular design allows you to customize each component independently, making **solvexity** suitable for traders at any level, from beginners to advanced quantitative traders.
+
+## Run the process
+
+### Before execute
+```
+python infra/log_aggregator.py --log-dir ./log
+```

@@ -10,7 +10,7 @@ import binance.client as BinanceClient
 from solvexity.dependency.notification import Notification
 import solvexity.helper as helper
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 class SpotTradeContext(TradeContext):
     def __init__(self, client: BinanceClient, feed: Feed, notification: Notification):
@@ -84,5 +84,5 @@ class SpotTradeContext(TradeContext):
     
     def get_trades(self, symbol, limit) -> list[Trade]:
         self._update_trade(symbol)
-        trades = filter(lambda x: x['symbol'] == symbol, self.trade.values())
+        trades = filter(lambda x: x.symbol == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]

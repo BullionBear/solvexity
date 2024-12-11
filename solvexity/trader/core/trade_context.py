@@ -5,7 +5,7 @@ from solvexity.dependency.notification import Color
 from typing import Optional
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 class TradeContext(ABC):
     @abstractmethod

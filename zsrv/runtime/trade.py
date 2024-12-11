@@ -4,7 +4,7 @@ from solvexity.helper.shutdown import Shutdown
 import solvexity.helper as helper
 import json
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str, granular: str):
     strategy = config_loader["strategies"][trade_service]
@@ -15,7 +15,8 @@ def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_servi
         for trigger in provider.receive(granular):
             if shutdown.is_set():
                 break
-            logger.info(f"Trigger Datetime: {helper.to_isoformat(trigger["data"]["current_time"])}")
+            logger.info(f"Trigger Datetime: {helper.to_isoformat(trigger['data']['current_time'])}")
+
             strategy.invoke()
     finally:
         logger.info("Trading process terminated gracefully.")

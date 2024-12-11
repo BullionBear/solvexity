@@ -1,7 +1,7 @@
 from solvexity.trader.config import ConfigLoader
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger("trading")
+logger = logging.getLogger()
 
 def trading_runtime(config_loader: ConfigLoader, trade_service: str, data_service: str):
     try:

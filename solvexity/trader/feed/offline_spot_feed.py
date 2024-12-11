@@ -12,7 +12,7 @@ from bisect import bisect_left, bisect_right
 import pandas as pd
 
 
-logger = logging.getLogger("feed")
+logger = logging.getLogger()
 
 
 class OfflineSpotFeed(Feed):

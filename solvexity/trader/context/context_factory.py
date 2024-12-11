@@ -4,7 +4,7 @@ from solvexity.dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeSpotContext
 
-logger = logging.getLogger("config")
+logger = logging.getLogger()
 
 def create_spot_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> SpotTradeContext:
     # Resolve services

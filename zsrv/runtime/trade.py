@@ -17,7 +17,7 @@ def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_servi
         logger.info(f"Trading will end at: {helper.to_isoformat(end_time)}")
     else:
         end_time = float("inf")
-        logger.info(f"Trading will never end: {helper.to_isoformat(end_time)}")
+        logger.info(f"Trading will never end")
     try:
         for trigger in provider.receive(granular):
             if time.time() * 1000 > end_time:

@@ -99,25 +99,18 @@ class PerpTradeContext(TradeContext):
         self.notification.notify(username, title, content, color)
 
 
-    def get_klines(self, symbol, limit) -> list[KLine]:
-        lastest_kline = query_latest_kline(self.redis, symbol, self.granular)
-        if not lastest_kline:
-            raise ValueError("No kline data found")
-        ts = lastest_kline.close_time
-        grandular_ts = helper.to_unixtime_interval(self.granular) * 1000
-        end_ts = ts // grandular_ts * grandular_ts
-        start_ts = end_ts - grandular_ts * limit
-        klines = query_kline(self.redis, symbol, self.granular, start_ts, end_ts)
+    def get_klines(self, symbol: str, limit: int, granular: str) -> list[KLine]:
+        klines = self.feed.latest_n_klines(symbol, granular, limit)
         return klines
     
     def get_trades(self, symbol, limit) -> list[Trade]:
         self._update_trade(symbol)
-        trades = filter(lambda x: x['symbol'] == symbol, self.trade.values())
+        trades = filter(lambda x: x.symbol == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]
     
-    def get_positions(self) -> list[Position]:
-        self._update_position()
-        return self.position
+    def get_positions(self, symbol: str) -> list[Position]:
+        self.positions = self._get_position()
+        return list(self.position.values())
     
     def get_leverage_ratio(self) -> Decimal:
         usdt = self.get_balance('USDT')

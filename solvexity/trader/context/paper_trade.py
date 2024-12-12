@@ -84,7 +84,6 @@ class PaperTradeSpotContext(TradeContext):
     def _get_time(self) -> int:
         return self.feed.time()
         
-    
     def get_askbid(self, symbol: str) -> tuple[Decimal, Decimal]:
         lastest_kline = self.feed.latest_n_klines(symbol, '1m', 1)[0]
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
@@ -98,3 +97,4 @@ class PaperTradeSpotContext(TradeContext):
     def get_trades(self, symbol, limit) -> list[Trade]:
         trades = filter(lambda x: x.symbol == symbol, self.trade)
         return list(trades)[-limit:]
+    

@@ -15,10 +15,13 @@ class FixQuotePerpPolicy(Policy):
         A policy that buy/sell fix quote size of the U-Perp
     """
     MAX_TRADE_SIZE = 65535
-    def __init__(self, trade_context: Type[PerpTradeContext], symbol: str, quote_size: float, accept_drawdown: float, accept_loss: float, trade_id: str):
+    def __init__(self, trade_context: Type[PerpTradeContext], symbol: str, quote_size: float, calm_down: int, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
         self.quote_size = Decimal(quote_size)
+        self.calm_down = calm_down # Only risk layer after calm_down in FixQuotePerpPolicy
+
+        self._latest_trade = 0
 
     @property
     def base(self):

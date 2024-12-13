@@ -28,4 +28,5 @@ def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_servi
 
             strategy.invoke()
     finally:
+        shutdown.set()
         logger.info("Trading process terminated gracefully.")

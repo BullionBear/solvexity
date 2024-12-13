@@ -40,6 +40,7 @@ class FixQuotePerpPolicy(Policy):
             size, price = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
             self.notify("OnMarketBuy", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n **ref price**: {price}", Color.BLUE)
             res = self.trade_context.market_buy(self.symbol, self.quote_size / ask)
+            
             logger.info(f"Order response: {res}")
         else:
             logger.error(f"Insufficient quote size {total_quote_size} for {self.symbol}")
@@ -57,22 +58,6 @@ class FixQuotePerpPolicy(Policy):
             logger.info(f"Order response: {res}")
         else:
             logger.error(f"Insufficient base size {total_base_size} for {self.symbol}")
-
-    def _risk_layer(self, symbol: str, side: str, size: Decimal) -> False:
-        """
-        A risk layer for the trade
-        """
-        if self.trade_context.get_avaliable_balance(self.base) < size:
-            logger.error(f"Insufficient balance for {self.symbol}, size: {size}, available: {self.trade_context.get_avaliable_balance(self.base)}")
-            return False
-        if side.lower() == "buy":
-            ask, _ = self.trade_context.get_askbid(symbol)
-            position = self.trade_context.get_position(symbol)
-
-        elif side.lower() == "sell":
-            self.trade_context.market_sell(symbol, size)
-        else:
-            logger.error(f"Invalid side {side}")
 
     def export(self, output_dir: str):
         trades = self.trade_context.get_trades(self.symbol, self.MAX_TRADE_SIZE)

@@ -36,7 +36,7 @@ class OnlineSpotFeed(Feed):
             for interval in self._GRANULARS
         }
 
-        self._current_time = -1
+        self._current_time = int(time.time() * 1000)
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False

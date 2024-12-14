@@ -48,6 +48,7 @@ def start_server(host: str, port: int, handler: CommandHandler, shutdown: Shutdo
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             break
+    logger.info("Shutting down server...")
 
 
 if __name__ == "__main__":
@@ -69,14 +70,21 @@ if __name__ == "__main__":
             # Start the feed runtime
             from zsrv.runtime.feed import feed_runtime
             feed_args = srv_config["arguments"]
-            thread = threading.Thread(target=feed_runtime, args=(config_loader, shutdown, feed_args["feed"]))
+            thread = threading.Thread(target=feed_runtime, args=(config_loader, 
+                                                                 shutdown, 
+                                                                 feed_args["feed"]))
             from zsrv.dispatcher.handler.feed_handler import FeedHandler
             handler = FeedHandler(config_loader)
         elif srv_config["runtime"] == "trade":
             # Start the trade runtime
             from zsrv.runtime.trade import trading_runtime
             trade_args = srv_config["arguments"]
-            thread = threading.Thread(target=trading_runtime, args=(config_loader, shutdown, trade_args["strategy"], trade_args["feed"], trade_args["granular"]))
+            thread = threading.Thread(target=trading_runtime, args=(config_loader, 
+                                                                    shutdown, 
+                                                                    trade_args["strategy"], 
+                                                                    trade_args["feed"], 
+                                                                    trade_args["granular"], 
+                                                                    trade_args["n_live_granular"]))
             from zsrv.dispatcher.handler.trade_handler import TradeHandler
             handler = TradeHandler(config_loader)
         else:
@@ -86,9 +94,7 @@ if __name__ == "__main__":
         # Start the server
         start_server("0.0.0.0", srv_config["port"], handler, shutdown)
     except Exception as e:
-        import traceback
-        full_traceback = traceback.format_exc()
-        logger.error(f"Error starting up: {e}\n{full_traceback}")
+        logger.error(f"Error starting up: {e}", exc_info=True)
     finally:
         if 'thread' in locals() and thread.is_alive():
             thread.join()

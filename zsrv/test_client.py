@@ -4,7 +4,7 @@ import json
 def test_zmq_server():
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:8819")
+    socket.connect("tcp://localhost:8919")
 
     message = {"test": "data"}
     socket.send_string(json.dumps(message))

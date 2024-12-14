@@ -12,15 +12,15 @@ def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_servi
     feed = config_loader["feeds"][feed_service]
     shutdown.register(lambda signum: feed.close())
     shutdown.register(lambda signum: strategy.close())
-    end_time = float('inf')
     try:
         for i, trigger in enumerate(feed.receive(granular)):
-            if i == 0 and n_live_granular > 0:
+            if i == 0:
                 end_time = feed.time() + n_live_granular * helper.to_unixtime_interval(granular)
-                logger.info(f"Trading will stop at {helper.to_isoformat(end_time)}")
-            if feed.time() > end_time:
+                logger.info(f"Trading started at {helper.to_isoformat(end_time)}")
+            if i >= n_live_granular >= 0: # n_live_granular < 0 means infinite
                 shutdown.set()
             if shutdown.is_set():
+                logger.info("Shutdown signal received.")
                 break
             logger.info(f"Trigger Datetime: {helper.to_isoformat(trigger['data']['current_time'])}")
             strategy.invoke()

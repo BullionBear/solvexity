@@ -50,10 +50,12 @@ class OfflineSpotFeed(Feed):
                     granular = channel.split(":")[1]
                     data = json.loads(message['data'].decode('utf-8'))
                     self._current_time = data['data']['current_time']
+                    logger.info(f"Blokcing before put data to queue: {data}")
                     with self._condition:  # Synchronize access to queues
+                        logger.info(f"Put data to queue: {data}")
                         if granular in self._queues and not self._queues[granular].full():
                             self._queues[granular].put(data)
-                            self._condition.notify_all()  # Notify waiting threads
+                        self._condition.notify_all()  # Notify waiting threads
         finally:
             pubsub.punsubscribe()
             pubsub.close()
@@ -125,13 +127,15 @@ class OfflineSpotFeed(Feed):
         """
         Wait indefinitely for the next message for the specified granular unless the process is stopped.
         """
-        self._thread = Thread(target=self._subscribe)
-        self._thread.start()
+        subscriber_thread = Thread(target=self._subscribe)
+        subscriber_thread.start()
         while not self._stop_event:  # Keep waiting until explicitly stopped
             with self._condition:
                 if not self._queues[granular].empty():
                     yield self._queues[granular].get()  # Return the message if available
                 self._condition.wait(timeout=1.0)  # Wait for notification or timeout for periodic checks
+        self._condition.notify_all()  # Notify other threads
+        subscriber_thread.join()
 
 
     def close(self):

@@ -28,12 +28,18 @@ class Shutdown:
         :param frame: The current stack frame (unused here).
         """
         logger.info(f"Signal received: {signum}. Number of callbacks: {len(self.callbacks)} is executing.")
+        # Print out all alive threads
+        current_threads = threading.enumerate()
+        logger.info("Currently alive threads:")
+        for th in current_threads:
+            logger.info(f"Thread Name: {th.name}, Is Alive: {th.is_alive()}")
         with self.lock:
             for callback in reversed(self.callbacks):  # Execute in LIFO order
                 try:
                     callback(signum)
                 except Exception as e:
                     logger.error(f"Error invoking shutdown callback: {e}", exc_info=True)
+            self.callbacks.clear()
         logger.info("All callbacks executed.")
         self.shutdown_event.set()  # Signal that shutdown is complete
 
@@ -69,8 +75,9 @@ class Shutdown:
         """
         self.shutdown_event.set()
         logger.info("Shutdown event set.")
+        self._trigger_callbacks()
 
-    def trigger_callbacks(self):
+    def _trigger_callbacks(self):
         """
         Trigger registered callbacks manually, useful for programmatic shutdowns.
         """
@@ -81,3 +88,4 @@ class Shutdown:
                     callback(None)
                 except Exception as e:
                     logger.error(f"Error invoking manual shutdown callback: {e}", exc_info=True)
+            self.callbacks.clear()

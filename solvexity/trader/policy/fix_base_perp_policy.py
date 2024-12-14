@@ -15,10 +15,12 @@ class FixBasePerpPolicy(Policy):
         A policy that buy/sell fix base size of the U-Perp
     """
     MAX_TRADE_SIZE = 65535
-    def __init__(self, trade_context: Type[PerpTradeContext], symbol: str, base_size: float, trade_id: str):
+    def __init__(self, trade_context: Type[PerpTradeContext], symbol: str, base_size: float, is_reversed: bool, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
         self.base_size = Decimal(base_size)
+        self.is_reversed = is_reversed
+        self.position: int = 0
 
     @property
     def base(self):
@@ -29,10 +31,15 @@ class FixBasePerpPolicy(Policy):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
     def buy(self):
-        logger.info(f"Long {self.base_size} {self.base}")
         ask, _ = self.trade_context.get_askbid(self.symbol)
         try:
-            self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {self.base_size}\n**ref price**: {ask}", Color.MAGENTA)
+            sz = self.base_size
+            self.position += 1
+            if self.is_reversed and self.position == 0:
+                sz += self.base_size
+                self.position = 1
+            logger.info(f"Long {self.base_size} {sz}")
+            self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {ask}", Color.MAGENTA)
             res = self.trade_context.market_buy(self.symbol, self.base_size)
             logger.info(f"Order response: {res}")
         except Exception as e:
@@ -44,8 +51,14 @@ class FixBasePerpPolicy(Policy):
         _, bid = self.trade_context.get_askbid(self.symbol)
         
         try:
-            self.notify("OnMarketShort", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {self.base_size}\n**ref price**: {bid}", Color.MAGENTA)
-            res = self.trade_context.market_sell(self.symbol, self.base_size)
+            sz = self.base_size
+            self.position -= 1
+            if self.is_reversed and self.position == 0:
+                sz += self.base_size
+                self.position = -1
+            logger.info(f"Short {self.base_size} {sz}")
+            self.notify("OnMarketShort", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {bid}", Color.MAGENTA)
+            res = self.trade_context.market_sell(self.symbol, sz)
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market short failed: {e}", exc_info=True)

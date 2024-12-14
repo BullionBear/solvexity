@@ -28,8 +28,8 @@ class PerpTradeContext(TradeContext):
             free_balance = Decimal(asset['availableBalance'])
             total_balance = Decimal(asset['balance'])
             balance[asset['asset']] = {
-                'free': str(free_balance),
-                'locked': str(total_balance - free_balance)
+                'free': free_balance,
+                'locked': total_balance - free_balance
             }
         return balance
     
@@ -44,10 +44,14 @@ class PerpTradeContext(TradeContext):
 
     
     def get_balance(self, token: str) -> Decimal:
-        return Decimal(self.balance.get(token, '0'))
+        if token not in self.balance:
+            return Decimal('0')
+        return Decimal(self.balance[token]['free']) + Decimal(self.balance[token]['locked'])
     
-    def get_avaliable_balance(self, token):
-        return Decimal(self.balance.get(token, '0')['free'])
+    def get_avaliable_balance(self, token) -> Decimal:
+        if token not in self.balance:
+            return Decimal('0')
+        return self.balance[token]['free']
 
     def market_buy(self, symbol: str, size: Decimal):
         try:
@@ -76,7 +80,7 @@ class PerpTradeContext(TradeContext):
             logger.error(f"Market sell failed: {e}", exc_info=True)
 
     def get_askbid(self, symbol: str):
-        order_book = self.client.futures_order_book(symbol=symbol, limit=1)
+        order_book = self.client.futures_order_book(symbol=symbol, limit=5) # 5 is the minimum limit
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
     
     def _update_trade(self, symbol: str):

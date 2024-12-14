@@ -6,14 +6,14 @@ from typing import Optional
 from solvexity.dependency.notification import Notification, Color
 from solvexity.trader.model import KLine, Trade
 import solvexity.helper.logging as logging
-import binance.client as BinanceClient
+from binance.client import Client
 from solvexity.dependency.notification import Notification
 import solvexity.helper as helper
 
 logger = logging.getLogger()
 
 class SpotTradeContext(TradeContext):
-    def __init__(self, client: BinanceClient, feed: Feed, notification: Notification):
+    def __init__(self, client: Client, feed: Feed, notification: Notification):
         self.client = client
         self.feed = feed
         self.notification = notification
@@ -36,8 +36,10 @@ class SpotTradeContext(TradeContext):
             return Decimal('0')
         return Decimal(self.balance[token]['free']) + Decimal(self.balance[token]['locked'])
 
-    def get_avaliable_balance(self, token):
-        return Decimal(self.balance.get(token, '0')['free'])
+    def get_avaliable_balance(self, token) -> Decimal:
+        if token not in self.balance:
+            return Decimal('0')
+        return self.balance[token]['free']
 
     def market_buy(self, symbol: str, size: Decimal):
         try:

@@ -16,13 +16,13 @@
             }
         },
         {
-            "name": "Python Debugger: Run BT service",
+            "name": "Python Debugger: Run service",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/zsrv/main.py",
             "args": [
                 "-s",
-                "PYTHA_BTCUSDT_MDD_SPOT_BT"
+                "PYTHA_ETHUSDT_DMA_PERP"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

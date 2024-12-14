@@ -2,6 +2,7 @@ import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .all_in_spot_policy import AllInSpotPolicy
 from .fix_quote_spot_policy import FixQuoteSpotPolicy
+from .fix_base_perp_policy import FixBasePerpPolicy
 
 logger = logging.getLogger()
 
@@ -16,6 +17,13 @@ POLICY_FACTORY_REGISTRY = {
         trade_context=context,
         symbol=config["symbol"],
         quote_size=config["quote_size"],
+        trade_id=config["trade_id"]
+    ),
+    "fix_base_perp_policy": lambda context, config: FixBasePerpPolicy(
+        trade_context=context,
+        symbol=config["symbol"],
+        base_size=config["base_size"],
+        is_reversed=config["is_reversed"],
         trade_id=config["trade_id"]
     )
 }

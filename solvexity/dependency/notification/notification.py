@@ -1,6 +1,7 @@
 import enum
 from typing import Callable, Dict, Optional, Any
 import requests
+import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
 
@@ -43,11 +44,14 @@ class Notification:
         self.webhook = webhook
         self.enabled = enabled
 
-    def notify(self, username: str, title: str, content: Optional[str], color: Color):
+    def notify(self, username: str, title: str, content: Optional[str], color: Color, timestamp: int = None):
+        if timestamp is None:
+            timestamp = int(time.time()) * 1000
         embed = {
             "title": title,
             "description": content,
-            "color": color
+            "color": color,
+            "timestamp": helper.to_isoformat(timestamp)
         }
         logger.info(f"Sending notification to {title=}")
         if self.enabled:

@@ -33,7 +33,6 @@ class PaperTradeSpotContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base]['free'] += size
         self.balance[quote]['free'] -= size * ask
-        # self.notify("OnMarketBuy", f"Symbol: {symbol}\n size: {size}\n price: {ask}", Color.BLUE)
         logger.info(f"Market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -57,7 +56,6 @@ class PaperTradeSpotContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base]['free'] -= size
         self.balance[quote]['free'] += size * bid
-        # self.notify("OnMarketSell", f"Symbol: {symbol}\n size: {size}\n price: {bid}", Color.BLUE)
         logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -69,7 +67,7 @@ class PaperTradeSpotContext(TradeContext):
                                 quote_qty=float(size * bid), 
                                 commission=0, 
                                 commission_asset="BNB", 
-                                time=self._get_time(symbol), 
+                                time=self._get_time(), 
                                 is_buyer=False, 
                                 is_maker=False, 
                                 is_best_match=True))
@@ -89,7 +87,7 @@ class PaperTradeSpotContext(TradeContext):
         return Decimal(lastest_kline.close), Decimal(lastest_kline.close)
     
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
-        self.notification.notify(username, title, content, color)
+        self.notification.notify(username, title, content, color, self.feed.time())
 
     def get_klines(self, symbol: str, limit: int, granular: str) -> list[KLine]:
         return self.feed.latest_n_klines(symbol, granular, limit)

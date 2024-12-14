@@ -4,6 +4,8 @@ from typing import Type
 from solvexity.trader.core import TradeContext
 from solvexity.trader.core import Signal, SignalType
 import solvexity.helper.logging as logging
+import mplfinance as mpf
+import matplotlib
 import pandas as pd
 
 logger = logging.getLogger()
@@ -14,6 +16,7 @@ class MaxDrawdown(Signal):
     """
     In Bullish markets, the drawdown is the percentage decline from the peak, a period of drawdown is the good time to buy.
     MaxDrawdown only return HOLD and BUY signals.
+    Assume max drawdown is positive, for example, 10% max drawdown is 0.1
     """
     NAME = "Maximal Drawdown"
     def __init__(self, trade_context: Type[TradeContext], symbol: str, rollback_period: int, threshold: float, granular: str):
@@ -24,69 +27,61 @@ class MaxDrawdown(Signal):
         self.threshold: float = threshold
 
         self.df_analyze: pd.DataFrame = None
+        self._cache_range = []
 
     def solve(self) -> SignalType:
         # Retrieve historical market data
         klines = self.trade_context.get_klines(self.symbol, self.rollback_period, self.granular)
         df = Signal.to_dataframe(klines)
         # Analyze the data to calculate moving averages
-        mdd = self.analyze(df)
-        if mdd > self.threshold:
-            return SignalType.BUY
-        return SignalType.HOLD
+        mdd, start_time, end_time = self.analyze(df)
+        logger.info(f"Maximal Drawdown: {mdd} from {start_time} to {end_time}")
+        if start_time == end_time:
+            return SignalType.HOLD
+        if mdd < self.threshold:
+            return SignalType.HOLD
+        for c_start, c_end in self._cache_range:
+            if c_start <= start_time <= c_end or c_start <= end_time <= c_end:
+                logger.info(f"Maximal Drawdown signal is overlayed. Start: {c_start}, End: {c_end}")
+                return SignalType.HOLD
+        self._cache_range.append((start_time, end_time))
+        return SignalType.BUY
 
-    def analyze(self, df: pd.DataFrame) -> float:
+    def analyze(self, df: pd.DataFrame) -> tuple[float, int, int]:
         if len(df) < self.rollback_period:
             logger.warning(f"Insufficient data points for analysis. Expected at least {self.slow_period} but receive {len(df)}.")
-            return df
-        df_analyze = df.copy()
-        high_data = df_analyze[['open_time', 'high']].copy()
-        high_data['is_high'] = True
-        high_data.rename(columns={'high': 'price'}, inplace=True)
-        low_data = df_analyze[['open_time', 'low']].copy()
-        low_data['is_high'] = False
-        low_data.rename(columns={'low': 'price'}, inplace=True)
-        transformed_df = pd.concat([high_data, low_data], axis=0)
-        transformed_df.sort_values(by=['open_time', 'is_high'], ascending=[True, False], inplace=True)
-        self.df_analyze = transformed_df
-        mdd, _, _ = MaxDrawdown.max_drawdown(transformed_df['price'].values)
-        return mdd
+            return 0.0, 0, 0
+        self.df_analyze = MaxDrawdown.drawdown(df)
+        end_idx = self.df_analyze['drawdown'].idxmax()
+        start_idx = self.df_analyze.iloc[:end_idx]['ref_price'].idxmax()
+
+        return self.df_analyze['drawdown_pct'].max(), self.df_analyze.iloc[start_idx].open_time, self.df_analyze.iloc[end_idx].open_time
     
     def get_filename(self) -> str:
         latest_time = self.df_analyze.iloc[-1].open_time
         return f"{self.symbol}_{latest_time}_MDD"
     
     @staticmethod
-    def max_drawdown(prices):
+    def drawdown(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Calculate the Maximum Drawdown (MDD) of a list of prices.
-
-        Args:
-            prices (list or array-like): A list of prices (e.g., stock prices).
-
-        Returns:
-            float: The maximum drawdown as a percentage.
-            tuple: The indices of the peak and the trough during the max drawdown.
+        Calculate the Maximum Drawdown (MDD) from kline dataframe.
         """
-        if len(prices) < 2:
-            return 0, None
-
-        peak = prices[0]
-        max_dd = 0
-        peak_index = 0
-        through_index = 0
-        current_peak_index = 0
-
-        for i in range(1, len(prices)):
-            if prices[i] > peak:
-                peak = prices[i]
-                current_peak_index = i
-            drawdown = (peak - prices[i]) / peak
-            if drawdown > max_dd:
-                max_dd = drawdown
-                peak_index = current_peak_index
-                through_index = i
-        return max_dd * 100, (peak_index, through_index)
+        df_high = df.copy()
+        df_low = df.copy()
+        df_high['ref_flag'] = df['close'] - df['low'] > df['high'] - df['close']
+        df_low['ref_flag'] = ~df_high['ref_flag']
+        df_high['ref_price'] = df['high']
+        df_low['ref_price'] = df['low']
+        df_merge = pd.concat([df_high, df_low], axis=0)
+        df_merge.sort_values(['open_time', 'ref_flag'], kind='mergesort', inplace=True)
+        df_merge.reset_index(drop=True, inplace=True)
+        df_merge["acc_max"] = df_merge["ref_price"].cummax()
+        df_merge["drawdown"] = df_merge["acc_max"] - df_merge["ref_price"]
+        df_merge["drawdown_pct"] = df_merge["drawdown"] / df_merge["acc_max"]
+        df_merge.sort_values('drawdown', inplace=True, ascending=False)
+        df_merge.drop_duplicates(subset='open_time', keep='first', inplace=True)
+        df_merge.sort_values('open_time', inplace=True)
+        return df_merge
         
     
     def export(self, output_dir: str):
@@ -99,14 +94,17 @@ class MaxDrawdown(Signal):
     def visualize(self, output_dir: str):
         if not Signal.directory_validator(output_dir):
             return
-        import mplfinance as mpf
-
+        matplotlib.use('Agg')  # Ensure a non-GUI backend is used
         ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume']]
         ohlc_data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'quote_asset_volume': 'Volume'}, inplace=True)
 
         ohlc_data['open_time'] = pd.to_datetime(ohlc_data['open_time'], unit='ms')
         ohlc_data.set_index('open_time', inplace=True)
         target_dest = os.path.join(output_dir, f"{self.get_filename()}.png")
+        additional_lines = [
+        mpf.make_addplot(ohlc_data['acc_max'], color='green', width=1.5, linestyle='dotted', ylabel="acc_max"),
+        mpf.make_addplot(ohlc_data['acc_max'] - ohlc_data['drawdown'], color='orange', width=1.5, linestyle='dashed', ylabel="acc_max - drawdown")
+        ]
         mpf.plot(
             ohlc_data,
             type='candle',
@@ -115,9 +113,9 @@ class MaxDrawdown(Signal):
             title='Candlestick Chart with Volume',
             ylabel='Price',
             ylabel_lower='Volume',
+            addplot=additional_lines,
             figsize=(12, 8),
             show_nontrading=True,
-            savefig=target_dest
         )
         logger.info(f"Exported visualization to {target_dest}")
         

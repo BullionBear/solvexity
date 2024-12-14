@@ -16,13 +16,13 @@
             }
         },
         {
-            "name": "Python Debugger: Run ETHUSDT_DRYRUN service",
+            "name": "Python Debugger: Run BT service",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/zsrv/main.py",
             "args": [
                 "-s",
-                "ETHUSDT_DRYRUN"
+                "PYTHA_BTCUSDT_MDD_SPOT_BT"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

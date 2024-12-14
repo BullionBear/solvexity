@@ -44,7 +44,7 @@ class MaxDrawdown(Signal):
             logger.info(f"Maximal Drawdown {mdd} < {self.threshold}")
             return SignalType.HOLD
         for c_start, c_end in self._cache_range:
-            if c_start <= start_time <= c_end or c_start <= end_time <= c_end:
+            if start_time <= c_end and end_time >= c_start:
                 logger.info(f"Maximal Drawdown signal is overlayed. Start: {c_start}, End: {c_end}")
                 return SignalType.HOLD
         self._cache_range.append((start_time, end_time))
@@ -84,6 +84,7 @@ class MaxDrawdown(Signal):
         df_merge.sort_values('drawdown', inplace=True, ascending=False)
         df_merge.drop_duplicates(subset='open_time', keep='first', inplace=True)
         df_merge.sort_values('open_time', inplace=True)
+        df_merge.reset_index(drop=True, inplace=True)
         return df_merge
         
     
@@ -98,16 +99,17 @@ class MaxDrawdown(Signal):
         if not Signal.directory_validator(output_dir):
             return
         matplotlib.use('Agg')  # Ensure a non-GUI backend is used
-        ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume']]
+        ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume', 'acc_max', 'drawdown']]
         ohlc_data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'quote_asset_volume': 'Volume'}, inplace=True)
 
         ohlc_data['open_time'] = pd.to_datetime(ohlc_data['open_time'], unit='ms')
         ohlc_data.set_index('open_time', inplace=True)
         target_dest = os.path.join(output_dir, f"{self.get_filename()}.png")
         additional_lines = [
-        mpf.make_addplot(ohlc_data['acc_max'], color='green', width=1.5, linestyle='dotted', ylabel="acc_max"),
-        mpf.make_addplot(ohlc_data['acc_max'] - ohlc_data['drawdown'], color='orange', width=1.5, linestyle='dashed', ylabel="acc_max - drawdown")
+            mpf.make_addplot(ohlc_data['acc_max'], color='green', width=1.5, linestyle='dotted', ylabel="acc_max"),
+            mpf.make_addplot(ohlc_data['acc_max'] - ohlc_data['drawdown'], color='orange', width=1.5, linestyle='dashed', ylabel="acc_max - drawdown")
         ]
+        target_dest = os.path.join(output_dir, f"{self.get_filename()}.png")
         mpf.plot(
             ohlc_data,
             type='candle',
@@ -119,6 +121,7 @@ class MaxDrawdown(Signal):
             addplot=additional_lines,
             figsize=(12, 8),
             show_nontrading=True,
+            savefig=target_dest
         )
         logger.info(f"Exported visualization to {target_dest}")
         

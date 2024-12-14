@@ -9,18 +9,16 @@ logger = logging.getLogger()
 
 def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str, granular: str, n_live_granular: int = -1):
     strategy = config_loader["strategies"][trade_service]
-    provider = config_loader["feeds"][feed_service]
-    shutdown.register(lambda signum: provider.close())
+    feed = config_loader["feeds"][feed_service]
+    shutdown.register(lambda signum: feed.close())
     shutdown.register(lambda signum: strategy.close())
-    if n_live_granular > 0:
-        end_time = time.time() + helper.to_unixtime_interval(granular) * n_live_granular
-        logger.info(f"Trading will end at: {helper.to_isoformat(end_time)}")
-    else:
-        end_time = float("inf")
-        logger.info(f"Trading will never end")
+    end_time = float('inf')
+    logger.info(f"Trading will never end")
     try:
-        for trigger in provider.receive(granular):
-            if time.time() * 1000 > end_time:
+        for i, trigger in enumerate(feed.receive(granular)):
+            if i == 0 and n_live_granular > 0:
+                end_time = feed.time() + n_live_granular * helper.to_unixtime_interval(granular)
+            if feed.time() > end_time:
                 shutdown.set()
             if shutdown.is_set():
                 break

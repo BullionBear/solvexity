@@ -33,7 +33,6 @@ class OfflineSpotFeed(Feed):
         self._queues = {granular: Queue(maxsize=10) for granular in self._GRANDULARS}  # Separate queues for granulars
         self._stop_event = False
         self._condition = Condition()  # Condition variable for signaling
-        self._thread = None
 
     def _get_key(self, symbol: str, granular: str) -> str:
         return f"spot:{symbol}:{granular}:offline"
@@ -144,8 +143,6 @@ class OfflineSpotFeed(Feed):
         self._stop_event = True  # Signal stop
         with self._condition:
             self._condition.notify_all()  # Wake up any waiting threads
-        if self._thread and self._thread.is_alive():
-            self._thread.join()
         # Clean up Redis keys
         try:
             for cache_key in self._cache_keys:

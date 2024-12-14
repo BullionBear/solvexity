@@ -28,6 +28,7 @@ class MaxDrawdown(Signal):
 
         self.df_analyze: pd.DataFrame = None
         self._cache_range = []
+        self.solve() # Solve once to initialize the cache, make sure the behavior is stateless
 
     def solve(self) -> SignalType:
         # Retrieve historical market data
@@ -37,8 +38,10 @@ class MaxDrawdown(Signal):
         mdd, start_time, end_time = self.analyze(df)
         logger.info(f"Maximal Drawdown: {mdd} from {start_time} to {end_time}")
         if start_time == end_time:
+            logger.warning(f"Maximal Drawdown signal is not found.")
             return SignalType.HOLD
         if mdd < self.threshold:
+            logger.info(f"Maximal Drawdown {mdd} < {self.threshold}")
             return SignalType.HOLD
         for c_start, c_end in self._cache_range:
             if c_start <= start_time <= c_end or c_start <= end_time <= c_end:

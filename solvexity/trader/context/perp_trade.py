@@ -28,8 +28,8 @@ class PerpTradeContext(TradeContext):
             free_balance = Decimal(asset['availableBalance'])
             total_balance = Decimal(asset['balance'])
             balance[asset['asset']] = {
-                'free': str(free_balance),
-                'locked': str(total_balance - free_balance)
+                'free': free_balance,
+                'locked': total_balance - free_balance
             }
         return balance
     
@@ -44,17 +44,14 @@ class PerpTradeContext(TradeContext):
 
     
     def get_balance(self, token: str) -> Decimal:
-        return Decimal(self.balance.get(token, '0'))
+        if token not in self.balance:
+            return Decimal('0')
+        return Decimal(self.balance[token]['free']) + Decimal(self.balance[token]['locked'])
     
-    def get_avaliable_balance(self, token):
-        return Decimal(self.balance.get(token, '0')['free'])
-    
-    def _set_leverage(self, symbol: str, leverage: int):
-        if symbol in self._symbol_with_leverage:
-            return
-        self.client.futures_change_leverage(symbol=symbol, leverage=leverage)
-        self._symbol_with_leverage.add(symbol)
-        logger.info(f"Set leverage for {symbol} to {leverage}")
+    def get_avaliable_balance(self, token) -> Decimal:
+        if token not in self.balance:
+            return Decimal('0')
+        return self.balance[token]['free']
 
     def market_buy(self, symbol: str, size: Decimal):
         try:
@@ -83,11 +80,11 @@ class PerpTradeContext(TradeContext):
             logger.error(f"Market sell failed: {e}", exc_info=True)
 
     def get_askbid(self, symbol: str):
-        order_book = self.client.futures_order_book(symbol=symbol, limit=1)
+        order_book = self.client.futures_order_book(symbol=symbol, limit=5) # 5 is the minimum limit
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
     
     def _update_trade(self, symbol: str):
-        trades = self.client.futures_account_trades(symbol=symbol, limit=1)
+        trades = self.client.futures_account_trades(symbol=symbol, limit=10)
         n_trade = 0
         for trade in trades:
             if trade['orderId'] not in self.trade:
@@ -108,9 +105,12 @@ class PerpTradeContext(TradeContext):
         trades = filter(lambda x: x.symbol == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]
     
-    def get_positions(self, symbol: str) -> list[Position]:
+    def get_positions(self) -> list[Position]:
         self.positions = self._get_position()
         return list(self.position.values())
+    
+    def get_position(self, symbol: str) -> Optional[Position]:
+        return self.positions.get(symbol, None)
     
     def get_leverage_ratio(self) -> Decimal:
         usdt = self.get_balance('USDT')

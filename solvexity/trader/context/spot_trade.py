@@ -75,7 +75,7 @@ class SpotTradeContext(TradeContext):
         logger.info(f"Updated {n_trade} new trades for {symbol}")
     
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
-        self.notification.notify(username, title, content, color)
+        self.notification.notify(username, title, content, color, self.feed.time())
 
 
     def get_klines(self, symbol: str, limit: int, granular: str) -> list[KLine]:

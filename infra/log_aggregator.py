@@ -9,6 +9,7 @@ from solvexity.trader.config import ConfigLoader
 import pymongo
 import dotenv
 from solvexity.dependency.notification import Color
+import textwrap
 
 dotenv.load_dotenv()
 
@@ -72,10 +73,11 @@ class LogAggregator:
             level = log_record.get("level", "info").lower()
             if level in ["warning", "error"]:
                 title = f"Log Level: {level.capitalize()}"
-                content = f"""
-Process ID: {process_id}
-Message: {log_record.get("message", "No message provided")}
-                """
+                content = textwrap.dedent(f"""\
+                    Process ID: {process_id}
+                    Message: {log_record.get("message", "No message provided")}
+                    Exception: {log_record.get("exception", "No exception provided")}
+                """)
                 self.notification.notify(username="LogAggregator", title=title, content=content, color=Color.RED if level == "error" else Color.YELLOW)
 
         except Exception as e:

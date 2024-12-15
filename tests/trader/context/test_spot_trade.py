@@ -20,13 +20,19 @@ def spot_trade_context():
     mongo_client = pymongo.MongoClient(SOLVEXITY_MONGO_URI)
     config_loader = ConfigLoader.from_db(mongo_client, "test")
     context_factory = config_loader["contexts"]
-    yield context_factory.get_context("test_spot_trade")
+    yield context_factory.get_context("scylla_spot")
 
-def test_balance_retrieval(spot_trade_context):
+def test_exist_balance_retrieval(spot_trade_context):
     balance = spot_trade_context.get_balance("USDT")
     logger.info(f"Retrieved balance: {balance}")
     assert isinstance(balance, Decimal), "Balance should be a Decimal instance"
-    assert balance >= Decimal('0'), "Balance should not be negative"
+    assert balance > Decimal('0'), "Balance should be greater than zero for existing token"
+
+def test_nonexist_balance_retrieval(spot_trade_context):
+    balance = spot_trade_context.get_balance("JTO")
+    logger.info(f"Retrieved balance: {balance}")
+    assert isinstance(balance, Decimal), "Balance should be a Decimal instance"
+    assert balance == Decimal('0'), "Balance should be zero for non-existent token"
 
 def test_market_buy(spot_trade_context):
     initial_balance = spot_trade_context.get_balance("BTC")

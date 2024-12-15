@@ -56,8 +56,10 @@ class MaxDrawdown(Signal):
             return 0.0, 0, 0
         self.df_analyze = MaxDrawdown.drawdown(df)
         end_idx = self.df_analyze['drawdown'].idxmax()
+        if end_idx == 0:
+            logger.warning(f"Maximal Drawdown end up with first index.", exc_info=True)
+            return self.df_analyze['drawdown_pct'].max(), 0, 0
         start_idx = self.df_analyze.iloc[:end_idx]['ref_price'].idxmax()
-
         return self.df_analyze['drawdown_pct'].max(), self.df_analyze.iloc[start_idx].open_time, self.df_analyze.iloc[end_idx].open_time
     
     def get_filename(self) -> str:

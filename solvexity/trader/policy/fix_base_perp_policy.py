@@ -38,7 +38,7 @@ class FixBasePerpPolicy(Policy):
             if self.is_reversed and self.position == 0:
                 sz += self.base_size
                 self.position = 1
-            logger.info(f"Long {self.base_size} {sz}")
+            logger.info(f"Long {self.size} {self.symbol} at {ask}")
             self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {ask}", Color.MAGENTA)
             res = self.trade_context.market_buy(self.symbol, self.base_size)
             logger.info(f"Order response: {res}")
@@ -56,7 +56,7 @@ class FixBasePerpPolicy(Policy):
             if self.is_reversed and self.position == 0:
                 sz += self.base_size
                 self.position = -1
-            logger.info(f"Short {self.base_size} {sz}")
+            logger.info(f"Short{self.size} {self.symbol} at {bid}")
             self.notify("OnMarketShort", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {bid}", Color.MAGENTA)
             res = self.trade_context.market_sell(self.symbol, sz)
             logger.info(f"Order response: {res}")

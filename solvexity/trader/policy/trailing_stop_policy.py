@@ -10,7 +10,7 @@ import solvexity.helper.logging as logging
 logger = logging.getLogger()
 
 class TrailingStopPolicy:
-    def __init__(trade_context: Type[TradeContext], symbol: str, quote_size: float, trade_id: str):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, quote_size: float, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
         self.quote_size = Decimal(quote_size)

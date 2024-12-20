@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
-from solvexity.trader.model import Trade
+from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
 import solvexity.helper as helper
@@ -26,6 +26,16 @@ class FixQuoteSpotPolicy(Policy):
     @property
     def quote(self):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
+    
+    def act(self, signal: SignalType):
+        if signal == SignalType.BUY:
+            self.buy()
+        elif signal == SignalType.SELL:
+            self.sell()
+        elif signal == SignalType.HOLD:
+            pass
+        else:
+            logger.error(f"Unknown signal type {signal}", exc_info=True)
     
     def buy(self):
         logger.info(f"Buying {self.quote_size} {self.quote} for {self.symbol}")

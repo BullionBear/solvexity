@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
 from solvexity.trader.model import Trade
+from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
 import solvexity.helper as helper
@@ -21,8 +22,8 @@ class TrailingStopPerpPolicy:
         self.quote_size = Decimal(quote_size)
         self.slippage = Decimal(slippage)
 
-        self._stoploss_buy_order: list[dict] = []
-        self._stoploss_sell_order: list[dict] = []
+        self._trailing_stop_buy_order: list[dict] = []
+        self._trailing_stop_sell_order: list[dict] = []
 
     @property
     def base(self):
@@ -32,31 +33,69 @@ class TrailingStopPerpPolicy:
     def quote(self):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
-    def buy(self):
-        ask, _ = self.trade_context.get_askbid(self.symbol)
-        
+    def act(self, signal: SignalType):
+        ask, bid = self.trade_context.get_askbid(self.symbol)
+        self.trigger_trailing_stop(ask, bid)
+        if signal == SignalType.BUY:
+            self.buy(ask)
+        elif signal == SignalType.SELL:
+            self.sell(bid)
+        elif signal == SignalType.HOLD:
+            pass
+        else:
+            logger.error(f"Unknown signal type {signal}", exc_info=True)
+    
+    def buy(self, px):
         try:
-            size, price = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
-            logger.info(f"Long {self.size} {self.symbol} at {price}")
-            self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {ask}", Color.MAGENTA)
-            res = self.trade_context.market_buy(self.symbol, self.base_size)
+            size, px = helper.symbol_filter(self.symbol, self.quote_size / px, px)
+            logger.info(f"Long {size} {self.symbol} at {px}")
+            self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n**ref price**: {px}", Color.MAGENTA)
+            res = self.trade_context.market_buy(self.symbol, size)
             logger.info(f"Order response: {res}")
+            stop_px = px * (Decimal('1') - self.slippage)
+            size, stop_px = helper.symbol_filter(self.symbol, size, stop_px)
+            trailing_order = {
+                "size": size,
+                "px": stop_px
+            }
+            self._stoploss_sell_order.append(trailing_order)
         except Exception as e:
             logger.error(f"Market long failed: {e}", exc_info=True)
 
-    def sell(self):
-        logger.info(f"Selling {self.quote_size} {self.quote} for {self.symbol}")
-        total_base_size = self.trade_context.get_avaliable_balance(self.base)
-        _, bid = self.trade_context.get_askbid(self.symbol)
-        
-        if total_base_size * bid > self.quote_size:
-            base_size = self.quote_size / bid
-            size, price = helper.symbol_filter(self.symbol, base_size, bid)
-            self.notify("OnMarketSell", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n**ref price**: {price}", Color.BLUE)
-            res = self.trade_context.market_sell(self.symbol, base_size)
+    def sell(self, px):
+        try:
+            size, px = helper.symbol_filter(self.symbol, self.quote_size / px, px)
+            logger.info(f"Short {size} {self.symbol} at {px}")
+            self.notify("OnMarketShort", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n**ref price**: {px}", Color.MAGENTA)
+            res = self.trade_context.market_sell(self.symbol, size)
             logger.info(f"Order response: {res}")
-        else:
-            logger.error(f"Insufficient base size {total_base_size} for {self.symbol}")
+            stop_px = px * (Decimal('1') + self.slippage)
+            size, stop_px = helper.symbol_filter(self.symbol, size, stop_px)
+            trailing_order = {
+                "size": size,
+                "px": stop_px
+            }
+            self._stoploss_buy_order.append(trailing_order)
+        except Exception as e:
+            logger.error(f"Market short failed: {e}", exc_info=True)
+    
+    def trigger_trailing_stop(self, ask: Decimal, bid: Decimal):
+        for order in self._trailing_stop_buy_order:
+            if ask < order['px']:
+                try:
+                    self.trade_context.market_sell(self.symbol, order['size'])
+                    self._trailing_stop_buy_order.remove(order)
+                except Exception as e:
+                    logger.error(f"Market sell failed: {e}", exc_info=True)
+        _trailing_stop_sell_order = self._trailing_stop_sell_order.copy()
+        for order in self._trailing_stop_sell_order:
+            if bid < order['px']:
+                try:
+                    self.trade_context.market_sell(self.symbol, order['size'])
+                    self._trailing_stop_sell_order.remove(order)
+                except Exception as e:
+                    logger.error(f"Market buy failed: {e}", exc_info=True)
+
 
     
 

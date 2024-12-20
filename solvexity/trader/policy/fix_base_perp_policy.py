@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
 from solvexity.trader.context.perp_trade import PerpTradeContext
-from solvexity.trader.model import Trade
+from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
 import solvexity.helper as helper
@@ -29,6 +29,16 @@ class FixBasePerpPolicy(Policy):
     @property
     def quote(self):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
+    
+    def act(self, signal: SignalType):
+        if signal == SignalType.BUY:
+            self.buy()
+        elif signal == SignalType.SELL:
+            self.sell()
+        elif signal == SignalType.HOLD:
+            pass
+        else:
+            logger.error(f"Unknown signal type {signal}", exc_info=True)
     
     def buy(self):
         ask, _ = self.trade_context.get_askbid(self.symbol)

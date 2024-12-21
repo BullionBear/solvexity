@@ -5,6 +5,9 @@ from binance.client import Client as BinanceClient
 from sqlalchemy import create_engine
 from .notification import Notification
 from pymongo import MongoClient
+import solvexity.helper.logging as logging
+
+logger = logging.getLogger()
 
 # Individual factory methods for service creation
 def create_redis(config: dict) -> redis.Redis:
@@ -68,7 +71,7 @@ class ServiceFactory:
         factory_function = FACTORY_REGISTRY.get(factory_name)
         if not factory_function:
             raise ValueError(f"Factory '{factory_name}' not registered for service '{service_name}'.")
-
+        logger.info(f"Creating service {service_name} with config {factory_config}")
         instance = factory_function(factory_config)
         self._instances[service_name] = instance
         return instance

@@ -96,3 +96,6 @@ class PaperTradeSpotContext(TradeContext):
         trades = filter(lambda x: x.symbol == symbol, self.trade)
         return list(trades)[-limit:]
     
+    def close(self):
+        pass
+    

@@ -25,11 +25,7 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
-    def on_buy_dealt(order_id: str, deal_size: Decimal, status: str):
-        pass
-
-    @abstractmethod
-    def on_sell_dealt(order_id: str, deal_size: Decimal, status: str):
+    def get_order(self, order_id: str):
         pass
 
     @abstractmethod
@@ -58,6 +54,10 @@ class TradeContext(ABC):
 
     @abstractmethod
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
+        pass
+
+    @abstractmethod
+    def close(self):
         pass
 
 

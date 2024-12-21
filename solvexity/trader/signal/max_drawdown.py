@@ -126,4 +126,7 @@ class MaxDrawdown(Signal):
             savefig=target_dest
         )
         logger.info(f"Exported visualization to {target_dest}")
+
+    def close(self):
+        super().close()
         

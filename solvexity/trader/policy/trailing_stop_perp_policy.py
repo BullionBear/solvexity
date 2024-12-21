@@ -96,7 +96,8 @@ class TrailingStopPerpPolicy:
                 except Exception as e:
                     logger.error(f"Market buy failed: {e}", exc_info=True)
 
-
+    def close(self):
+        super().close()
     
 
     

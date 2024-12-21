@@ -74,3 +74,6 @@ class FixQuoteSpotPolicy(Policy):
 
     def notify(self, title: str, content: str, color: Color):
         super().notify(title, content, color)
+    
+    def close(self):
+        super().close()

@@ -27,6 +27,10 @@ class Policy(ABC):
     def export(self, output_dir: str):
         pass
 
+    @abstractmethod
+    def close(self):
+        self.trade_context.close()
+
     @property
     def id(self):
         return self._id

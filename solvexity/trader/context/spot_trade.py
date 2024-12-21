@@ -4,11 +4,12 @@ from solvexity.trader.core import TradeContext
 from solvexity.trader.core import Feed
 from typing import Optional
 from solvexity.dependency.notification import Notification, Color
-from solvexity.trader.model import KLine, Trade
+from solvexity.trader.model import KLine, Trade, Order
 import solvexity.helper.logging as logging
 from binance.client import Client
 from solvexity.dependency.notification import Notification
 import solvexity.helper as helper
+from binance import ThreadedWebsocketManager
 
 logger = logging.getLogger()
 
@@ -19,6 +20,12 @@ class SpotTradeContext(TradeContext):
         self.notification = notification
         self.balance = self._get_balance()
         self.trade: dict[int, Trade] = {}
+        self.order: dict[int, Order] = self._get_open_orders()
+
+        self.ws_manager = ThreadedWebsocketManager(api_key=self.client.API_KEY, api_secret=self.client.API_SECRET)
+        self.ws_manager.start()
+        self.ws_manager.start_user_socket(self._on_dealt)
+        
 
     def _get_balance(self):
         user_assets = self.client.get_user_asset(needBtcValuation=True)
@@ -35,6 +42,20 @@ class SpotTradeContext(TradeContext):
         if token not in self.balance:
             return Decimal('0')
         return Decimal(self.balance[token]['free']) + Decimal(self.balance[token]['locked'])
+
+    def _get_open_orders(self):
+        open_orders = self.client.get_open_orders()
+        orders = {}
+        for order in open_orders:
+            orders[order['orderId']] = Order.from_rest(order)
+        return orders
+    
+    def _get_order(self, symbol: str, order_id: str):
+        order = self.client.get_order(symbol=symbol, orderId=order_id)
+        return Order.from_rest(order)
+    
+    def get_order(self, order_id: str):
+        return self.order[int(order_id)]
 
     def get_avaliable_balance(self, token) -> Decimal:
         if token not in self.balance:
@@ -73,7 +94,7 @@ class SpotTradeContext(TradeContext):
         except Exception as e:
             logger.error(f"Limit buy failed: {e}", exc_info=True)
 
-    def limit_sell(self, symbol, size, price):
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal):
         try:
             size, price = helper.symbol_filter(symbol, size, price)
             logger.info(f"Limit sell: {symbol}, size: {size}, price: {price}")
@@ -91,6 +112,18 @@ class SpotTradeContext(TradeContext):
             self.balance = self._get_balance()
         except Exception as e:
             logger.error(f"Cancel order failed: {e}", exc_info=True)
+
+    def _on_user_event(self, msg: dict):
+        if msg['e'] == 'executionReport':
+            symbol = msg['s']
+            order_id = msg['i']
+            order = self._get_order(symbol, order_id)
+            self.order[order_id] = order
+        elif msg['e'] == 'outboundAccountInfo':
+            self.balance = self._get_balance()
+        else:
+            logger.info(f"Unkown message type: {msg}")
+        
 
     def get_askbid(self, symbol: str):
         order_book = self.client.get_order_book(symbol=symbol, limit=1)
@@ -117,3 +150,9 @@ class SpotTradeContext(TradeContext):
         self._update_trade(symbol)
         trades = filter(lambda x: x.symbol == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]
+    
+    def close(self):
+        if self.ws_manager and self.ws_manager.is_alive():
+            self.ws_manager.stop()
+            self.ws_manager.join()
+        

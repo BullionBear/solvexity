@@ -10,6 +10,8 @@ ENV PYTHONPATH=/solvexity
 # Copy the Python code and dependency files into the container
 COPY . /solvexity
 
+RUN mkdir /solvexity/verbose
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

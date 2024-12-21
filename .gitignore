@@ -9,3 +9,4 @@ verbose
 .DS_Store
 .env
 *.http
+experiments

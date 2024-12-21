@@ -33,7 +33,7 @@ Before pushing, ensure your Docker image is built. Use the following command:
 
 Example:
 ```bash
-docker build -t ghcr.io/bullionbear/solvexity:latest -f deployment/Dockerfile .
+docker build -t ghcr.io/bullionbear/solvexity:latest .
 ```
 
 

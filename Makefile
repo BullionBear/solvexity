@@ -1,7 +1,7 @@
 # Variables
 IMAGE_NAME = ghcr.io/bullionbear/solvexity
 TAG = latest
-DOCKERFILE = deployment/Dockerfile
+DOCKERFILE = ./Dockerfile
 CONTEXT = .
 
 .PHONY: all build clean

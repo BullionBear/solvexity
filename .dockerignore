@@ -14,3 +14,4 @@ verbose
 .ipynb_checkpoints
 .pytest_cache
 .vscode
+experiments

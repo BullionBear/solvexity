@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Function to start Docker Compose
-run() {
+init() {
     echo "Starting Docker Compose..."
     docker compose up logger spot_feed -d
 }

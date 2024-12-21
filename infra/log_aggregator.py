@@ -79,6 +79,7 @@ class LogAggregator:
                 content = textwrap.dedent(f"""\
                     Process ID: {process_id}
                     Message: {log_record.get("message", "No message provided")}
+                    Session: {session}
                     Exception: {log_record.get("exception", "No exception provided")}
                 """)
                 self.notification.notify(username="LogAggregator", title=title, content=content, color=Color.RED if level == "error" else Color.YELLOW)

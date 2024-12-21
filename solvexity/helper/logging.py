@@ -3,13 +3,19 @@ import logging.config
 import json
 import redis
 import sys
+import uuid
 import traceback
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter to format logs in JSON format."""
+    def __init__(self, session: str = None):
+        super().__init__()
+        self.session = session if session else uuid.uuid4().hex
+
     def format(self, record):
         log_record = {
             "time": self.formatTime(record),
+            "session": self.session,
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
@@ -69,6 +75,7 @@ DEFAULT_LOGGING_CONFIG = {
         },
         'json': {
             '()': JSONFormatter,  # Use the custom JSON formatter
+            'session': 'default',
         },
     },
     'handlers': {
@@ -104,6 +111,7 @@ PROD_LOGGING_CONFIG = {
         },
         'json': {
             '()': JSONFormatter,  # Use the custom JSON formatter
+            'session': 'default',
         },
     },
     'handlers': {
@@ -139,16 +147,20 @@ def is_redis_connected(host: str, port: int) -> bool:
     except ConnectionError:
         return False
 
-def setup_logging():
+def setup_logging(session: str = None):
     """Sets up logging based on the configuration."""
     if is_redis_connected(DEFAULT_LOGGING_CONFIG['handlers']['redis']['redis_host'], 
                           DEFAULT_LOGGING_CONFIG['handlers']['redis']['redis_port']):
-        logging.config.dictConfig(DEFAULT_LOGGING_CONFIG)
+        logging_config = DEFAULT_LOGGING_CONFIG
     elif is_redis_connected(PROD_LOGGING_CONFIG['handlers']['redis']['redis_host'], 
                             PROD_LOGGING_CONFIG['handlers']['redis']['redis_port']):
-        logging.config.dictConfig(PROD_LOGGING_CONFIG)
+        logging_config = PROD_LOGGING_CONFIG
     else:
-        raise ConnectionError("Failed to connect to Redis server") 
+        raise ConnectionError("Failed to connect to Redis server")
+    if session:
+        logging_config['formatters']['json']['session'] = session
+    logging.config.dictConfig(logging_config)
+    
 
 # Global exception hook
 def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):

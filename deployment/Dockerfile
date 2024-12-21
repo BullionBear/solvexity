@@ -4,6 +4,9 @@ FROM python:3.12
 # Set the working directory in the container
 WORKDIR /solvexity
 
+# Add the working directory to the PYTHONPATH
+ENV PYTHONPATH=/solvexity
+
 # Copy the Python code and dependency files into the container
 COPY . /solvexity
 

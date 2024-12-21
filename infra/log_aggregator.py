@@ -82,7 +82,8 @@ class LogAggregator:
                 self.notification.notify(username="LogAggregator", title=title, content=content, color=Color.RED if level == "error" else Color.YELLOW)
 
         except Exception as e:
-            print(f"Error writing log: {e}")
+            import traceback
+            print(f"Error writing log: {e}: {traceback.format_exc()}")
 
     def _compress_logs_daily(self):
         """

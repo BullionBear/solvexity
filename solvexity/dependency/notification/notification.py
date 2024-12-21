@@ -3,6 +3,7 @@ from typing import Callable, Dict, Optional, Any
 import requests
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
+import time
 
 
 logger = logging.getLogger()

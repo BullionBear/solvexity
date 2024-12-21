@@ -53,6 +53,7 @@ def start_server(host: str, port: int, handler: CommandHandler, shutdown: Shutdo
 
 if __name__ == "__main__":
     args = parse_arguments()
+    logger = logging.getLogger(args.service)
     logger.info("Starting up...")
 
     try:

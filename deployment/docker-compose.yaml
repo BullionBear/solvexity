@@ -25,7 +25,6 @@ services:
     environment:
       PYTHONPATH: /solvexity
     volumes:
-      - /home/ubuntu/solvexity/log/:/var/log/
       - /home/ubuntu/solvexity/.env:/solvexity/.env
     pull_policy: always
     command: [ "python", "zsrv/main.py", "-s", "SPOT_FEED" ]

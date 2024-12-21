@@ -61,8 +61,9 @@ class LogAggregator:
             log_record = json.loads(log_data)
 
             process_id = log_record.get("process_id", "unknown_process")
+            name = log_record.get("name", "unknown_name")
             log_date = datetime.date.today().strftime("%Y_%m_%d")
-            log_filename = f"{log_date}_{process_id}.log"
+            log_filename = f"{log_date}_{process_id}_{name}.log"
             log_filepath = os.path.join(self.log_dir, log_filename)
 
             # Write the log message to the file

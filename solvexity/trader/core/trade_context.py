@@ -17,6 +17,22 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal):
+        pass
+
+    @abstractmethod
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal):
+        pass
+
+    @abstractmethod
+    def on_buy_dealt(callback: callable):
+        pass
+
+    @abstractmethod
+    def on_sell_dealt(callback: callable):
+        pass
+
+    @abstractmethod
     def get_balance(self, token: str) -> Decimal:
         pass
 

@@ -19,5 +19,15 @@ services:
     pull_policy: always
     command: [ "python", "infra/log_aggregator.py", "--log-dir", "/var/log/", "--redis-host", "redis", "--redis-port", "6379", "--channel", "log_channel", "--system", "prod", "--notify", "notifyalert" ]
 
+  spot_feed:
+    image: ghcr.io/bullionbear/solvexity:latest
+    container_name: spot_feed
+    environment:
+      PYTHONPATH: /solvexity
+    volumes:
+      - /home/ubuntu/solvexity/log/:/var/log/
+      - /home/ubuntu/solvexity/.env:/solvexity/.env
+    pull_policy: always
+    command: [ "python", "zsrv/main.py", "-s", "SPOT_FEED" ]
 volumes:
   redis_data:

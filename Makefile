@@ -4,6 +4,10 @@ TAG = latest
 DOCKERFILE = deployment/Dockerfile
 CONTEXT = .
 
+.PHONY: all build clean
+
+all: build push
+
 # Build the Docker image
 build:
 	docker build -t $(IMAGE_NAME):$(TAG) -f $(DOCKERFILE) $(CONTEXT)

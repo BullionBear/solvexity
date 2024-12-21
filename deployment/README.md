@@ -33,7 +33,7 @@ Before pushing, ensure your Docker image is built. Use the following command:
 
 Example:
 ```bash
-docker build -t solvexity .
+docker build -t solvexity -f deployment/Dockerfile .
 ```
 
 

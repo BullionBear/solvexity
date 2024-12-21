@@ -25,11 +25,11 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
-    def on_buy_dealt(order_id: str, symbol: str, deal_size: Decimal, status: str):
+    def on_buy_dealt(order_id: str, deal_size: Decimal, status: str):
         pass
 
     @abstractmethod
-    def on_sell_dealt(order_id: str, symbol: str, deal_size: Decimal, status: str):
+    def on_sell_dealt(order_id: str, deal_size: Decimal, status: str):
         pass
 
     @abstractmethod

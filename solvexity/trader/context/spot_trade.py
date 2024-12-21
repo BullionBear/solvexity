@@ -63,6 +63,35 @@ class SpotTradeContext(TradeContext):
         except Exception as e:
             logger.error(f"Market sell failed: {e}", exc_info=True)
 
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal):
+        try:
+            size, price = helper.symbol_filter(symbol, size, price)
+            logger.info(f"Limit buy: {symbol}, size: {size}, price: {price}")
+            res = self.client.order_limit_buy(symbol=symbol, quantity=str(size), price=str(price))
+            logger.info(f"Order response: {res}")
+            self.balance = self._get_balance()
+        except Exception as e:
+            logger.error(f"Limit buy failed: {e}", exc_info=True)
+
+    def limit_sell(self, symbol, size, price):
+        try:
+            size, price = helper.symbol_filter(symbol, size, price)
+            logger.info(f"Limit sell: {symbol}, size: {size}, price: {price}")
+            res = self.client.order_limit_sell(symbol=symbol, quantity=str(size), price=str(price))
+            logger.info(f"Order response: {res}")
+            self.balance = self._get_balance()
+        except Exception as e:
+            logger.error(f"Limit sell failed: {e}", exc_info=True)
+
+    def cancel_order(self, order_id: str):
+        try:
+            logger.info(f"Cancel order: {order_id}")
+            res = self.client.cancel_order(orderId=order_id)
+            logger.info(f"Order response: {res}")
+            self.balance = self._get_balance()
+        except Exception as e:
+            logger.error(f"Cancel order failed: {e}", exc_info=True)
+
     def get_askbid(self, symbol: str):
         order_book = self.client.get_order_book(symbol=symbol, limit=1)
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])

@@ -41,3 +41,5 @@ class Pythagoras(Strategy):
             self.report.export(self.output_dir)
             self.policy.export(self.output_dir)
             logger.info(f"Trading report is exported to {self.output_dir}")
+        self.signal.close()
+        self.policy.close()

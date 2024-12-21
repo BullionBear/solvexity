@@ -40,7 +40,6 @@ class OnlineSpotFeed(Feed):
         self._cache_keys = set()
         self._buffer: Queue = Queue(maxsize=1)
         self._stop_event = False
-        self._thread = ThreadedWebsocketManager()
 
     def time(self) -> int:
         return self._current_time
@@ -49,8 +48,9 @@ class OnlineSpotFeed(Feed):
         """
         Retrieve kline data from the buffer and send it to Redis.
         """
-        self._thread.start()  # Start the WebSocket manager
-        self._thread.start_kline_socket(
+        ws_manager = ThreadedWebsocketManager()
+        ws_manager.start()  # Start the WebSocket manager
+        ws_manager.start_kline_socket(
             symbol="BTCUSDT",
             interval="1m",
             callback=self._kline_helper
@@ -60,7 +60,7 @@ class OnlineSpotFeed(Feed):
                 kline = self._buffer.get(block=True, timeout=2)
                 if kline is None:
                     logger.warning("Online feed recv stop signal.")
-                    return
+                    break
                 self._current_time = kline.event_time
                 for granular in self._GRANULARS:
                     if self._is_ts_closed(granular):
@@ -74,7 +74,9 @@ class OnlineSpotFeed(Feed):
             except Exception as e:
                 logger.error(f"Error in OnlineSpotFeed: {e}", exc_info=True)
                 continue
-
+        if ws_manager.is_alive():
+            ws_manager.stop()  # Stop the WebSocket manager
+            ws_manager.join()
         logger.info("OnlineSpotFeed stopped send()")
 
     def _is_ts_closed(self, granular: str) -> bool:
@@ -158,10 +160,6 @@ class OnlineSpotFeed(Feed):
             self._buffer.put(None, timeout=1)  # Unblock any waiting threads
         except Full:
             pass
-
-        if self._thread and self._thread.is_alive():
-            self._thread.stop()  # Stop the WebSocket manager
-            self._thread.join()
 
         # Delete Redis key safely
         try:

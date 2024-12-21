@@ -17,19 +17,23 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
-    def limit_buy(self, symbol: str, size: Decimal, price: Decimal):
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal)->str:
         pass
 
     @abstractmethod
-    def limit_sell(self, symbol: str, size: Decimal, price: Decimal):
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal)->str:
         pass
 
     @abstractmethod
-    def on_buy_dealt(callback: callable):
+    def on_buy_dealt(order_id: str, symbol: str, deal_size: Decimal, status: str):
         pass
 
     @abstractmethod
-    def on_sell_dealt(callback: callable):
+    def on_sell_dealt(order_id: str, symbol: str, deal_size: Decimal, status: str):
+        pass
+
+    @abstractmethod
+    def cancel_order(self, symbol: str, order_id: str):
         pass
 
     @abstractmethod

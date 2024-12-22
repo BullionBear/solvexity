@@ -1,7 +1,6 @@
 from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
-from solvexity.trader.context.perp_trade import PerpTradeContext
 from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
@@ -10,17 +9,15 @@ import solvexity.helper.logging as logging
 
 logger = logging.getLogger()
 
-class FixBasePerpPolicy(Policy):
+class FixQuotePolicy(Policy):
     """
-        A policy that buy/sell fix base size of the U-Perp
+        A policy that buy/sell fix quote size of the base asset.
     """
     MAX_TRADE_SIZE = 65535
-    def __init__(self, trade_context: Type[PerpTradeContext], symbol: str, base_size: float, is_reversed: bool, trade_id: str):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, quote_size: float, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
-        self.base_size = Decimal(base_size)
-        self.is_reversed = is_reversed
-        self.position: int = 0
+        self.quote_size = Decimal(quote_size)
 
     @property
     def base(self):
@@ -41,37 +38,29 @@ class FixBasePerpPolicy(Policy):
             logger.error(f"Unknown signal type {signal}", exc_info=True)
     
     def buy(self):
+        logger.info(f"Buying {self.quote_size} {self.quote} for {self.symbol}")
         ask, _ = self.trade_context.get_askbid(self.symbol)
         try:
-            sz = self.base_size
-            self.position += 1
-            if self.is_reversed and self.position == 0:
-                sz += self.base_size
-                self.position = 1
-            logger.info(f"Long {self.size} {self.symbol} at {ask}")
-            self.notify("OnMarketLong", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {ask}", Color.MAGENTA)
-            res = self.trade_context.market_buy(self.symbol, self.base_size)
+            size, ask = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
+            logger.info(f"Buy {size} {self.symbol} at {ask}")
+            res = self.trade_context.market_buy(self.symbol, size)
             logger.info(f"Order response: {res}")
         except Exception as e:
-            logger.error(f"Market long failed: {e}", exc_info=True)
-
+            logger.error(f"Market Buy failed: {e}", exc_info=True)
+        
 
     def sell(self):
-        logger.info(f"Short {self.base_size} {self.base}")
+        logger.info(f"Selling {self.quote_size} {self.quote} for {self.symbol}")
         _, bid = self.trade_context.get_askbid(self.symbol)
-        
         try:
-            sz = self.base_size
-            self.position -= 1
-            if self.is_reversed and self.position == 0:
-                sz += self.base_size
-                self.position = -1
-            logger.info(f"Short{self.size} {self.symbol} at {bid}")
-            self.notify("OnMarketShort", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {sz}\n**ref price**: {bid}", Color.MAGENTA)
-            res = self.trade_context.market_sell(self.symbol, sz)
+            size, bid = helper.symbol_filter(self.symbol, self.quote_size / bid, bid)
+            logger.info(f"Buy {size} {self.symbol} at {bid}")
+            res = self.trade_context.market_sell(self.symbol, size)
             logger.info(f"Order response: {res}")
         except Exception as e:
-            logger.error(f"Market short failed: {e}", exc_info=True)
+            logger.error(f"Market Sell failed: {e}", exc_info=True)
+        
+       
 
     def export(self, output_dir: str):
         trades = self.trade_context.get_trades(self.symbol, self.MAX_TRADE_SIZE)

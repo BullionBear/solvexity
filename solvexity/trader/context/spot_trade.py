@@ -26,6 +26,7 @@ class SpotTradeContext(TradeContext):
 
         self._running = True
         self._ws_event_queue = Queue()
+        self._thread = Thread(target=self._thread_manager)
 
     def _thread_manager(self):
         ws_producer = ThreadedWebsocketManager(api_key=self.client.API_KEY, api_secret=self.client.API_SECRET)
@@ -163,4 +164,6 @@ class SpotTradeContext(TradeContext):
     
     def close(self):
         self._running = False
+        if self._thread.is_alive():
+            self._thread.join()
         

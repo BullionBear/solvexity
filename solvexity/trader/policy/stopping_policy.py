@@ -1,7 +1,8 @@
 from decimal import Decimal
 from typing import Type
+import solvexity.helper as helper
 from solvexity.trader.core import Policy, TradeContext
-from solvexity.trader.model import Trade
+from solvexity.trader.model import Order
 from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
@@ -10,20 +11,29 @@ import solvexity.helper.logging as logging
 
 logger = logging.getLogger()
 
-class TrailingStopPerpPolicy:
+class StoppingPolicy(Policy):
     """
         A policy that buy/sell fix quote size of the quote asset. Always set a stoploss market order
         For example, if price of BTCUSDT is 50000, quote_size is 1000, stoploss_quote is 100, then 
         the policy will buy 0.02 BTC at 50000, and set a stoploss market order at 49000
     """
-    def __init__(self, trade_context: Type[TradeContext], symbol: str, quote_size: float, slippage: float, trade_id: str):
+    def __init__(self, 
+                 trade_context: Type[TradeContext], 
+                 symbol: str, 
+                 quote_size: float, 
+                 profit_quote: float, 
+                 loss_quote: float, 
+                 lifecycle: int,
+                 trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
         self.quote_size = Decimal(quote_size)
-        self.slippage = Decimal(slippage)
-
-        self._trailing_stop_buy_order: list[dict] = []
-        self._trailing_stop_sell_order: list[dict] = []
+        self.stop_loss_pct = Decimal(profit_quote / quote_size)
+        self.stop_profit_pct = Decimal(loss_quote / quote_size)
+        self.lifecycle = lifecycle
+        if 0 <= self.lifecycle <= helper.to_unixtime_interval('1m'):
+            raise ValueError("Lifecycle should be greater than 1 minute")
+        self._pending_orders = []
 
     @property
     def base(self):
@@ -78,23 +88,6 @@ class TrailingStopPerpPolicy:
             self._stoploss_buy_order.append(trailing_order)
         except Exception as e:
             logger.error(f"Market short failed: {e}", exc_info=True)
-    
-    def trigger_trailing_stop(self, ask: Decimal, bid: Decimal):
-        for order in self._trailing_stop_buy_order:
-            if ask < order['px']:
-                try:
-                    self.trade_context.market_sell(self.symbol, order['size'])
-                    self._trailing_stop_buy_order.remove(order)
-                except Exception as e:
-                    logger.error(f"Market sell failed: {e}", exc_info=True)
-        _trailing_stop_sell_order = self._trailing_stop_sell_order.copy()
-        for order in self._trailing_stop_sell_order:
-            if bid < order['px']:
-                try:
-                    self.trade_context.market_sell(self.symbol, order['size'])
-                    self._trailing_stop_sell_order.remove(order)
-                except Exception as e:
-                    logger.error(f"Market buy failed: {e}", exc_info=True)
 
     def close(self):
         super().close()

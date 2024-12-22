@@ -2,7 +2,7 @@ import redis
 from typing import Any
 from sqlalchemy.engine import Engine
 from binance.client import Client as BinanceClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from .notification import Notification
 from pymongo import MongoClient
@@ -51,8 +51,8 @@ def create_sql_engine(config: dict) -> Engine:
         )
         # Test the connection
         with engine.connect() as connection:
-            connection.execute("SELECT 1")
-        logger.info("Connected to PostgreSQL successfully.")
+            result = connection.execute(text("SELECT 1"))
+            logger.info(f"connection successful: {result.scalar() == 1}")
         return engine
     except OperationalError as e:
         logger.error(f"Failed to connect to PostgreSQL: {e}")

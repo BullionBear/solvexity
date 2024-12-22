@@ -20,7 +20,7 @@ def create_spot_trade_context(config: dict, services: ServiceFactory, feed_facto
         notification=notification_instance
     )
 
-def create_spot_paper_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> PaperTradeSpotContext:
+def create_paper_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> PaperTradeSpotContext:
     # Resolve services
     feed = feed_factory[config["feed"].split(".")[1]]
     notification_instance = services[config["notification"].split(".")[1]]
@@ -49,7 +49,7 @@ def create_perp_trade_context(config: dict, services: ServiceFactory, feed_facto
 # Register factories
 CONTEXT_FACTORY_REGISTRY = {
     "spot_trade": create_spot_trade_context,
-    "spot_paper_trade": create_spot_paper_trade_context,
+    "paper_trade": create_paper_trade_context,
     "perp_trade": create_perp_trade_context
 }
 

@@ -73,6 +73,18 @@ class PaperTradeSpotContext(TradeContext):
                                 is_best_match=True))
         self._trade_id += 1
 
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal):
+        raise NotImplementedError
+    
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal):
+        raise NotImplementedError
+
+    def get_order(self, order_id: str):
+        raise NotImplementedError
+    
+    def cancel_order(self, symbol, order_id):
+        raise NotImplementedError
+
     def get_balance(self, token: str) -> Decimal:
         return self.balance[token]['free'] + self.balance[token]['locked']
     

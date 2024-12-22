@@ -9,6 +9,8 @@ import solvexity.helper.logging as logging
 from binance.client import Client
 from solvexity.dependency.notification import Notification
 import solvexity.helper as helper
+from queue import Queue
+from threading import Thread
 from binance import ThreadedWebsocketManager
 
 logger = logging.getLogger()
@@ -22,10 +24,30 @@ class SpotTradeContext(TradeContext):
         self.trade: dict[int, Trade] = {}
         self.order: dict[int, Order] = self._get_open_orders()
 
-        self.ws_manager = ThreadedWebsocketManager(api_key=self.client.API_KEY, api_secret=self.client.API_SECRET)
-        self.ws_manager.start()
-        self.ws_manager.start_user_socket(self._on_dealt)
-        
+        self._running = True
+        self._ws_event_queue = Queue()
+
+    def _thread_manager(self):
+        ws_producer = ThreadedWebsocketManager(api_key=self.client.API_KEY, api_secret=self.client.API_SECRET)
+        ws_producer.start()
+        ws_producer.start_user_socket(lambda msg: self._ws_event_queue.put(msg))
+        def consumer(queue: Queue):
+            while self._running:
+                msg = queue.get(block=True, timeout=2)
+                if msg['e'] == 'executionReport':
+                    symbol = msg['s']
+                    order_id = msg['i']
+                    self.order[order_id] = self._get_order(symbol, order_id)
+                elif msg['e'] == 'outboundAccountPosition':
+                    self.balance = self._get_balance()
+                else:
+                    logger.info(f"Unhandle message: {msg}")
+        ws_consumer = Thread(target=consumer, args=(self._ws_event_queue,))
+        ws_consumer.start()
+        # lock by the condition variables
+        ws_producer.stop()
+        ws_producer.join()
+        ws_consumer.join()
 
     def _get_balance(self):
         user_assets = self.client.get_user_asset(needBtcValuation=True)
@@ -113,18 +135,6 @@ class SpotTradeContext(TradeContext):
         except Exception as e:
             logger.error(f"Cancel order failed: {e}", exc_info=True)
 
-    def _on_user_event(self, msg: dict):
-        if msg['e'] == 'executionReport':
-            symbol = msg['s']
-            order_id = msg['i']
-            order = self._get_order(symbol, order_id)
-            self.order[order_id] = order
-        elif msg['e'] == 'outboundAccountInfo':
-            self.balance = self._get_balance()
-        else:
-            logger.info(f"Unkown message type: {msg}")
-        
-
     def get_askbid(self, symbol: str):
         order_book = self.client.get_order_book(symbol=symbol, limit=1)
         return Decimal(order_book['asks'][0][0]), Decimal(order_book['bids'][0][0])
@@ -152,7 +162,5 @@ class SpotTradeContext(TradeContext):
         return sorted(trades, key=lambda t: t.id)[-limit:]
     
     def close(self):
-        if self.ws_manager and self.ws_manager.is_alive():
-            self.ws_manager.stop()
-            self.ws_manager.join()
+        self._running = False
         

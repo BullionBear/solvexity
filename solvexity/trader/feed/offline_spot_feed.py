@@ -67,7 +67,7 @@ class OfflineSpotFeed(Feed):
     def send(self):
         while self._current_time < self.end:
             if self._stop_event:
-                return
+                break
             self._current_time += self._GRANDULARS['1m']
             for granular, granular_ms in self._GRANDULARS.items():
                 if self._current_time % granular_ms == 0:

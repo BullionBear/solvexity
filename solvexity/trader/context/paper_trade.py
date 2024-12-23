@@ -1,9 +1,9 @@
 from typing import Optional
 from decimal import Decimal
-import redis
+from threading import Thread
 from solvexity.dependency.notification import Notification, Color
 from solvexity.trader.core import TradeContext, Feed
-from solvexity.trader.model import KLine, Trade
+from solvexity.trader.model import KLine, Trade, Order
 import solvexity.helper.logging as logging
 import solvexity.helper as helper
 
@@ -25,6 +25,11 @@ class PaperTradeContext(TradeContext):
         self.notification = notification
         self._trade_id = 1
         self.trade: list[Trade] = []
+
+        self._order_id = 1
+        self._order: dict[int, Order] = {}
+
+        self._thread = Thread(target=self._thread_manager)
 
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)

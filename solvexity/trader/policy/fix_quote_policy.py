@@ -44,14 +44,6 @@ class FixQuotePolicy(Policy):
             size, ask = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
             logger.info(f"Buy {size} {self.symbol} at {ask}")
             res = self.trade_context.market_buy(self.symbol, size)
-            content = helper.to_content({
-                "policy": self.__class__.__name__,
-                "trade id": self.id,
-                "symbol": self.symbol,
-                "size": size,
-                "ref price": ask
-            })
-            self.notify("OnMarketBuy", content, Color.GREEN)
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market Buy failed: {e}", exc_info=True)
@@ -64,14 +56,6 @@ class FixQuotePolicy(Policy):
             size, bid = helper.symbol_filter(self.symbol, self.quote_size / bid, bid)
             logger.info(f"Sell {size} {self.symbol} at {bid}")
             res = self.trade_context.market_sell(self.symbol, size)
-            content = helper.to_content({
-                "policy": self.__class__.__name__,
-                "trade id": self.id,
-                "symbol": self.symbol,
-                "size": size,
-                "ref price": bid
-            })
-            self.notify("OnMarketSell", content, Color.RED)
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market Sell failed: {e}", exc_info=True)

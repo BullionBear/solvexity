@@ -29,14 +29,21 @@ class PaperTradeContext(TradeContext):
         self._order_id = 1
         self._order: dict[int, Order] = {}
 
-        self._thread = Thread(target=self._thread_manager)
-
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)
         size, ask = helper.symbol_filter(symbol, size, ask)
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base]['free'] += size
         self.balance[quote]['free'] -= size * ask
+        content = helper.to_content({
+            "context": self.__class__.__name__,
+            "type": "market",
+            "symbol": symbol,
+            "side": "buy",
+            "size": size,
+            "ref price": ask
+        })
+        self.notify("OnMarketBuy", content, Color.CYAN)
         logger.info(f"Context market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -60,6 +67,15 @@ class PaperTradeContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base]['free'] -= size
         self.balance[quote]['free'] += size * bid
+        content = helper.to_content({
+            "context": self.__class__.__name__,
+            "type": "market",
+            "symbol": symbol,
+            "side": "sell",
+            "size": size,
+            "ref price": bid
+        })
+        self.notify("OnMarketSell", content, Color.MAGENTA)
         logger.info(f"Context market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 

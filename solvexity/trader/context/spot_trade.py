@@ -87,10 +87,19 @@ class SpotTradeContext(TradeContext):
 
     def market_buy(self, symbol: str, size: Decimal):
         try:
-            _, bid = self.get_askbid(symbol)
-            size, bid = helper.symbol_filter(symbol, size, bid)
+            ask, _ = self.get_askbid(symbol)
+            size, ask = helper.symbol_filter(symbol, size, ask)
             logger.info(f"Market buy: {symbol}, size: {size}")
             res = self.client.order_market_buy(symbol=symbol, quantity=str(size))
+            content = helper.to_content({
+                "context": self.__class__.__name__,
+                "type": "market",
+                "symbol": symbol,
+                "side": "buy",
+                "size": size,
+                "ref price": ask
+            })
+            self.notify("OnMarketBuy", content, Color.BLUE)
             logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
         except Exception as e:
@@ -98,10 +107,19 @@ class SpotTradeContext(TradeContext):
 
     def market_sell(self, symbol: str, size: Decimal):
         try:
-            ask, _ = self.get_askbid(symbol)
-            size, ask = helper.symbol_filter(symbol, size, ask)
-            logger.info(f"Market sell: {symbol}, size: {size}, expected price: {ask}")
+            _, bid = self.get_askbid(symbol)
+            size, bid = helper.symbol_filter(symbol, size, bid)
+            logger.info(f"Market sell: {symbol}, size: {size}, expected price: {bid}")
             res = self.client.order_market_sell(symbol=symbol, quantity=str(size))
+            content = helper.to_content({
+                "context": self.__class__.__name__,
+                "type": "market",
+                "symbol": symbol,
+                "side": "sell",
+                "size": size,
+                "ref price": bid
+            })
+            self.notify("OnMarketSell", content, Color.ORANGE)
             logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
         except Exception as e:

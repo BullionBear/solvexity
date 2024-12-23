@@ -57,3 +57,4 @@ class Notification:
         logger.info(f"Sending notification to {title=}")
         if self.enabled:
             send_notification(self.webhook, None, username, embed)
+    

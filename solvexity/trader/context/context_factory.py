@@ -2,7 +2,7 @@ import solvexity.helper.logging as logging
 from solvexity.trader.feed import FeedFactory
 from solvexity.dependency import ServiceFactory
 from .spot_trade import SpotTradeContext
-from .paper_trade import PaperTradeSpotContext
+from .paper_trade import PaperTradeContext
 from .perp_trade import PerpTradeContext
 
 logger = logging.getLogger()
@@ -25,7 +25,7 @@ def create_paper_trade_context(config: dict, services: ServiceFactory, feed_fact
     feed = feed_factory[config["feed"].split(".")[1]]
     notification_instance = services[config["notification"].split(".")[1]]
     # Create and return the context
-    return PaperTradeSpotContext(
+    return PaperTradeContext(
         feed=feed,
         notification=notification_instance,
         init_balance=config["init_balance"]

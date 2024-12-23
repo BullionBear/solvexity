@@ -5,12 +5,11 @@ from solvexity.dependency.notification import Notification, Color
 from solvexity.trader.core import TradeContext, Feed
 from solvexity.trader.model import KLine, Trade
 import solvexity.helper.logging as logging
-from datetime import datetime, timezone
 import solvexity.helper as helper
 
 logger = logging.getLogger()
 
-class PaperTradeSpotContext(TradeContext):
+class PaperTradeContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """
@@ -33,7 +32,7 @@ class PaperTradeSpotContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base]['free'] += size
         self.balance[quote]['free'] -= size * ask
-        logger.info(f"Market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
+        logger.info(f"Context market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 
@@ -56,7 +55,7 @@ class PaperTradeSpotContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base]['free'] -= size
         self.balance[quote]['free'] += size * bid
-        logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
+        logger.info(f"Context market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 

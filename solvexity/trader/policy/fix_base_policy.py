@@ -40,8 +40,9 @@ class FixBasePolicy(Policy):
     def buy(self):
         ask, _ = self.trade_context.get_askbid(self.symbol)
         try:
-            logger.info(f"Buy {self.size} {self.symbol} at {ask}")
+            logger.info(f"{self.__class__.__name__}: {self.id} Buy {self.size} {self.symbol} at {ask}")
             res = self.trade_context.market_buy(self.symbol, self.base_size)
+            self.notify("OnMarketBuy", )
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market long failed: {e}", exc_info=True)

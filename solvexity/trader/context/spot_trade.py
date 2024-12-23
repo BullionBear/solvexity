@@ -26,9 +26,9 @@ class SpotTradeContext(TradeContext):
 
         self._running = True
         self._ws_event_queue = Queue()
-        self._thread = Thread(target=self._thread_manager)
+        self._thread = Thread(target=self._order_manager)
 
-    def _thread_manager(self):
+    def _order_manager(self):
         ws_producer = ThreadedWebsocketManager(api_key=self.client.API_KEY, api_secret=self.client.API_SECRET)
         ws_producer.start()
         ws_producer.start_user_socket(lambda msg: self._ws_event_queue.put(msg))

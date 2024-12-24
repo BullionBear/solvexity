@@ -29,9 +29,13 @@ class PaperTradeContext(TradeContext):
         self._order_id = 1
         self._order: dict[int, Order] = {}
 
+        self._thread = Thread(target=self._order_manager)
+        self._thread.start()
+
     def _order_manager(self):
-        for trigger in self.feed.receive('1m'):
-            logger.info(f"Triggered in order manager {trigger}")
+        return
+        # for trigger in self.feed.receive('1m'):
+        #     logger.info(f"Triggered in order manager {trigger}")
 
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)

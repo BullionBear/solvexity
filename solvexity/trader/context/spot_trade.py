@@ -180,6 +180,9 @@ class SpotTradeContext(TradeContext):
         trades = filter(lambda x: x.symbol == symbol, self.trade.values())
         return sorted(trades, key=lambda t: t.id)[-limit:]
     
+    def recv(self):
+        return self.feed.receive('1m')
+    
     def close(self):
         self._running = False
         if self._thread.is_alive():

@@ -62,6 +62,10 @@ class OnlineSpotFeed(Feed):
                     logger.warning("Online feed recv stop signal.")
                     break
                 self._current_time = kline.event_time
+                event = json.dumps({"E": "kline_update", "data": {
+                                "granular": "l1m", "current_time": self._current_time}
+                                }) # "l1m" is a special case for "less than 1m" granularity
+                self.redis.publish(f"spot:{granular}:online", event)
                 for granular in self._GRANULARS:
                     if self._is_ts_closed(granular):
                         event = json.dumps({"E": "kline_update", "data": {
@@ -122,10 +126,12 @@ class OnlineSpotFeed(Feed):
         start_time = end_time - granular_ms * limit
         return self.get_klines(start_time, end_time - 1, symbol, granular) # -1 is to make sure the kline is closed
 
-    def receive(self, granular: str):
+    def receive(self, granular: str|None = None):
         """
         Listen to Redis Pub/Sub messages for the current key and yield them.
         """
+        if granular is None:
+            granular = "l1m"
         key = f"spot:{granular}:online"
         pubsub = self.redis.pubsub()
         pubsub.subscribe(key)

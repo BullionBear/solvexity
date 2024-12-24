@@ -33,7 +33,6 @@ class PaperTradeContext(TradeContext):
         self._thread.start()
 
     def _order_manager(self):
-        
         for _ in self.feed.receive('1m'):
             dealt_orders = []
             for _, order in self._order.items():
@@ -260,6 +259,9 @@ class PaperTradeContext(TradeContext):
     def get_trades(self, symbol, limit) -> list[Trade]:
         trades = filter(lambda x: x.symbol == symbol, self.trade)
         return list(trades)[-limit:]
+    
+    def recv(self):
+        return self.feed.receive('1m')
     
     def close(self):
         if self._thread.is_alive():

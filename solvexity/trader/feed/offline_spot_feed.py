@@ -128,11 +128,12 @@ class OfflineSpotFeed(Feed):
         total_klines.sort(key=lambda x: x.open_time, reverse=False)
         return total_klines
     
-    def receive(self, granular: str):
+    def receive(self, granular: str|None=None):
         """
         Wait indefinitely for the next message for the specified granular unless the process is stopped.
         """
-       
+        if granular is None:
+            granular = '1m'
         try:
             while not self._stop_event:  # Keep waiting until explicitly stopped
                 with self._condition:

@@ -53,12 +53,18 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def recv(self):
+        pass
+
+    @abstractmethod
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         pass
 
     @abstractmethod
     def close(self):
         pass
+
+    
 
 
 class PerpTradeContext(TradeContext):

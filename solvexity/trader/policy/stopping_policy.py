@@ -106,10 +106,8 @@ class StoppingPolicy(Policy):
             size, px = helper.symbol_filter(self.symbol, self.quote_size / px, px)
             logger.info(f"Sell {size} {self.symbol} at {px}")
             res = self.trade_context.market_buy(self.symbol, size)
-            self.hooks[self._order_id] = StoppingOrder(symbol=self.symbol, qty=size, side='SELL', 
-                                                       stop_upper_px=px * (Decimal('1') + self.stop_loss_pct), 
-                                                       stop_lower_px=px * (Decimal('1') - self.stop_profit_pct))
-            
+            self.hooks[self._order_id] = StoppingOrder.from_order(self.symbol, 'BUY', px, size, self.stop_profit_pct, self.stop_loss_pct)
+            self._order_id += 1
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market sell failed: {e}", exc_info=True)
@@ -119,6 +117,8 @@ class StoppingPolicy(Policy):
             size, px = helper.symbol_filter(self.symbol, self.quote_size / px, px)
             logger.info(f"Sell {size} {self.symbol} at {px}")
             res = self.trade_context.market_sell(self.symbol, size)
+            self.hooks[self._order_id] = StoppingOrder.from_order(self.symbol, 'SELL', px, size, self.stop_profit_pct, self.stop_loss_pct)
+            self._order_id += 1
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market sell failed: {e}", exc_info=True)

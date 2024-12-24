@@ -2,6 +2,7 @@ import solvexity.helper.logging as logging
 from solvexity.trader.context import ContextFactory
 from .fix_quote_policy import FixQuotePolicy
 from .fix_base_policy import FixBasePolicy
+from .stopping_policy import StoppingPolicy
 
 logger = logging.getLogger()
 
@@ -17,6 +18,14 @@ POLICY_FACTORY_REGISTRY = {
         trade_context=context,
         symbol=config["symbol"],
         base_size=config["base_size"],
+        trade_id=config["trade_id"]
+    ),
+    "stopping_policy": lambda context, config: StoppingPolicy(
+        trade_context=context,
+        symbol=config["symbol"],
+        quote_size=config["quote_size"],
+        profit_quote=config["profit_quote"],
+        loss_quote=config["loss_quote"],
         trade_id=config["trade_id"]
     )
 }

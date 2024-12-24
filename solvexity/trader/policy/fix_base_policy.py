@@ -14,7 +14,7 @@ class FixBasePolicy(Policy):
         A policy that buy/sell fix base size of the U-Perp
     """
     MAX_TRADE_SIZE = 65535
-    def __init__(self, trade_context: Type[TradeContext], symbol: str, base_size: float, is_reversed: bool, trade_id: str):
+    def __init__(self, trade_context: Type[TradeContext], symbol: str, base_size: float, trade_id: str):
         super().__init__(trade_context, trade_id)
         self.symbol: str = symbol
         self.base_size = Decimal(base_size)

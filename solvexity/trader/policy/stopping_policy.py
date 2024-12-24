@@ -5,7 +5,7 @@ from solvexity.trader.core import Policy, TradeContext
 from solvexity.trader.model import Order
 from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
-import time
+import pandas as pd
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
 from pydantic import BaseModel
@@ -42,6 +42,7 @@ class StoppingPolicy(Policy):
         For example, if price of BTCUSDT is 50000, quote_size is 1000, stoploss_quote is 100, then 
         the policy will buy 0.02 BTC at 50000, and set a stoploss market order at 49000
     """
+    MAX_TRADE_SIZE = 65535
     def __init__(self, 
                  trade_context: Type[TradeContext], 
                  symbol: str, 
@@ -57,7 +58,8 @@ class StoppingPolicy(Policy):
         self._order_id = 0
         
         self.hooks: dict[int, StoppingOrder] = {}
-        self._px_react_thread = Thread(target=self._px_react_thread) 
+        self._px_react_thread = Thread(target=self._px_react_thread)
+        self._px_react_thread.start()
         self._is_running = True
 
     @property
@@ -72,6 +74,7 @@ class StoppingPolicy(Policy):
         for _ in self.trade_context.recv(): # To fit feed's recv instead of request every second
             dealt_orders = []
             ask, bid = self.trade_context.get_askbid(self.symbol)
+            logger.info(f"Current ask: {ask}, bid: {bid}")
             for order_id, order in self.hooks.items():
                 if order.side == 'BUY' and ask >= order.stop_upper_px:
                     logger.info(f"Stop loss triggered for order {order_id}")
@@ -104,7 +107,7 @@ class StoppingPolicy(Policy):
     def buy(self, px):
         try:
             size, px = helper.symbol_filter(self.symbol, self.quote_size / px, px)
-            logger.info(f"Sell {size} {self.symbol} at {px}")
+            logger.info(f"Buy {size} {self.symbol} at {px}")
             res = self.trade_context.market_buy(self.symbol, size)
             self.hooks[self._order_id] = StoppingOrder.from_order(self.symbol, 'BUY', px, size, self.stop_profit_pct, self.stop_loss_pct)
             self._order_id += 1
@@ -122,6 +125,13 @@ class StoppingPolicy(Policy):
             logger.info(f"Order response: {res}")
         except Exception as e:
             logger.error(f"Market sell failed: {e}", exc_info=True)
+
+    def export(self, output_dir: str):
+        trades = self.trade_context.get_trades(self.symbol, self.MAX_TRADE_SIZE)
+        df = pd.DataFrame([trade.dict() for trade in trades])
+        logger.info(f"Exporting policy {self.symbol} trades to {output_dir}")
+        target_dest = f"{output_dir}/policy_{self.symbol}_{self.id}.csv"
+        df.to_csv(target_dest, index=False)
 
     def close(self):
         self._is_running = False

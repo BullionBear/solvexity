@@ -2,6 +2,7 @@ import json5 as json
 import logging
 import random
 import string
+from typing import Any
 from decimal import Decimal, ROUND_DOWN
 from binance.client import Client as BinanceClient
 from datetime import datetime, timezone
@@ -63,6 +64,9 @@ def symbol_filter(symbol: str, size: Decimal, price: Decimal) -> tuple[Decimal, 
             lot_size = Decimal(_filter['stepSize']).normalize()
             size = size.quantize(lot_size, rounding=ROUND_DOWN)
     return size, price
+
+def to_content(obj: dict[str, Any]) -> str:
+    return "\n".join([f"**{k}**: {v}" for k, v in obj.items()])
     
 
 @lru_cache(maxsize=128)  # Set the cache size to 128 entries (or adjust as needed)

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Type
 from solvexity.trader.core import Policy, TradeContext
-from solvexity.trader.model import Trade
+from solvexity.trader.core import SignalType
 from solvexity.dependency.notification import Color
 import pandas as pd
 import solvexity.helper as helper
@@ -9,7 +9,7 @@ import solvexity.helper.logging as logging
 
 logger = logging.getLogger()
 
-class FixQuoteSpotPolicy(Policy):
+class FixQuotePolicy(Policy):
     """
         A policy that buy/sell fix quote size of the base asset.
     """
@@ -27,32 +27,40 @@ class FixQuoteSpotPolicy(Policy):
     def quote(self):
         return self.symbol[-4:] # e.g. BTCUSDT -> USDT
     
+    def act(self, signal: SignalType):
+        if signal == SignalType.BUY:
+            self.buy()
+        elif signal == SignalType.SELL:
+            self.sell()
+        elif signal == SignalType.HOLD:
+            pass
+        else:
+            logger.error(f"Unknown signal type {signal}", exc_info=True)
+    
     def buy(self):
         logger.info(f"Buying {self.quote_size} {self.quote} for {self.symbol}")
-        total_quote_size = self.trade_context.get_avaliable_balance(self.quote)
         ask, _ = self.trade_context.get_askbid(self.symbol)
-
-        if total_quote_size > self.quote_size:
-            size, price = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
-            self.notify("OnMarketBuy", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n **ref price**: {price}", Color.BLUE)
-            res = self.trade_context.market_buy(self.symbol, self.quote_size / ask)
+        try:
+            size, ask = helper.symbol_filter(self.symbol, self.quote_size / ask, ask)
+            logger.info(f"Buy {size} {self.symbol} at {ask}")
+            res = self.trade_context.market_buy(self.symbol, size)
             logger.info(f"Order response: {res}")
-        else:
-            logger.error(f"Insufficient quote size {total_quote_size} for {self.symbol}")
+        except Exception as e:
+            logger.error(f"Market Buy failed: {e}", exc_info=True)
+        
 
     def sell(self):
         logger.info(f"Selling {self.quote_size} {self.quote} for {self.symbol}")
-        total_base_size = self.trade_context.get_avaliable_balance(self.base)
         _, bid = self.trade_context.get_askbid(self.symbol)
-        
-        if total_base_size * bid > self.quote_size:
-            base_size = self.quote_size / bid
-            size, price = helper.symbol_filter(self.symbol, base_size, bid)
-            self.notify("OnMarketSell", f"**Trade ID**: {self.id}\n**Symbol**: {self.symbol}\n**size**: {size}\n**ref price**: {price}", Color.BLUE)
-            res = self.trade_context.market_sell(self.symbol, base_size)
+        try:
+            size, bid = helper.symbol_filter(self.symbol, self.quote_size / bid, bid)
+            logger.info(f"Sell {size} {self.symbol} at {bid}")
+            res = self.trade_context.market_sell(self.symbol, size)
             logger.info(f"Order response: {res}")
-        else:
-            logger.error(f"Insufficient base size {total_base_size} for {self.symbol}")
+        except Exception as e:
+            logger.error(f"Market Sell failed: {e}", exc_info=True)
+        
+       
 
     def export(self, output_dir: str):
         trades = self.trade_context.get_trades(self.symbol, self.MAX_TRADE_SIZE)
@@ -64,3 +72,6 @@ class FixQuoteSpotPolicy(Policy):
 
     def notify(self, title: str, content: str, color: Color):
         super().notify(title, content, color)
+    
+    def close(self):
+        super().close()

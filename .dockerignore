@@ -1,6 +1,7 @@
 log
 *.log
 venv
+tests
 *.pyc
 __pycache__/
 notebook
@@ -9,4 +10,8 @@ verbose
 .DS_Store
 .env
 *.http
+.git
+.ipynb_checkpoints
+.pytest_cache
+.vscode
 experiments

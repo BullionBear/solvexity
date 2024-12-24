@@ -1,16 +1,15 @@
 from typing import Optional
 from decimal import Decimal
-import redis
+from threading import Thread
 from solvexity.dependency.notification import Notification, Color
 from solvexity.trader.core import TradeContext, Feed
-from solvexity.trader.model import KLine, Trade
+from solvexity.trader.model import KLine, Trade, Order
 import solvexity.helper.logging as logging
-from datetime import datetime, timezone
 import solvexity.helper as helper
 
 logger = logging.getLogger()
 
-class PaperTradeSpotContext(TradeContext):
+class PaperTradeContext(TradeContext):
     """
     A paper trade context for trading strategies.  The execution of trades is simulated in this context in simple strategies.
     """
@@ -27,17 +26,94 @@ class PaperTradeSpotContext(TradeContext):
         self._trade_id = 1
         self.trade: list[Trade] = []
 
+        self._order_id = 1
+        self._order: dict[int, Order] = {}
+
+        self._thread = Thread(target=self._order_manager)
+        self._thread.start()
+
+    def _order_manager(self):
+        for _ in self.feed.receive('1m'):
+            dealt_orders = []
+            for _, order in self._order.items():
+                kline = self.feed.latest_n_klines(order.symbol, '1m', 1)[0].close, self.feed.latest_n_klines(order.symbol, '1m', 1)[0].close
+                symbol = order.symbol
+                order_px = float(order.price)
+                order_qty = float(order.qty)
+                if order.side == "BUY" and order_px >= kline[0].close:
+                    self.trade.append(Trade(symbol=symbol, 
+                                            id=self._trade_id, 
+                                            order_id=order.order_id, 
+                                            order_list_id=-1, 
+                                            price=min(order_px, kline[0].close), 
+                                            qty=order_qty, 
+                                            quote_qty=min(order_px, kline[0].close) * order_qty,
+                                            commission=0, 
+                                            commission_asset="BNB", 
+                                            time=self._get_time(), 
+                                            is_buyer=True, 
+                                            is_maker=True, 
+                                            is_best_match=True))
+                    self._trade_id += 1
+                    content = helper.to_content({
+                        "context": self.__class__.__name__,
+                        "type": "limit",
+                        "symbol": symbol,
+                        "side": "buy",
+                        "size": order.qty,
+                        "ref price": order.price
+                    })
+                    self.notify(self.__class__.__name__, "OnLimitBuyDealt", content, Color.GREEN)
+                    dealt_orders.append(order.order_id)
+                if order.side == "SELL" and order_px <= kline[0].close:
+                    self.trade.append(Trade(symbol=symbol, 
+                                            id=self._trade_id, 
+                                            order_id=order.order_id, 
+                                            order_list_id=-1, 
+                                            price=max(order_px, kline[0].close), 
+                                            qty=order_qty, 
+                                            quote_qty=max(order_px, kline[0].close) * order_qty,
+                                            commission=0, 
+                                            commission_asset="BNB", 
+                                            time=self._get_time(), 
+                                            is_buyer=False, 
+                                            is_maker=True, 
+                                            is_best_match=True))
+                    self._trade_id += 1
+                    content = helper.to_content({
+                        "context": self.__class__.__name__,
+                        "type": "limit",
+                        "symbol": symbol,
+                        "side": "sell",
+                        "size": order.qty,
+                        "ref price": order.price
+                    })
+                    self.notify(self.__class__.__name__, "OnLimitSellDealt", content, Color.PURPLE)
+                    dealt_orders.append(order.order_id)
+            for order_id in dealt_orders:
+                self._order.pop(order_id)
+        return
+
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)
         size, ask = helper.symbol_filter(symbol, size, ask)
         base, quote = symbol[:-4], symbol[-4:] # e.g. BTCUSDT -> BTC, USDT
         self.balance[base]['free'] += size
         self.balance[quote]['free'] -= size * ask
-        logger.info(f"Market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
+        content = helper.to_content({
+            "context": self.__class__.__name__,
+            "type": "market",
+            "symbol": symbol,
+            "side": "buy",
+            "size": size,
+            "ref price": ask
+        })
+        self.notify(self.__class__.__name__, "OnMarketBuy", content, Color.CYAN)
+        logger.info(f"Context market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 
-                                order_id=self._trade_id, 
+                                order_id=self._order_id, 
                                 order_list_id=-1, 
                                 price=float(ask), 
                                 qty=float(size), 
@@ -48,6 +124,7 @@ class PaperTradeSpotContext(TradeContext):
                                 is_buyer=True, 
                                 is_maker=False, 
                                 is_best_match=True))
+        self._order_id += 1
         self._trade_id += 1
 
     def market_sell(self, symbol: str, size: Decimal):
@@ -56,11 +133,20 @@ class PaperTradeSpotContext(TradeContext):
         base, quote = symbol[:-4], symbol[-4:]
         self.balance[base]['free'] -= size
         self.balance[quote]['free'] += size * bid
-        logger.info(f"Market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
+        content = helper.to_content({
+            "context": self.__class__.__name__,
+            "type": "market",
+            "symbol": symbol,
+            "side": "sell",
+            "size": size,
+            "ref price": bid
+        })
+        self.notify(self.__class__.__name__, "OnMarketSell", content, Color.MAGENTA)
+        logger.info(f"Context market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
                                 id=self._trade_id, 
-                                order_id=self._trade_id, 
+                                order_id=self._order_id, 
                                 order_list_id=-1, 
                                 price=float(bid), 
                                 qty=float(size), 
@@ -71,7 +157,85 @@ class PaperTradeSpotContext(TradeContext):
                                 is_buyer=False, 
                                 is_maker=False, 
                                 is_best_match=True))
+        self._order_id += 1
         self._trade_id += 1
+
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal):
+        self._order[self._order_id] = Order(
+            symbol=symbol,
+            order_id=self._order_id,
+            order_list_id=-1,
+            client_order_id=str(self._order_id),
+            price=str(price),
+            original_quantity=str(size),
+            executed_quantity='0',
+            cumulative_quote_quantity='0',
+            status="NEW",
+            time_in_force="GTC",
+            order_type="LIMIT",
+            side="BUY",
+            stop_price='0',
+            iceberg_quantity='0',
+            time=self._get_time(),
+            update_time=self._get_time(),
+            is_working=True,
+            original_quote_order_quantity='0',
+            working_time=self._get_time(),
+            self_trade_prevention_mode="NONE"
+        )
+        content = helper.to_content({
+                        "context": self.__class__.__name__,
+                        "type": "limit",
+                        "symbol": symbol,
+                        "side": "buy",
+                        "size": size,
+                        "ref price": price
+                    })
+        self.notify(self.__class__.__name__, "OnLimitBuySent", content, Color.PURPLE)
+        self._order_id += 1
+        
+    
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal):
+        self._order[self._order_id] = Order(
+            symbol=symbol,
+            order_id=self._order_id,
+            order_list_id=-1,
+            client_order_id=str(self._order_id),
+            price=str(price),
+            original_quantity=str(size),
+            executed_quantity='0',
+            cumulative_quote_quantity='0',
+            status="NEW",
+            time_in_force="GTC",
+            order_type="LIMIT",
+            side="SELL",
+            stop_price='0',
+            iceberg_quantity='0',
+            time=self._get_time(),
+            update_time=self._get_time(),
+            is_working=True,
+            original_quote_order_quantity='0',
+            working_time=self._get_time(),
+            self_trade_prevention_mode="NONE"
+        )
+        content = helper.to_content({
+                        "context": self.__class__.__name__,
+                        "type": "limit",
+                        "symbol": symbol,
+                        "side": "sell",
+                        "size": size,
+                        "ref price": price
+                    })
+        self.notify(self.__class__.__name__, "OnLimitSellSent", content, Color.PURPLE)
+        self._order_id += 1
+
+    def get_order(self, order_id: str):
+        return self._order[order_id]
+    
+    def cancel_order(self, symbol, order_id):
+        if order_id in self._order and self._order[order_id].symbol == symbol:
+            self._order.pop(order_id)
+            
 
     def get_balance(self, token: str) -> Decimal:
         return self.balance[token]['free'] + self.balance[token]['locked']
@@ -95,4 +259,12 @@ class PaperTradeSpotContext(TradeContext):
     def get_trades(self, symbol, limit) -> list[Trade]:
         trades = filter(lambda x: x.symbol == symbol, self.trade)
         return list(trades)[-limit:]
+    
+    def recv(self):
+        return self.feed.receive('1m')
+    
+    def close(self):
+        if self._thread.is_alive():
+            self._thread.join()
+        
     

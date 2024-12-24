@@ -10,8 +10,8 @@ logger = logging.getLogger()
 def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str, granular: str, n_live_granular: int = -1):
     strategy = config_loader["strategies"][trade_service]
     feed = config_loader["feeds"][feed_service]
-    shutdown.register(lambda signum: feed.close())
     shutdown.register(lambda signum: strategy.close())
+    shutdown.register(lambda signum: feed.close())
     try:
         for i, trigger in enumerate(feed.receive(granular)):
             if i == 0:

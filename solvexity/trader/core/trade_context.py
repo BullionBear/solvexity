@@ -17,6 +17,22 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def limit_buy(self, symbol: str, size: Decimal, price: Decimal)->str:
+        pass
+
+    @abstractmethod
+    def limit_sell(self, symbol: str, size: Decimal, price: Decimal)->str:
+        pass
+
+    @abstractmethod
+    def get_order(self, order_id: str):
+        pass
+
+    @abstractmethod
+    def cancel_order(self, symbol: str, order_id: str):
+        pass
+
+    @abstractmethod
     def get_balance(self, token: str) -> Decimal:
         pass
 
@@ -37,8 +53,18 @@ class TradeContext(ABC):
         pass
 
     @abstractmethod
+    def recv(self):
+        pass
+
+    @abstractmethod
     def notify(self, username: str, title: str, content: Optional[str], color: Color):
         pass
+
+    @abstractmethod
+    def close(self):
+        pass
+
+    
 
 
 class PerpTradeContext(TradeContext):

@@ -1,0 +1,47 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  logger:
+    image: ghcr.io/bullionbear/solvexity:latest
+    container_name: logger
+    environment:
+      PYTHONPATH: /solvexity
+    volumes:
+      - /home/ubuntu/solvexity/log/:/var/log/
+      - /home/ubuntu/solvexity/.env:/solvexity/.env
+    pull_policy: always
+    command: [ "python", "infra/log_aggregator.py", "--log-dir", "/var/log/", "--redis-host", "redis", "--redis-port", "6379", "--channel", "log_channel", "--system", "prod", "--notify", "notifyalert" ]
+
+  spot_feed:
+    image: ghcr.io/bullionbear/solvexity:latest
+    container_name: spot_feed
+    environment:
+      PYTHONPATH: /solvexity
+    volumes:
+      - /home/ubuntu/solvexity/.env:/solvexity/.env
+    pull_policy: always
+    command: [ "python", "zsrv/main.py", "-s", "SPOT_FEED" ]
+
+  tps_1:
+    image: ghcr.io/bullionbear/solvexity:latest
+    container_name: pytha_btcusd_dma_spot_sim
+    ports:
+      - "8920:8920"
+    environment:
+      PYTHONPATH: /solvexity
+    volumes:
+      - /home/ubuntu/solvexity/verbose/:/solvexity/verbose/
+      - /home/ubuntu/solvexity/.env:/solvexity/.env
+    pull_policy: always
+    command: [ "python", "zsrv/main.py", "-s", "PYTHA_BTCUSDT_DMA_SPOT_SIM" ]
+volumes:
+  redis_data:
+
+

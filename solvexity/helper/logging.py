@@ -3,14 +3,19 @@ import logging.config
 import json
 import redis
 import sys
+import uuid
 import traceback
-
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter to format logs in JSON format."""
+    def __init__(self, session: str = None):
+        super().__init__()
+        self.session = session if session else uuid.uuid4().hex
+
     def format(self, record):
         log_record = {
             "time": self.formatTime(record),
+            "session": self.session,
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
@@ -61,7 +66,7 @@ class RedisPubSubHandler(logging.Handler):
 
 
 # Define a centralized logging configuration with JSON and readable formatters
-LOGGING_CONFIG = {
+DEFAULT_LOGGING_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
@@ -70,6 +75,7 @@ LOGGING_CONFIG = {
         },
         'json': {
             '()': JSONFormatter,  # Use the custom JSON formatter
+            'session': 'default',
         },
     },
     'handlers': {
@@ -92,33 +98,69 @@ LOGGING_CONFIG = {
         '': {  # Root logger
             'level': 'INFO',
             'handlers': ['console', 'redis'],
-        },
-        'config': {
-            'level': 'INFO',
-            'handlers': ['console', 'redis'],
-            'propagate': True,
-        },
-        'trading': {
-            'level': 'INFO',
-            'handlers': ['console', 'redis'],
-            'propagate': True,
-        },
-        'feed': {
-            'level': 'INFO',
-            'handlers': ['console', 'redis'],
-            'propagate': True,
-        },
-        'service': {
-            'level': 'INFO',
-            'handlers': ['console', 'redis'],
-            'propagate': True,
-        },
+        }
     }
 }
 
-def setup_logging():
+PROD_LOGGING_CONFIG = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'readable': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] - %(message)s',
+        },
+        'json': {
+            '()': JSONFormatter,  # Use the custom JSON formatter
+            'session': 'default',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'readable',  # Human-readable format for console
+            'stream': 'ext://sys.stdout',
+        },
+        'redis': {
+            '()': RedisPubSubHandler,  # Use the custom Redis handler
+            'level': 'INFO',
+            'formatter': 'json',
+            'redis_host': 'redis',
+            'redis_port': 6379,
+            'channel': 'log_channel',
+        },
+    },
+    'loggers': {
+        '': {  # Root logger
+            'level': 'INFO',
+            'handlers': ['console', 'redis'],
+        }
+    }
+}
+
+def is_redis_connected(host: str, port: int) -> bool:
+    from redis.exceptions import ConnectionError
+    try:
+        redis_client = redis.Redis(host=host, port=port)
+        redis_client.ping()
+        return True
+    except ConnectionError:
+        return False
+
+def setup_logging(session: str = None):
     """Sets up logging based on the configuration."""
-    logging.config.dictConfig(LOGGING_CONFIG)
+    if is_redis_connected(DEFAULT_LOGGING_CONFIG['handlers']['redis']['redis_host'], 
+                          DEFAULT_LOGGING_CONFIG['handlers']['redis']['redis_port']):
+        logging_config = DEFAULT_LOGGING_CONFIG
+    elif is_redis_connected(PROD_LOGGING_CONFIG['handlers']['redis']['redis_host'], 
+                            PROD_LOGGING_CONFIG['handlers']['redis']['redis_port']):
+        logging_config = PROD_LOGGING_CONFIG
+    else:
+        raise ConnectionError("Failed to connect to Redis server")
+    if session:
+        logging_config['formatters']['json']['session'] = session
+    logging.config.dictConfig(logging_config)
+    
 
 # Global exception hook
 def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):

@@ -1,6 +1,7 @@
 from typing import Type
 from solvexity.dependency.notification import Color
 from abc import ABC, abstractmethod
+from solvexity.trader.core import SignalType
 from .trade_context import TradeContext
 import solvexity.helper as helper
 
@@ -13,14 +14,10 @@ class Policy(ABC):
             self._id = trade_id
         else:
             self._id = helper.generate_random_id()
-        self.trade_context: Type[TradeContext] = trade_context  
+        self.trade_context: Type[TradeContext] = trade_context
 
     @abstractmethod
-    def buy(self):
-        pass
-    
-    @abstractmethod
-    def sell(self):
+    def act(self, signal: SignalType):
         pass
 
     def notify(self, title: str, content: str, color: Color):
@@ -29,6 +26,10 @@ class Policy(ABC):
     @abstractmethod
     def export(self, output_dir: str):
         pass
+
+    @abstractmethod
+    def close(self):
+        self.trade_context.close()
 
     @property
     def id(self):

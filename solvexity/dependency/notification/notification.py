@@ -3,6 +3,7 @@ from typing import Callable, Dict, Optional, Any
 import requests
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
+import time
 
 
 logger = logging.getLogger()
@@ -56,3 +57,4 @@ class Notification:
         logger.info(f"Sending notification to {title=}")
         if self.enabled:
             send_notification(self.webhook, None, username, embed)
+    

@@ -8,10 +8,12 @@ import threading
 from solvexity.trader.config import ConfigLoader
 import pymongo
 import dotenv
+import solvexity.helper.logging as logging
 from solvexity.dependency.notification import Color
 import textwrap
 
 dotenv.load_dotenv()
+
 
 class LogAggregator:
     SOLVEXITY_MONGO_URI = os.getenv("SOLVEXITY_MONGO_URI")
@@ -61,8 +63,9 @@ class LogAggregator:
             log_record = json.loads(log_data)
 
             process_id = log_record.get("process_id", "unknown_process")
+            session = log_record.get("session", "unknown_session")
             log_date = datetime.date.today().strftime("%Y_%m_%d")
-            log_filename = f"{log_date}_{process_id}.log"
+            log_filename = f"{log_date}_{process_id}_{session}.log"
             log_filepath = os.path.join(self.log_dir, log_filename)
 
             # Write the log message to the file
@@ -76,12 +79,14 @@ class LogAggregator:
                 content = textwrap.dedent(f"""\
                     Process ID: {process_id}
                     Message: {log_record.get("message", "No message provided")}
+                    Session: {session}
                     Exception: {log_record.get("exception", "No exception provided")}
                 """)
                 self.notification.notify(username="LogAggregator", title=title, content=content, color=Color.RED if level == "error" else Color.YELLOW)
 
         except Exception as e:
-            print(f"Error writing log: {e}")
+            import traceback
+            print(f"Error writing log: {e}: {traceback.format_exc()}")
 
     def _compress_logs_daily(self):
         """
@@ -133,6 +138,7 @@ def parse_arguments():
     return parser.parse_args()
 
 if __name__ == "__main__":
+    logging.setup_logging("LOG_AGGREGATOR")
     args = parse_arguments()
     aggregator = LogAggregator(
         redis_host=args.redis_host,

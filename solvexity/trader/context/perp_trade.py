@@ -116,6 +116,9 @@ class PerpTradeContext(TradeContext):
         usdt = self.get_balance('USDT')
         position_value = sum([Decimal(pos['positionAmt']) * Decimal(pos['entryPrice']) for pos in self.get_positions().values()])
         return position_value / usdt
+    
+    def close(self):
+        pass
         
         
 

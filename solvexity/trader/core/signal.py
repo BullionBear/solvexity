@@ -33,6 +33,11 @@ class Signal(ABC):
     def visualize(self, output_dir: str):
         pass
 
+    @abstractmethod
+    def close(self):
+        self.trade_context.close()
+        
+
     def get_context(self) -> Type[TradeContext]:
         return self.trade_context
 

@@ -26,10 +26,7 @@ class Pythagoras(Strategy):
         self.report.invoke() # Invoke report before executing the strategy
         s = self.signal.solve()
         logger.info(f"Signal: {s}")
-        if s == SignalType.BUY:
-            self.policy.buy()
-        elif s == SignalType.SELL:
-            self.policy.sell()
+        self.policy.act(s)
         
         if self.verbose:
             self.signal.visualize(self.output_dir)
@@ -41,3 +38,5 @@ class Pythagoras(Strategy):
             self.report.export(self.output_dir)
             self.policy.export(self.output_dir)
             logger.info(f"Trading report is exported to {self.output_dir}")
+        self.signal.close()
+        self.policy.close()

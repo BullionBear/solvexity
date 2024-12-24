@@ -33,9 +33,9 @@ class PaperTradeContext(TradeContext):
         self._thread.start()
 
     def _order_manager(self):
+        for trigger in self.feed.receive('1m'):
+            logger.info(f"Triggered in order manager {trigger}")
         return
-        # for trigger in self.feed.receive('1m'):
-        #     logger.info(f"Triggered in order manager {trigger}")
 
     def market_buy(self, symbol: str, size: Decimal):
         ask, _ = self.get_askbid(symbol)
@@ -51,7 +51,7 @@ class PaperTradeContext(TradeContext):
             "size": size,
             "ref price": ask
         })
-        self.notify("OnMarketBuy", content, Color.CYAN)
+        self.notify(self.__class__.__name__, "OnMarketBuy", content, Color.CYAN)
         logger.info(f"Context market buy: {symbol}, size: {str(size)}, price: {str(ask)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -83,7 +83,7 @@ class PaperTradeContext(TradeContext):
             "size": size,
             "ref price": bid
         })
-        self.notify("OnMarketSell", content, Color.MAGENTA)
+        self.notify(self.__class__.__name__, "OnMarketSell", content, Color.MAGENTA)
         logger.info(f"Context market sell: {symbol}, size: {str(size)}, price: {str(bid)}")
         logger.info(f"Current balance: {self.balance}")
         self.trade.append(Trade(symbol=symbol, 
@@ -137,5 +137,7 @@ class PaperTradeContext(TradeContext):
         return list(trades)[-limit:]
     
     def close(self):
-        pass
+        if self._thread.is_alive():
+            self._thread.join()
+        
     

@@ -33,6 +33,8 @@ class OfflineSpotFeed(Feed):
         self._queues = {granular: Queue(maxsize=10) for granular in self._GRANDULARS}  # Separate queues for granulars
         self._stop_event = False
         self._condition = Condition()  # Condition variable for signaling
+        self._subscribe_thread = Thread(target=self._subscribe)
+        self._subscribe_thread.start()
 
     def _get_key(self, symbol: str, granular: str) -> str:
         return f"spot:{symbol}:{granular}:offline"
@@ -130,8 +132,7 @@ class OfflineSpotFeed(Feed):
         """
         Wait indefinitely for the next message for the specified granular unless the process is stopped.
         """
-        subscriber_thread = Thread(target=self._subscribe)
-        subscriber_thread.start()
+       
         try:
             while not self._stop_event:  # Keep waiting until explicitly stopped
                 with self._condition:
@@ -143,13 +144,15 @@ class OfflineSpotFeed(Feed):
         finally:
             with self._condition:  # Acquire the lock before calling notify_all()
                 self._condition.notify_all()  # Notify other threads
-            subscriber_thread.join()
+            
 
 
     def close(self):
         """Gracefully stop the Offline Feed."""
         logger.info("OfflineSpotFeed close() is called")
         self._stop_event = True  # Signal stop
+        if self._subscribe_thread.is_alive():
+            self._subscribe_thread.join()
         with self._condition:
             self._condition.notify_all()  # Wake up any waiting threads
         # Clean up Redis keys

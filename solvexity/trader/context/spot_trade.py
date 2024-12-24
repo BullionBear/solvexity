@@ -99,7 +99,7 @@ class SpotTradeContext(TradeContext):
                 "size": size,
                 "ref price": ask
             })
-            self.notify("OnMarketBuy", content, Color.BLUE)
+            self.notify(self.__class__.__name__, "OnMarketBuy", content, Color.BLUE)
             logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
         except Exception as e:
@@ -119,7 +119,7 @@ class SpotTradeContext(TradeContext):
                 "size": size,
                 "ref price": bid
             })
-            self.notify("OnMarketSell", content, Color.ORANGE)
+            self.notify(self.__class__.__name__, "OnMarketSell", content, Color.ORANGE)
             logger.info(f"Order response: {res}")
             self.balance = self._get_balance()
         except Exception as e:

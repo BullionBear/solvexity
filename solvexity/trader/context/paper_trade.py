@@ -36,18 +36,16 @@ class PaperTradeContext(TradeContext):
         for _ in self.feed.receive('1m'):
             dealt_orders = []
             for _, order in self._order.items():
-                kline = self.feed.latest_n_klines(order.symbol, '1m', 1)[0].close, self.feed.latest_n_klines(order.symbol, '1m', 1)[0].close
+                kline = self.feed.latest_n_klines(order.symbol, '1m', 1)[0]
                 symbol = order.symbol
-                order_px = float(order.price)
-                order_qty = float(order.qty)
-                if order.side == "BUY" and order_px >= kline[0].close:
+                if order.side == "BUY" and order.price >= kline[0].close:
                     self.trade.append(Trade(symbol=symbol, 
                                             id=self._trade_id, 
                                             order_id=order.order_id, 
                                             order_list_id=-1, 
-                                            price=min(order_px, kline[0].close), 
-                                            qty=order_qty, 
-                                            quote_qty=min(order_px, kline[0].close) * order_qty,
+                                            price=min(order.price, kline[0].close), 
+                                            qty=order.original_quantity, 
+                                            quote_qty=min(order.price, kline[0].close) * order.original_quantity,
                                             commission=0, 
                                             commission_asset="BNB", 
                                             time=self._get_time(), 
@@ -65,14 +63,14 @@ class PaperTradeContext(TradeContext):
                     })
                     self.notify(self.__class__.__name__, "OnLimitBuyDealt", content, Color.GREEN)
                     dealt_orders.append(order.order_id)
-                if order.side == "SELL" and order_px <= kline[0].close:
+                if order.side == "SELL" and order.price <= kline[0].close:
                     self.trade.append(Trade(symbol=symbol, 
                                             id=self._trade_id, 
                                             order_id=order.order_id, 
                                             order_list_id=-1, 
-                                            price=max(order_px, kline[0].close), 
-                                            qty=order_qty, 
-                                            quote_qty=max(order_px, kline[0].close) * order_qty,
+                                            price=max(order.price, kline[0].close), 
+                                            qty=order.original_quantity, 
+                                            quote_qty=max(order.price, kline[0].close) * order.original_quantity,
                                             commission=0, 
                                             commission_asset="BNB", 
                                             time=self._get_time(), 
@@ -148,9 +146,9 @@ class PaperTradeContext(TradeContext):
                                 id=self._trade_id, 
                                 order_id=self._order_id, 
                                 order_list_id=-1, 
-                                price=float(bid), 
-                                qty=float(size), 
-                                quote_qty=float(size * bid), 
+                                price=bid, 
+                                qty=size, 
+                                quote_qty=size * bid, 
                                 commission=0, 
                                 commission_asset="BNB", 
                                 time=self._get_time(), 
@@ -168,18 +166,18 @@ class PaperTradeContext(TradeContext):
             client_order_id=str(self._order_id),
             price=str(price),
             original_quantity=str(size),
-            executed_quantity='0',
-            cumulative_quote_quantity='0',
+            executed_quantity=Decimal('0'),
+            cumulative_quote_quantity=Decimal('0'),
             status="NEW",
             time_in_force="GTC",
             order_type="LIMIT",
             side="BUY",
-            stop_price='0',
-            iceberg_quantity='0',
+            stop_price=Decimal('0'),
+            iceberg_quantity=Decimal('0'),
             time=self._get_time(),
             update_time=self._get_time(),
             is_working=True,
-            original_quote_order_quantity='0',
+            original_quote_order_quantity=Decimal('0'),
             working_time=self._get_time(),
             self_trade_prevention_mode="NONE"
         )
@@ -201,20 +199,20 @@ class PaperTradeContext(TradeContext):
             order_id=self._order_id,
             order_list_id=-1,
             client_order_id=str(self._order_id),
-            price=str(price),
-            original_quantity=str(size),
-            executed_quantity='0',
-            cumulative_quote_quantity='0',
+            price=price,
+            original_quantity=size,
+            executed_quantity=Decimal('0'),
+            cumulative_quote_quantity=Decimal('0'),
             status="NEW",
             time_in_force="GTC",
             order_type="LIMIT",
             side="SELL",
-            stop_price='0',
-            iceberg_quantity='0',
+            stop_price=Decimal('0'),
+            iceberg_quantity=Decimal('0'),
             time=self._get_time(),
             update_time=self._get_time(),
             is_working=True,
-            original_quote_order_quantity='0',
+            original_quote_order_quantity=Decimal('0'),
             working_time=self._get_time(),
             self_trade_prevention_mode="NONE"
         )

@@ -43,7 +43,7 @@ class Signal(ABC):
 
     @staticmethod
     def to_dataframe(data: list[KLine]):
-        data_dict = [kline.model_dump() for kline in data]
+        data_dict = [kline.to_numeric_dict() for kline in data]
         return pd.DataFrame(data_dict)
     
     @staticmethod

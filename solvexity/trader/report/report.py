@@ -41,8 +41,8 @@ class Report:
     def _update_position(self, kline: KLine):
         """Update the position with the adjusted kline data."""
         kline = kline.model_copy()
-        base_size = float(self.context.get_balance(self.base))
-        quote_size = float(self.context.get_balance(self.quote))
+        base_size = self.context.get_balance(self.base)
+        quote_size = self.context.get_balance(self.quote)
         kline.open = base_size * kline.open + quote_size
         kline.close = base_size * kline.close + quote_size
         kline.high = base_size * kline.high + quote_size
@@ -186,5 +186,5 @@ class Report:
         Returns:
             pd.DataFrame: The DataFrame representation of the KLine data.
         """
-        data_dict = [kline.model_dump() for kline in data]
+        data_dict = [kline.to_numeric_dict() for kline in data]
         return pd.DataFrame(data_dict)

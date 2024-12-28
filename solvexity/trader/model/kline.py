@@ -54,3 +54,13 @@ class KLine(BaseModel):
             taker_buy_quote_asset_volume=Decimal(data[10]),
             is_closed=True
         )
+    
+    def to_numeric_dict(self) -> dict:
+        """
+        Convert the KLine instance to a dictionary, casting Decimal values to float.
+        """
+        data = self.model_dump()
+        for key, value in data.items():
+            if isinstance(value, Decimal):
+                data[key] = float(value)
+        return data

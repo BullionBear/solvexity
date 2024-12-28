@@ -103,7 +103,6 @@ class MaxDrawdown(Signal):
         matplotlib.use('Agg')  # Ensure a non-GUI backend is used
         ohlc_data = self.df_analyze[['open_time', 'open', 'high', 'low', 'close', 'quote_asset_volume', 'acc_max', 'drawdown']]
         ohlc_data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'quote_asset_volume': 'Volume'}, inplace=True)
-
         ohlc_data['open_time'] = pd.to_datetime(ohlc_data['open_time'], unit='ms')
         ohlc_data.set_index('open_time', inplace=True)
         target_dest = os.path.join(output_dir, f"{self.get_filename()}.png")

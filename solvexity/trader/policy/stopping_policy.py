@@ -87,9 +87,11 @@ class StoppingPolicy(Policy):
                 elif order.side == 'SELL' and bid >= order.stop_upper_px:
                     logger.info(f"Stop profit triggered for order {order_id}")
                     self.trade_context.market_sell(self.symbol, order.qty)
+                    dealt_orders.append(order_id)
                 elif order.side == 'SELL' and bid <= order.stop_lower_px:
                     logger.info(f"Stop loss triggered for order {order_id}")
                     self.trade_context.market_sell(self.symbol, order.qty)
+                    dealt_orders.append(order_id)
             for order_id in dealt_orders:
                 self.hooks.pop(order_id)                     
     
@@ -110,6 +112,7 @@ class StoppingPolicy(Policy):
             logger.info(f"Buy {size} {self.symbol} at {px}")
             res = self.trade_context.market_buy(self.symbol, size)
             self.hooks[self._order_id] = StoppingOrder.from_order(self.symbol, 'BUY', px, size, self.stop_profit_pct, self.stop_loss_pct)
+            logger.info(f"Hooked stopping order: {self.hooks[self._order_id]}")
             self._order_id += 1
             logger.info(f"Order response: {res}")
         except Exception as e:
@@ -121,6 +124,7 @@ class StoppingPolicy(Policy):
             logger.info(f"Sell {size} {self.symbol} at {px}")
             res = self.trade_context.market_sell(self.symbol, size)
             self.hooks[self._order_id] = StoppingOrder.from_order(self.symbol, 'SELL', px, size, self.stop_profit_pct, self.stop_loss_pct)
+            logger.info(f"Hooked stopping order: {self.hooks[self._order_id]}")
             self._order_id += 1
             logger.info(f"Order response: {res}")
         except Exception as e:

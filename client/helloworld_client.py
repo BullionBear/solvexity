@@ -1,11 +1,13 @@
 import grpc
 from generated import helloworld_pb2, helloworld_pb2_grpc
 
+
 def run():
-    with grpc.insecure_channel('localhost:50051') as channel:
+    with grpc.insecure_channel("localhost:50051") as channel:
         stub = helloworld_pb2_grpc.GreeterStub(channel)
-        response = stub.SayHello(helloworld_pb2.HelloRequest(name='Alice'))
+        response = stub.SayHello(helloworld_pb2.HelloRequest(name="Alice"))
         print(response.message)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()

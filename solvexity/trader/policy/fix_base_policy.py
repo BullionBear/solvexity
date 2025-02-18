@@ -7,7 +7,7 @@ import pandas as pd
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class FixBasePolicy(Policy):
     """

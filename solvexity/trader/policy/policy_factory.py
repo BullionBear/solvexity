@@ -4,7 +4,7 @@ from .fix_quote_policy import FixQuotePolicy
 from .fix_base_policy import FixBasePolicy
 from .stopping_policy import StoppingPolicy
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 # Registry for available policies
 POLICY_FACTORY_REGISTRY = {

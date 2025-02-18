@@ -2,7 +2,7 @@ import signal
 import threading
 import logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class Shutdown:
     def __init__(self, *signals):

@@ -14,7 +14,7 @@ import solvexity.helper.logging as logging
 import pandas as pd
 import json
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class INDEX(str, Enum):
     MARKET = "MARKET"

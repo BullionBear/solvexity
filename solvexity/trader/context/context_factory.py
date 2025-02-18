@@ -5,7 +5,7 @@ from .spot_trade import SpotTradeContext
 from .paper_trade import PaperTradeContext
 from .perp_trade import PerpTradeContext
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def create_spot_trade_context(config: dict, services: ServiceFactory, feed_factory: FeedFactory) -> SpotTradeContext:
     # Resolve services

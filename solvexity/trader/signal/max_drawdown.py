@@ -8,7 +8,7 @@ import mplfinance as mpf
 import matplotlib
 import pandas as pd
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 pd.options.mode.copy_on_write = True
 

@@ -4,7 +4,7 @@ from solvexity.dependency import ServiceFactory
 from .offline_spot_feed import OfflineSpotFeed
 from .online_spot_feed import OnlineSpotFeed
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def create_offline_spot_feed(services: ServiceFactory, config: dict) -> OfflineSpotFeed:
     redis_instance = services[config["redis"].split(".")[1]]

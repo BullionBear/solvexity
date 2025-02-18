@@ -7,7 +7,7 @@ from solvexity.trader.report import Report
 import solvexity.helper as helper
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class Stanley(Strategy):
     """

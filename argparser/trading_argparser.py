@@ -7,7 +7,7 @@ import json
 from solvexity.trader.config import ConfigLoader
 
 logging.setup_logging()
-logger = logging.getLogger()
+logger = logging.get_logger()
 shutdown = helper.Shutdown(signal.SIGINT, signal.SIGTERM)
 
 def parse_arguments():

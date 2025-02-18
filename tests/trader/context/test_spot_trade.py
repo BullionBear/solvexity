@@ -8,7 +8,7 @@ import pymongo
 from solvexity.dependency.notification import Color
 import logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 dotenv.load_dotenv()
 

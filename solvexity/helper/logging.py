@@ -165,7 +165,7 @@ def setup_logging(session: str = None):
 # Global exception hook
 def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
     """Logs uncaught exceptions."""
-    logger = logging.getLogger()
+    logger = logging.get_logger()
     if issubclass(exc_type, KeyboardInterrupt):
         # Ignore KeyboardInterrupt to allow graceful shutdown
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -177,15 +177,15 @@ def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
 setup_logging()
 sys.excepthook = log_uncaught_exceptions
 
-def getLogger(name=None):
+def get_logger(name=None):
     """
     Returns a logger instance with the specified name.
     """
-    return logging.getLogger(name)
+    return logging.get_logger(name)
 
 # Example to test unhandled exceptions
 if __name__ == "__main__":
-    logger = getLogger()
+    logger = get_logger()
     try:
         raise ValueError("Test exception for demonstration")
     except Exception as e:

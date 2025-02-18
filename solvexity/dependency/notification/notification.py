@@ -6,7 +6,7 @@ import solvexity.helper.logging as logging
 import time
 
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 
 def send_notification(webhook_url, content, username, embed=None):

@@ -7,7 +7,7 @@ from solvexity.trader.model import KLine, Trade, Order
 import solvexity.helper.logging as logging
 import solvexity.helper as helper
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class PaperTradeContext(TradeContext):
     """

@@ -8,7 +8,7 @@ from solvexity.trader.config import ConfigLoader
 
 
 logging.setup_logging()
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Read configuration and run trading process")

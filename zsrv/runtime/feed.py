@@ -4,7 +4,7 @@ from solvexity.helper.shutdown import Shutdown
 import solvexity.helper as helper
 import json
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def feed_runtime(config_loader: ConfigLoader, shutdown: Shutdown, feed_service: str):
 

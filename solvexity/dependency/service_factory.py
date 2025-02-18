@@ -8,7 +8,7 @@ from .notification import Notification
 from pymongo import MongoClient
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 # Individual factory methods for service creation
 def create_redis(config: dict) -> redis.Redis:

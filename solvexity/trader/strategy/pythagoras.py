@@ -4,7 +4,7 @@ from solvexity.trader.core import Strategy, Signal, Policy, SignalType
 from solvexity.trader.report import Report
 import solvexity.helper.logging as logging
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class Pythagoras(Strategy):
     REPORT_BUFFER_SIZE = 65535

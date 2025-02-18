@@ -8,7 +8,7 @@ from solvexity.trader.core import Signal, SignalType
 import solvexity.helper.logging as logging
 import pandas as pd
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 pd.options.mode.copy_on_write = True
 

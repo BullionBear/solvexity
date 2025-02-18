@@ -5,7 +5,7 @@ import solvexity.helper as helper
 import time
 import json
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def trading_runtime(config_loader: ConfigLoader, shutdown: Shutdown, trade_service: str, feed_service: str, granular: str, n_live_granular: int = -1):
     strategy = config_loader["strategies"][trade_service]

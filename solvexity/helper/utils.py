@@ -8,7 +8,7 @@ from binance.client import Client as BinanceClient
 from datetime import datetime, timezone
 from functools import lru_cache
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def load_config(file_path):
     try:

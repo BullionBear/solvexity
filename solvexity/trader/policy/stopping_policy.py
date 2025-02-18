@@ -11,7 +11,7 @@ import solvexity.helper.logging as logging
 from pydantic import BaseModel
 from threading import Thread
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class StoppingOrder(BaseModel):
     symbol: str

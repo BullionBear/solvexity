@@ -3,7 +3,7 @@ from solvexity.trader.context import ContextFactory
 from .doubly_moving_average import DoublyMovingAverage
 from .max_drawdown import MaxDrawdown
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 def create_doubly_moving_average_signal(trade_context, config):
     return DoublyMovingAverage(

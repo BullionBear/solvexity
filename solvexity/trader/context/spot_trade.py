@@ -13,7 +13,7 @@ from queue import Queue
 from threading import Thread
 from binance import ThreadedWebsocketManager
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class SpotTradeContext(TradeContext):
     def __init__(self, client: Client, feed: Feed, notification: Notification):

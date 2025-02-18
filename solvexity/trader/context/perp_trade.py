@@ -9,7 +9,7 @@ from binance.client import Client
 from solvexity.dependency.notification import Notification
 import solvexity.helper as helper
 
-logger = logging.getLogger()
+logger = logging.get_logger()
 
 class PerpTradeContext(TradeContext):
     def __init__(self, client: Client, feed: Feed, notification: Notification):

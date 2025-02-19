@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package logger;
+
+service Logger {
+  rpc Log (stream LogRequest) returns (LogResponse);  // Client-side streaming
+}
+
+// Define the log level as an enum
+enum LogLevel {
+  DEBUG = 0;
+  INFO = 1;
+  WARNING = 2;
+  ERROR = 3;
+}
+
+message LogRequest {
+  string message = 1;
+  LogLevel level = 2;  // Use the enum here
+}
+
+message LogResponse {
+  int32 total_logs_received = 1;
+  bool success = 2;
+}

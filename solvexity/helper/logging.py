@@ -8,7 +8,7 @@ from solvexity.generated import logger_pb2, logger_pb2_grpc
 
 def setup_logging(config: dict):
     """Sets up logging based on the configuration."""
-    logging.config.dictConfig(config)
+    logging.config.dictConfig(LOGGING_CONFIG)
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter to format logs in JSON format."""
@@ -132,7 +132,6 @@ def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
                  exc_info=(exc_type, exc_value, exc_traceback))
 
 # Set up the logging and global exception hook
-setup_logging()
 sys.excepthook = log_uncaught_exceptions
 
 def getLogger(name=None):

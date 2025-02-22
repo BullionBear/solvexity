@@ -37,6 +37,7 @@ class LoggerServicer(logger_pb2_grpc.LoggerServicer):
 def serve(config_path: str):
     # Load the configuration
     config = load_config(config_path)
+    
     # Configure logging
     logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG to see all log levels
 

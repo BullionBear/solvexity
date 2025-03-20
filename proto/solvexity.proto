@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package solvexity;
+
+option go_package = "./protobuf/solvexity";
+
+import "google/protobuf/timestamp.proto";
+
+service Solvexity {
+  rpc Solve (SolveRequest) returns (SolveResponse);
+}
+
+message SolveRequest {
+  string symbol = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+enum StatusType {
+    SUCCESS = 0;
+    FAIL = 1;
+    // Add more event types as needed
+}
+
+message SolveResponse {
+    StatusType status = 1;
+    string message = 2;
+    google.protobuf.Timestamp timestamp = 3;
+}
+

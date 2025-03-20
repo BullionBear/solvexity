@@ -1,6 +1,6 @@
 import grpc
-import solvexity.generated.greet_pb2 as greet_pb2
-import solvexity.generated.greet_pb2_grpc as greet_pb2_grpc
+import solvexity.generated.greet.greet_pb2 as greet_pb2
+import solvexity.generated.greet.greet_pb2_grpc as greet_pb2_grpc
 
 def run():
     with grpc.insecure_channel("localhost:50051") as channel:

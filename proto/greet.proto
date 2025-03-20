@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package greet;
 
-// option python_package = "solvexity.generated.greet";
-
 // The greeting service definition.
 service Greeter {
   // Sends a greeting

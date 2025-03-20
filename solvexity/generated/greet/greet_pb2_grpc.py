@@ -26,9 +26,7 @@ if _version_not_supported:
 
 
 class GreeterStub(object):
-    """option python_package = "solvexity.generated.greet";
-
-    The greeting service definition.
+    """The greeting service definition.
     """
 
     def __init__(self, channel):
@@ -45,9 +43,7 @@ class GreeterStub(object):
 
 
 class GreeterServicer(object):
-    """option python_package = "solvexity.generated.greet";
-
-    The greeting service definition.
+    """The greeting service definition.
     """
 
     def SayHello(self, request, context):
@@ -74,9 +70,7 @@ def add_GreeterServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class Greeter(object):
-    """option python_package = "solvexity.generated.greet";
-
-    The greeting service definition.
+    """The greeting service definition.
     """
 
     @staticmethod

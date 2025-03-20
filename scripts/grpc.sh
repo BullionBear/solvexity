@@ -1,6 +1,6 @@
 #!/bin/bash
-
-PROTO_DIR="solvexity/proto"
+set -xe
+PROTO_DIR="./proto"
 OUT_DIR="solvexity/generated"
 
 # Function to start Docker Compose

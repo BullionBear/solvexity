@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package solvexity;
 
-option go_package = "./protobuf/solvexity";
-
 import "google/protobuf/timestamp.proto";
 
 service Solvexity {

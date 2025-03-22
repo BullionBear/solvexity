@@ -64,6 +64,13 @@ class Feed:
         df = pd.read_sql(query, self.sql_engine)
         res = df.values.tolist()
         return [KLine.from_binance(kline, symbol, interval) for kline in res]
+    
+    def _get_cache_key(self, symbol: str, interval: str):
+        return f"{symbol}-{interval}"
+
+    def _insert_cache(self, symbol: str, interval: str, klines: list[KLine]):
+        key = f"{symbol}-{interval}"
+        self.redis.set(key, klines)
 
     def get_klines(self, symbol: str, interval: str, limit: int):
         pass

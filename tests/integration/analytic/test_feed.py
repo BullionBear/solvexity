@@ -1,29 +1,39 @@
-import unittest
+import pytest
 import redis
 import sqlalchemy
-from solvexity.analytic.feed import Feed
+from binance import Client as BinanceClient
+from your_package.feed import Feed
+from your_package.model import KLine  # Ensure your KLine has .from_binance() classmethod
+from solvexity.helper import to_ms_interval
+from datetime import datetime, timedelta
 
-class TestFeedIntegration(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Connect to real Redis
-        cls.redis = redis.Redis(host="localhost", port=6379, decode_responses=True)
-        cls.redis.ping()  # will raise an error if not connected
+@pytest.fixture(scope="module")
+def redis_client():
+    r = redis.Redis(host='localhost', port=6379, db=0)  # Use a test Redis instance
+    yield r
+    r.flushdb()  # Clean up after test
 
-        # Connect to real PostgreSQL
-        db_url = "postgresql+psycopg2://test_user:test_pass@localhost:5432/test_db"
-        cls.engine = sqlalchemy.create_engine(db_url)
-        cls.engine.connect()  # test connection
+@pytest.fixture(scope="module")
+def sql_engine():
+    # Use a local or Docker-based test DB; this example uses SQLite in-memory for simplicity
+    engine = sqlalchemy.create_engine("sqlite:///:memory:")
+    yield engine
+    engine.dispose()
 
-        # Initialize Feed
-        cls.feed = Feed(cache=cls.redis, sql_engine=cls.engine)
+@pytest.fixture(scope="module")
+def feed(redis_client, sql_engine):
+    return Feed(cache=redis_client, sql_engine=sql_engine)
 
-    def test_redis_set_get(self):
-        self.redis.set("test_key", "hello")
-        value = self.redis.get("test_key")
-        self.assertEqual(value, "hello")
+@pytest.mark.integration
+def test_request_binance_klines(feed):
+    symbol = "BTCUSDT"
+    interval = "1m"
+    now = int(datetime.now().timestamp() * 1000)
+    five_minutes_ago = now - 5 * 60 * 1000
 
-    def test_sql_connection(self):
-        with self.engine.connect() as conn:
-            result = conn.execute(sqlalchemy.text("SELECT 1"))
-            self.assertEqual(result.scalar(), 1)
+    klines = feed._request_binance_klines(symbol, interval, five_minutes_ago, now)
+
+    assert isinstance(klines, list)
+    assert len(klines) > 0
+    assert isinstance(klines[0], KLine)
+    assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field

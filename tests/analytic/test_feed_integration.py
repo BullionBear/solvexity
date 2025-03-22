@@ -37,6 +37,22 @@ def test_request_binance_klines(feed):
     klines = feed._request_binance_klines(symbol, interval, start, end)
 
     assert isinstance(klines, list)
-    assert len(klines) > 0
+    assert len(klines) == 30
     assert isinstance(klines[0], KLine)
     assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field
+
+@pytest.mark.integration
+def test_request_sql_klines(feed):
+    symbol = "BTCUSDT"
+    interval = "1m"
+    start = int(datetime(year=2025, month=1, day=5, hour=9, minute=0, second=0, tzinfo=timezone.utc).timestamp() * 1000)
+    end = int(datetime(year=2025, month=1, day=5, hour=9, minute=30, second=0, tzinfo=timezone.utc).timestamp() * 1000)
+    
+
+    klines = feed._request_sql_klines(symbol, interval, start, end)
+
+    assert isinstance(klines, list)
+    assert len(klines) == 30
+    assert isinstance(klines[0], KLine)
+    assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field
+    

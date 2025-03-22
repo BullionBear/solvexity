@@ -15,7 +15,7 @@ class Feed:
 
     def _request_binance_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
         res = self.client.get_klines(symbol=symbol, interval=interval, startTime=start_time, endTime=end_time)
-        return [KLine.from_binance(kline) for kline in res]
+        return [KLine.from_binance(kline, symbol, interval) for kline in res]
 
     def _request_sql_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
         interval_ms = to_ms_interval(interval)

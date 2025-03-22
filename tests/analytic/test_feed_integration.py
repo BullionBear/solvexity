@@ -1,11 +1,13 @@
+import os
 import pytest
 import redis
 import sqlalchemy
-from binance import Client as BinanceClient
 from solvexity.analytic.feed import Feed
 from solvexity.analytic.model import KLine  # Ensure your KLine has .from_binance() classmethod
-from solvexity.helper import to_ms_interval
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @pytest.fixture(scope="module")
 def redis_client():
@@ -15,8 +17,8 @@ def redis_client():
 
 @pytest.fixture(scope="module")
 def sql_engine():
-    # Use a local or Docker-based test DB; this example uses SQLite in-memory for simplicity
-    engine = sqlalchemy.create_engine("sqlite:///:memory:")
+    sql_url = os.getenv("SQL_URL")
+    engine = sqlalchemy.create_engine(sql_url)
     yield engine
     engine.dispose()
 
@@ -28,10 +30,11 @@ def feed(redis_client, sql_engine):
 def test_request_binance_klines(feed):
     symbol = "BTCUSDT"
     interval = "1m"
-    now = int(datetime.now().timestamp() * 1000)
-    five_minutes_ago = now - 5 * 60 * 1000
+    start = int(datetime(year=2025, month=1, day=5, hour=9, minute=0, second=0, tzinfo=timezone.utc).timestamp() * 1000)
+    end = int(datetime(year=2025, month=1, day=5, hour=9, minute=30, second=0, tzinfo=timezone.utc).timestamp() * 1000)
+    
 
-    klines = feed._request_binance_klines(symbol, interval, five_minutes_ago, now)
+    klines = feed._request_binance_klines(symbol, interval, start, end)
 
     assert isinstance(klines, list)
     assert len(klines) > 0

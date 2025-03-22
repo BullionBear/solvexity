@@ -1,11 +1,13 @@
-grpcio-tools
-grpcio
 python-binance
 pydantic
 pandas
 sqlalchemy
 psycopg2-binary
 redis
+python-dotenv
+# grpc
+grpcio-tools
+grpcio
 # unittest
 mypy
 pytest

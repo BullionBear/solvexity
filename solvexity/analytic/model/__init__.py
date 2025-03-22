@@ -1,3 +1,3 @@
-from .kline import Kline
+from .kline import KLine
 
-__all__ = ['Kline']
+__all__ = ['KLine']

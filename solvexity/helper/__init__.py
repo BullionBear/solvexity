@@ -1,7 +1,6 @@
-from .utils import load_config
-from .logging import setup_logging, getLogger
+from .utils import load_config, to_ms_interval
 
 __all__ = [
     'load_config',
-    'setup_logging', 'getLogger'
+    'to_ms_interval'
 ]

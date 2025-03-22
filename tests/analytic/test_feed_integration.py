@@ -2,8 +2,8 @@ import pytest
 import redis
 import sqlalchemy
 from binance import Client as BinanceClient
-from your_package.feed import Feed
-from your_package.model import KLine  # Ensure your KLine has .from_binance() classmethod
+from solvexity.analytic.feed import Feed
+from solvexity.analytic.model import KLine  # Ensure your KLine has .from_binance() classmethod
 from solvexity.helper import to_ms_interval
 from datetime import datetime, timedelta
 

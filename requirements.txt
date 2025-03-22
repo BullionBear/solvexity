@@ -5,6 +5,7 @@ pydantic
 pandas
 sqlalchemy
 psycopg2-binary
+redis
 # unittest
 mypy
 pytest

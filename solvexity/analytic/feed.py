@@ -1,6 +1,7 @@
 import redis
 import binance
 import pandas as pd
+import json
 from sqlalchemy.engine import Engine
 
 from .model import KLine
@@ -73,6 +74,24 @@ class Feed:
         key = f"{symbol}-{interval}"
         res = self.redis.zadd(key, {kline.model_dump_json(): kline.open_time for kline in klines})
         return res
+    
+    def _request_cache_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
+        key = f"{symbol}-{interval}"
+        res = self.redis.zrangebyscore(key, start_time, end_time, start=0, num=-1, withscores=False)
+        
+        # Decode and parse the data into KLine objects
+        klines = []
+        for kline in res:
+            try:
+                # Assuming the data is stored as a JSON string
+                kline_data = json.loads(kline.decode())
+                klines.append(KLine(**kline_data))
+            except (json.JSONDecodeError, AttributeError) as e:
+                print(f"Error decoding kline data: {e}")
+                continue
+        
+        return klines
 
-    def get_klines(self, symbol: str, interval: str, limit: int):
-        pass
+    def get_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
+        
+        return []

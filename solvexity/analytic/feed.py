@@ -8,10 +8,11 @@ from solvexity.helper import to_ms_interval
 
 
 class Feed:
-    def __init__(self, cache: redis.Redis, sql_engine: Engine):
+    def __init__(self, cache: redis.Redis, sql_engine: Engine, limit: int = 1000):
         self.client: binance.Client = binance.Client()
         self.redis: redis.Redis = cache
         self.sql_engine: Engine = sql_engine
+        self.limit: int = limit
 
     def _request_binance_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
         res = self.client.get_klines(symbol=symbol, interval=interval, startTime=start_time, endTime=end_time - 1) # Left inclusive, right exclusive
@@ -68,9 +69,10 @@ class Feed:
     def _get_cache_key(self, symbol: str, interval: str):
         return f"{symbol}-{interval}"
 
-    def _insert_cache(self, symbol: str, interval: str, klines: list[KLine]):
+    def _insert_cache(self, symbol: str, interval: str, klines: list[KLine]) -> int:
         key = f"{symbol}-{interval}"
-        self.redis.set(key, klines)
+        res = self.redis.zadd(key, {kline.model_dump_json(): kline.open_time for kline in klines})
+        return res
 
     def get_klines(self, symbol: str, interval: str, limit: int):
         pass

@@ -1,14 +1,21 @@
 from concurrent import futures
+import redis
+import os
+import sqlalchemy
 import grpc
+import solvexity.analytic as ans
 import solvexity.generated.solvexity.solvexity_pb2 as solvexity_pb2
 import solvexity.generated.solvexity.solvexity_pb2_grpc as solvexity_pb2_grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 import datetime
 
 class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
+    def __init__(self, solver: ans.Solver):
+        self.solver = solver
+    
     def Solve(self, request, context):
         print(f"Received request for symbol: {request.symbol} at {request.timestamp}")
-        
+        self.solver.solve(request.symbol, request.timestamp)
         # Example logic: check if the symbol is valid
         if request.symbol:
             status = solvexity_pb2.SUCCESS
@@ -29,8 +36,13 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
         )
 
 def serve():
+    # Resource allocation
+    redis_client = redis.Redis(host='localhost', port=6379, db=0)
+    sql_engine = sqlalchemy.create_engine(os.getenv("SQL_URL"))
+    feed = ans.Feed(redis_client, sql_engine)
+    solver = ans.Solver(feed)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    solvexity_pb2_grpc.add_SolvexityServicer_to_server(SolvexityServicer(), server)
+    solvexity_pb2_grpc.add_SolvexityServicer_to_server(SolvexityServicer(solver), server)
     server.add_insecure_port('[::]:50052')
     print("Solvexity gRPC Server started on port 50052...")
     server.start()

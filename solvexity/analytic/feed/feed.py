@@ -129,8 +129,10 @@ class Feed:
         self.redis.zremrangebyrank(key, 0, -cache_limit - 1)
         return
 
-    def get_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
-        return self._request_klines(symbol, interval, start_time, end_time)
+    def get_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> pd.DataFrame:
+        klines = self._request_klines(symbol, interval, start_time, end_time)
+        df = pd.DataFrame([k.model_dump() for k in klines])
+        return df
     
     def clean_cache(self):
         for key in self.cache_keys:

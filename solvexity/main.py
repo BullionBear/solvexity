@@ -17,9 +17,10 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
     def __init__(self, solver: ans.Solver):
         self.solver = solver
     
-    def Solve(self, request, context):
+    def Solve(self, request: solvexity_pb2.SolveRequest, context):
         print(f"Received request for symbol: {request.symbol} at {request.timestamp}")
-        self.solver.solve(request.symbol, request.timestamp)
+        ts = request.timestamp.seconds + request.timestamp.nanos / 1e9
+        self.solver.solve(request.symbol, ts)
         # Example logic: check if the symbol is valid
         if request.symbol:
             status = solvexity_pb2.SUCCESS

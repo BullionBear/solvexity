@@ -1,22 +1,13 @@
-websockets
 python-binance
-numpy
-scipy
-pandas
-redis[hiredis]
 pydantic
-json5
-pymongo
-pyzmq
+pandas
+sqlalchemy
+psycopg2-binary
+redis
 python-dotenv
+# grpc
+grpcio-tools
+grpcio
 # unittest
 mypy
 pytest
-fakeredis
-types-requests
-# Backtest
-sqlalchemy
-psycopg2-binary
-# Jupyter
-jupyterlab
-mplfinance

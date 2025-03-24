@@ -40,7 +40,7 @@ def grpc_test_server(solver):
     server = grpc_testing.server_from_dictionary(services, fake_time)
     return server, fake_time
 
-
+@pytest.mark.integration
 def test_solve_valid_symbol(grpc_test_server):
     server, _ = grpc_test_server
 

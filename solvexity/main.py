@@ -9,6 +9,10 @@ import solvexity.generated.solvexity.solvexity_pb2_grpc as solvexity_pb2_grpc
 from google.protobuf.timestamp_pb2 import Timestamp
 import datetime
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
     def __init__(self, solver: ans.Solver):
         self.solver = solver

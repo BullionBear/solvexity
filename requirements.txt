@@ -9,6 +9,7 @@ mplfinance
 # grpc
 grpcio-tools
 grpcio
-# unittest
+# devops
 mypy
 pytest
+pytest-grpc

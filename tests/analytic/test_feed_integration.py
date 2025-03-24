@@ -180,3 +180,24 @@ def test_request_cache_klines(feed, redis_client):
 
     # Clean up Redis
     redis_client.delete(key)
+
+@pytest.mark.integration
+def test_request_local_klines(feed, redis_client):
+    # Define test data
+    symbol = "BTCUSDT"
+    interval = "5m"
+    key = f"{symbol}-{interval}"
+
+    expected_klines = feed._request_local_klines(symbol, interval, 1735113600000, 1735115400000) # 2024, 12, 25, 8:00 - 8:30
+    result_klines = feed._request_cache_klines(symbol, interval, 1735113600000, 1735115400000) # 2024, 12, 25, 8:00 - 8:30
+    assert len(expected_klines) == 6
+    assert len(result_klines) == 6
+    for i in range(6):
+        assert expected_klines[i].open_time == result_klines[i].open_time
+
+    expected_klines = feed._request_sql_klines(symbol, interval, 1735113600000, 1735122600000) # 2024, 12, 25, 8:00 - 10:30
+    result_klines = feed._request_cache_klines(symbol, interval, 1735113600000, 1735122600000) # 2024, 12, 25, 8:00 - 10:30
+    assert len(result_klines) == 30
+    for i in range(30):
+        assert expected_klines[i].open_time == result_klines[i].open_time
+    redis_client.delete(key)

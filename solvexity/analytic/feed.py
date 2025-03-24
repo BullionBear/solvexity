@@ -2,6 +2,7 @@ import redis
 import binance
 import pandas as pd
 import json
+import bisect
 from sqlalchemy.engine import Engine
 
 from .model import KLine
@@ -85,7 +86,7 @@ class Feed:
     
     def _request_cache_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
         key = f"{symbol}-{interval}"
-        res = self.redis.zrangebyscore(key, start_time, end_time, start=0, num=-1, withscores=False)
+        res = self.redis.zrangebyscore(key, start_time, f'({end_time}', start=0, num=-1, withscores=False)
         
         # Decode and parse the data into KLine objects
         klines = []
@@ -97,72 +98,44 @@ class Feed:
             except (json.JSONDecodeError, AttributeError) as e:
                 print(f"Error decoding kline data: {e}")
                 continue
-        
         return klines
     
-    def trim_cache(self, symbol: str, interval: str):
+    def _request_local_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
+        klines = self._request_cache_klines(symbol, interval, start_time, end_time)  # Request data from cache
+        interval_ms = to_ms_interval(interval)
+        # cache[s, e) = empty
+        if not klines:
+            s = start_time
+            e = max(start_time + interval_ms * self.INTERVAL_CACHE_LIMIT[interval], end_time)
+            klines += self._request_sql_klines(symbol, interval, s, e)
+            self._insert_cache(symbol, interval, klines)
+            self._trim_cache(symbol, interval)
+            index = bisect.bisect_left([k.open_time for k in klines], end_time)
+            return klines[:index]
+        # cache[s, e) = kline[i, j)
+        # SQL[s, i] + kline[i, j) + SQL[j, e)
+        else:
+            if start_time < klines[0].open_time:
+                s = start_time
+                i = klines[0].open_time
+                klines = self._request_sql_klines(symbol, interval, s, i) + klines
+                self._insert_cache(symbol, interval, klines)
+            if end_time > klines[-1].open_time - interval_ms:
+                j = klines[-1].open_time
+                e = max(end_time, j + interval_ms * self.INTERVAL_CACHE_LIMIT[interval])
+                klines += self._request_sql_klines(symbol, interval, j, e)
+                self._insert_cache(symbol, interval, klines)
+            self._trim_cache(symbol, interval)
+            index = bisect.bisect_left([k.open_time for k in klines], end_time)
+            return klines[:index]
+
+    
+    def _trim_cache(self, symbol: str, interval: str):
         key = self._get_cache_key(symbol, interval)
         cache_limit = self.INTERVAL_CACHE_LIMIT[interval]
         self.redis.zremrangebyrank(key, 0, -cache_limit - 1)
         return
 
     def get_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
-        # 0. Reformat timestamps
-        interval_ms = to_ms_interval(interval)
-        start_time = start_time // interval_ms * interval_ms
-        end_time = end_time // interval_ms * interval_ms
-        # 1. Request data from cache
-        klines = self._request_cache_klines(symbol, interval, start_time, end_time)
-        # 2.1. If cache is empty, kline[s, e) = SQL[s, k) + Binance[k, e)
-        if not klines:
-            # SQL[s, k)
-            s = start_time
-            k = s + interval_ms * self.INTERVAL_CACHE_LIMIT[interval]
-            sql_klines = self._request_sql_klines(symbol, interval, s, k)
-            self._insert_cache(symbol, interval, sql_klines)
-            # if k > e, return SQL[s, e)
-            if sql_klines and sql_klines[-1].open_time >= end_time:
-                self._trim_cache(symbol, interval)
-                return [kline for kline in sql_klines if kline.open_time < end_time]
-            else:
-                # Binance[k, e)
-                klines += sql_klines
-                k = (klines[-1].open_time // interval_ms + 1) * interval_ms
-                e = end_time
-                binance_klines = self._request_binance_klines(symbol, interval, k, e)
-                self._insert_cache(symbol, interval, binance_klines)
-                klines += binance_klines
-                self._trim_cache(symbol, interval)
-                return klines
-        # 2.2. If cache is not empty, and kline[s, e) = cache[s, e)
-        elif klines[0].open_time == start_time and klines[-1].open_time == end_time:
-            return klines
-        # 2.3. If cache is not empty, request kline[s, e) = SQL[s, i) + cache[i, j) + SQL[j, k) + Binance[k, e)
-        else:
-            # SQL[s, i)
-            if klines[0].open_time != start_time:
-                s = start_time
-                i = klines[0].open_time
-                sql_klines = self._request_sql_klines(symbol, interval, s, i)
-                self._insert_cache(symbol, interval, sql_klines)
-                klines = sql_klines + klines
-            # SQL[s, i)
-            if klines[-1].open_time != end_time:
-                j = klines[-1].open_time + interval_ms
-                k = s + interval_ms * self.INTERVAL_CACHE_LIMIT[interval]
-                sql_klines = self._request_sql_klines(symbol, interval, j, k)
-                self._insert_cache(symbol, interval, sql_klines)
-                klines = klines + sql_klines
-            if klines[-1]
-                (klines[-1].open_time // interval_ms + 1) * interval_ms
-            start_time = (klines[-1].open_time // interval_ms + 1) * interval_ms
-            sql_klines = self._request_sql_klines(symbol, interval, start_time, start_time + interval_ms * self.INTERVAL_CACHE_LIMIT[interval])
-            self._insert_cache(symbol, interval, sql_klines)
-            klines += sql_klines
-            start_time = (klines[-1].open_time // interval_ms + 1) * interval_ms
-            binance_klines = self._request_binance_klines(symbol, interval, start_time, end_time)
-            self._insert_cache(symbol, interval, binance_klines)
-            klines += binance_klines
-            self._trim_cache(symbol, interval)
-            return klines
+        return []
     

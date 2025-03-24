@@ -9,7 +9,5 @@ class Solver:
         print("solve 15m")
         df_15m.to_csv(f"verbose/15m_{symbol}_{timestamp}.csv", index=False)
 
-    def close(self):
-        self.feed.close()
 
 

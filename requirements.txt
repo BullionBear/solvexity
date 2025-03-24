@@ -13,3 +13,4 @@ grpcio
 mypy
 pytest
 pytest-grpc
+grpcio-testing

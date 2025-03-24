@@ -5,7 +5,7 @@ from solvexity.generated.greet import greet_pb2
 from solvexity.generated.greet import greet_pb2_grpc
 from google.protobuf import empty_pb2
 
-from solvexity.main_greet import GreeterServicer  # Your implementation
+from solvexity.main_greet import GreeterServicer
 
 @pytest.fixture
 def grpc_test_env():

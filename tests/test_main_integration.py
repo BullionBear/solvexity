@@ -1,48 +1,66 @@
-import pytest
 import os
+import grpc
+import grpc_testing
+import pytest
+import datetime
 import redis
 import sqlalchemy
-from concurrent import futures
-import grpc
+
 from google.protobuf.timestamp_pb2 import Timestamp
-import datetime
-import solvexity.analytic as ans
-import solvexity.generated.solvexity.solvexity_pb2_grpc as solvexity_pb2_grpc
+
 import solvexity.generated.solvexity.solvexity_pb2 as solvexity_pb2
-from solvexity.main import SolvexityServicer
+import solvexity.generated.solvexity.solvexity_pb2_grpc as solvexity_pb2_grpc
+import solvexity.analytic as ans
+from solvexity.main import SolvexityServicer  # Adjust to your actual module path
 
-@pytest.fixture(scope='module')
-def grpc_add_to_server():
-    return solvexity_pb2_grpc.add_SolvexityServicer_to_server
+from dotenv import load_dotenv
+load_dotenv()
 
-@pytest.fixture(scope='module')
-def grpc_servicer():
-    # Set up your dependencies here
+
+@pytest.fixture(scope="module")
+def feed():
     redis_client = redis.Redis(host='localhost', port=6379, db=0)
     sql_engine = sqlalchemy.create_engine(os.getenv("SQL_URL"))
-    feed = ans.Feed(redis_client, sql_engine)
-    solver = ans.Solver(feed)
-    return SolvexityServicer(solver)
+    return ans.Feed(redis_client, sql_engine)
 
-@pytest.fixture(scope='module')
-def grpc_stub_cls(grpc_channel):
-    return solvexity_pb2_grpc.SolvexityStub
 
-@pytest.mark.integration
-def test_solve_method(grpc_stub):
-    # Create a timestamp for the request
-    pbts = Timestamp()
-    pbts.FromDatetime(datetime.datetime(2024, 12, 25, 8, 0, 0, tzinfo=datetime.timezone.utc))
-    # Create the request object
-    request = solvexity_pb2.SolveRequest(
-        symbol="BTCUSDT",
-        timestamp=pbts
+@pytest.fixture(scope="module")
+def solver(feed):
+    return ans.Solver(feed)
+
+
+@pytest.fixture
+def grpc_test_server(solver):
+    servicer = SolvexityServicer(solver)
+
+    services = {
+        solvexity_pb2.DESCRIPTOR.services_by_name['Solvexity']: servicer
+    }
+    fake_time = grpc_testing.strict_real_time()
+    server = grpc_testing.server_from_dictionary(services, fake_time)
+    return server, fake_time
+
+
+def test_solve_valid_symbol(grpc_test_server):
+    server, _ = grpc_test_server
+
+    method = solvexity_pb2.DESCRIPTOR.services_by_name['Solvexity'].methods_by_name['Solve']
+
+    ts = Timestamp()
+    ts.FromDatetime(datetime.datetime.now(datetime.timezone.utc))
+
+    request = solvexity_pb2.SolveRequest(symbol="BTCUSDT", timestamp=ts)
+
+    rpc = server.invoke_unary_unary(
+        method_descriptor=method,
+        invocation_metadata={},
+        request=request,
+        timeout=5
     )
 
-    # Make the gRPC call
-    response = grpc_stub.Solve(request)
+    response, trailing_metadata, code, details = rpc.termination()
 
-    # Assert the response
+    assert code == grpc.StatusCode.OK
     assert response.status == solvexity_pb2.SUCCESS
-    assert "Solution processed for symbol: BTCUSDT" in response.message
+    assert "BTCUSDT" in response.message
     assert isinstance(response.timestamp, Timestamp)

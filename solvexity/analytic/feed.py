@@ -142,18 +142,19 @@ class Feed:
             # SQL[s, i)
             if klines[0].open_time != start_time:
                 s = start_time
-                i = s + interval_ms * self.INTERVAL_CACHE_LIMIT[interval]
+                i = klines[0].open_time
                 sql_klines = self._request_sql_klines(symbol, interval, s, i)
                 self._insert_cache(symbol, interval, sql_klines)
                 klines = sql_klines + klines
             # SQL[s, i)
             if klines[-1].open_time != end_time:
-                j = klines[-1].open_time
-                k = (j // interval_ms + 1) * interval_ms
+                j = klines[-1].open_time + interval_ms
+                k = s + interval_ms * self.INTERVAL_CACHE_LIMIT[interval]
                 sql_klines = self._request_sql_klines(symbol, interval, j, k)
                 self._insert_cache(symbol, interval, sql_klines)
-                klines += sql_klines
-            end_time = (klines[0].open_time // interval_ms + 1) * interval_ms
+                klines = klines + sql_klines
+            if klines[-1]
+                (klines[-1].open_time // interval_ms + 1) * interval_ms
             start_time = (klines[-1].open_time // interval_ms + 1) * interval_ms
             sql_klines = self._request_sql_klines(symbol, interval, start_time, start_time + interval_ms * self.INTERVAL_CACHE_LIMIT[interval])
             self._insert_cache(symbol, interval, sql_klines)

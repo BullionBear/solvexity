@@ -31,7 +31,7 @@ def feed():
 def solver(feed):
     solver = ans.Solver(feed)
     yield solver
-    solver.close()
+
 
 
 

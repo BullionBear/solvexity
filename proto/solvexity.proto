@@ -15,13 +15,12 @@ message SolveRequest {
 
 enum StatusType {
     SUCCESS = 0;
-    FAIL = 1;
+    FAILURE = 1;
     // Add more event types as needed
 }
 
 message SolveResponse {
     StatusType status = 1;
     string message = 2;
-    google.protobuf.Timestamp timestamp = 3;
 }
 

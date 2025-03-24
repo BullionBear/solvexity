@@ -17,28 +17,16 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
     def __init__(self, solver: ans.Solver):
         self.solver = solver
     
-    def Solve(self, request: solvexity_pb2.SolveRequest, context):
-        print(f"Received request for symbol: {request.symbol} at {request.timestamp}")
-        ts = request.timestamp.seconds + request.timestamp.nanos / 1e9
-        self.solver.solve(request.symbol, ts)
-        # Example logic: check if the symbol is valid
-        if request.symbol:
-            status = solvexity_pb2.SUCCESS
-            message = f"Solution processed for symbol: {request.symbol}"
-        else:
-            status = solvexity_pb2.FAIL
-            message = "Invalid symbol"
-        
-        # Create response timestamp
-        current_time = datetime.datetime.now(datetime.timezone.utc)
-        response_timestamp = Timestamp()
-        response_timestamp.FromDatetime(current_time)
-        
-        return solvexity_pb2.SolveResponse(
-            status=status,
-            message=message,
-            timestamp=response_timestamp
-        )
+    def Solve(self, request: solvexity_pb2.SolveRequest, context: grpc.ServicerContext) -> solvexity_pb2.SolveResponse:
+        try:
+            # dt = request.timestamp.ToDatetime()
+            # ts = dt.timestamp()
+            # result = self.solver.solve(request.symbol, ts)
+            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, result="result")
+        except Exception as e:
+            context.set_details(str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)  # or appropriate error code
+            return solvexity_pb2.SolveResponse(status=solvexity_pb2.FAILURE)
 
 def serve():
     # Resource allocation

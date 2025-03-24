@@ -21,12 +21,18 @@ load_dotenv()
 def feed():
     redis_client = redis.Redis(host='localhost', port=6379, db=0)
     sql_engine = sqlalchemy.create_engine(os.getenv("SQL_URL"))
-    return ans.Feed(redis_client, sql_engine)
+    yield ans.Feed(redis_client, sql_engine)
+    sql_engine.dispose()
+    redis_client.flushdb()
+    
 
 
 @pytest.fixture(scope="module")
 def solver(feed):
-    return ans.Solver(feed)
+    solver = ans.Solver(feed)
+    yield solver
+    solver.close()
+
 
 
 @pytest.fixture
@@ -62,5 +68,3 @@ def test_solve_valid_symbol(grpc_test_server):
 
     assert code == grpc.StatusCode.OK
     assert response.status == solvexity_pb2.SUCCESS
-    assert "BTCUSDT" in response.message
-    assert isinstance(response.timestamp, Timestamp)

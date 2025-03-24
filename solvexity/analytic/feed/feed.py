@@ -134,7 +134,7 @@ class Feed:
         df = pd.DataFrame([k.model_dump() for k in klines])
         return df
     
-    def clean_cache(self):
+    def close(self):
         for key in self.cache_keys:
             self.redis.delete(key)
         return

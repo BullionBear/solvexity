@@ -128,6 +128,35 @@ class Feed:
             self._trim_cache(symbol, interval)
             index = bisect.bisect_left([k.open_time for k in klines], end_time)
             return klines[:index]
+    
+    def _request_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
+        klines = self._request_local_klines(symbol, interval, start_time, end_time)  # Request data from cache
+        interval_ms = to_ms_interval(interval)
+        # local[s, e) = empty
+        if not klines:
+            s = start_time
+            e = end_time
+            klines += self._request_binance_klines(symbol, interval, s, e)
+            self._insert_cache(symbol, interval, klines)
+            self._trim_cache(symbol, interval)
+            index = bisect.bisect_left([k.open_time for k in klines], end_time)
+            return klines[:index]
+        # cache[s, e) = kline[i, j)
+        # SQL[s, i] + kline[i, j) + SQL[j, e)
+        else:
+            if start_time < klines[0].open_time:
+                s = start_time
+                i = klines[0].open_time
+                klines = self._request_binance_klines(symbol, interval, s, i) + klines
+                self._insert_cache(symbol, interval, klines)
+            if end_time > klines[-1].open_time - interval_ms:
+                j = klines[-1].open_time
+                e = end_time
+                klines += self._request_binance_klines(symbol, interval, j, e)
+                self._insert_cache(symbol, interval, klines)
+            self._trim_cache(symbol, interval)
+            index = bisect.bisect_left([k.open_time for k in klines], end_time)
+            return klines[:index]
 
     
     def _trim_cache(self, symbol: str, interval: str):

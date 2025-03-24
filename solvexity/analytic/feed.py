@@ -120,7 +120,7 @@ class Feed:
                 i = klines[0].open_time
                 klines = self._request_sql_klines(symbol, interval, s, i) + klines
                 self._insert_cache(symbol, interval, klines)
-            if end_time > klines[-1].open_time - interval_ms:
+            if end_time > klines[-1].open_time + interval_ms:
                 j = klines[-1].open_time
                 e = max(end_time, j + interval_ms * self.INTERVAL_CACHE_LIMIT[interval])
                 klines += self._request_sql_klines(symbol, interval, j, e)
@@ -149,7 +149,7 @@ class Feed:
                 i = klines[0].open_time
                 klines = self._request_binance_klines(symbol, interval, s, i) + klines
                 self._insert_cache(symbol, interval, klines)
-            if end_time > klines[-1].open_time - interval_ms:
+            if end_time > klines[-1].open_time + interval_ms:
                 j = klines[-1].open_time
                 e = end_time
                 klines += self._request_binance_klines(symbol, interval, j, e)

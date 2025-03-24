@@ -22,11 +22,11 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
             # dt = request.timestamp.ToDatetime()
             # ts = dt.timestamp()
             # result = self.solver.solve(request.symbol, ts)
-            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, result="result")
+            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, message="result")
         except Exception as e:
             context.set_details(str(e))
             context.set_code(grpc.StatusCode.INTERNAL)  # or appropriate error code
-            return solvexity_pb2.SolveResponse(status=solvexity_pb2.FAILURE)
+            return solvexity_pb2.SolveResponse(status=solvexity_pb2.FAILURE, message="error")
 
 def serve():
     # Resource allocation

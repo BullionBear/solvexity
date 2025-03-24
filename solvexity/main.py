@@ -19,9 +19,9 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
     
     def Solve(self, request: solvexity_pb2.SolveRequest, context: grpc.ServicerContext) -> solvexity_pb2.SolveResponse:
         try:
-            # dt = request.timestamp.ToDatetime()
-            # ts = dt.timestamp()
-            # result = self.solver.solve(request.symbol, ts)
+            dt = request.timestamp.ToDatetime()
+            ts = dt.timestamp()
+            # self.solver.solve(request.symbol, ts)
             return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, message="result")
         except Exception as e:
             context.set_details(str(e))

@@ -4,6 +4,7 @@ matplotlib.use('Agg')
 import mplfinance as mpf
 
 from .feed import Feed
+from .pattern import Pattern
 from solvexity.helper import to_ms_interval
 
 class Solver:
@@ -18,6 +19,7 @@ class Solver:
             "1d": 0
         }
 
+
     def solve(self, symbol: str, timestamp: int) -> int:
         res = -1
         print(f"Checking for new data for {symbol} at {timestamp}")
@@ -31,6 +33,7 @@ class Solver:
         for interval, ref in self.closed_klines.items():
             interval_ms = to_ms_interval(interval)
             ref_ = timestamp // interval_ms
+            print(f"Checking for {interval} interval, ref: {ref}, ref_: {ref_}")
             if ref_ > ref:
                 print(f"New data available for {interval} interval")
                 n_data = 30
@@ -38,7 +41,7 @@ class Solver:
                 self.closed_klines[interval] = ref_
                 self.plot_kline(df, symbol, interval, timestamp)
                 res += 1
-            return res
+        return res
 
     def plot_kline(self, df: pd.DataFrame, symbol: str, interval: str, timestamp: int):
         if df.empty:

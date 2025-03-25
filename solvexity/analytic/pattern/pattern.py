@@ -17,9 +17,8 @@ class Pattern:
         
     @staticmethod
     def support(df: pd.DataFrame) -> float:
-
-        pass
+        return 0.0
 
     @staticmethod
     def resistance(df: pd.DataFrame) -> float:
-        pass
+        return 0.0

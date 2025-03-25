@@ -48,7 +48,6 @@ class Solver:
         df = df.copy()
         df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
         df.set_index('open_time', inplace=True)
-
         # Rename columns to match mplfinance expectations
         df.rename(columns={
             'open_px': 'Open',
@@ -64,6 +63,7 @@ class Solver:
         # Format filename
         date_str = pd.to_datetime(timestamp, unit='ms').strftime('%Y-%m-%d_%H-%M-%S')
         filename = f"./verbose/{symbol}_{interval}_{date_str}.png"
+        df.to_csv(filename.replace('.png', '.csv'), index=False)
 
         # Plot and save the candlestick chart
         mpf.plot(

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
 
-class Analytic(BaseModel):
+class Descriptive(BaseModel):
     result: float
     

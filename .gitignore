@@ -10,3 +10,4 @@ verbose
 .env
 *.http
 experiments
+.ipynb_checkpoints/

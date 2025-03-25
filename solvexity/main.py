@@ -20,9 +20,10 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
     def Solve(self, request: solvexity_pb2.SolveRequest, context: grpc.ServicerContext) -> solvexity_pb2.SolveResponse:
         try:
             dt = request.timestamp.ToDatetime()
-            ts = dt.timestamp()
-            # self.solver.solve(request.symbol, ts)
-            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, message="result")
+            ts = int(dt.timestamp() * 1000)
+            print(f"Received request for symbol: {request.symbol} at {dt}")
+            res = self.solver.solve(request.symbol, ts)
+            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, message=f"result {res}")
         except Exception as e:
             context.set_details(str(e))
             context.set_code(grpc.StatusCode.INTERNAL)  # or appropriate error code

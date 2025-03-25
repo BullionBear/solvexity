@@ -1,21 +1,49 @@
-from .feed import Feed
-import mplfinance as mpf
-import matplotlib
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import mplfinance as mpf
+
+from .feed import Feed
+from solvexity.helper import to_ms_interval
 
 class Solver:
     def __init__(self, feed: Feed):
         self.feed = feed
+        self.closed_klines = {
+            "1m": 0,
+            "5m": 0,
+            "15m": 0,
+            "1h": 0,
+            "4h": 0,
+            "1d": 0
+        }
 
-    def solve(self, symbol: str, timestamp: int):
-        df_15m = self.feed.get_klines(symbol, "15m", timestamp - 86400_000, timestamp)
-        self.plot_kline(df_15m, symbol, timestamp)
+    def solve(self, symbol: str, timestamp: int) -> int:
+        res = -1
+        print(f"Checking for new data for {symbol} at {timestamp}")
+        if self.closed_klines["1m"] == 0:
+            print("First time running, initializing closed klines")
+            for interval in self.closed_klines.keys():
+                interval_ms = to_ms_interval(interval)
+                self.closed_klines[interval] = timestamp // interval_ms
+            return res
+        res += 1
+        for interval, ref in self.closed_klines.items():
+            interval_ms = to_ms_interval(interval)
+            ref_ = timestamp // interval_ms
+            if ref_ > ref:
+                print(f"New data available for {interval} interval")
+                n_data = 30
+                df = self.feed.get_klines(symbol, interval, timestamp - n_data * interval_ms + 1, timestamp + 1) 
+                self.closed_klines[interval] = ref_
+                self.plot_kline(df, symbol, interval, timestamp)
+                res += 1
+            return res
 
-    def plot_kline(self, df: pd.DataFrame, symbol: str, timestamp: int):
+    def plot_kline(self, df: pd.DataFrame, symbol: str, interval: str, timestamp: int):
         if df.empty:
             print("No data to plot.")
             return
-
         # Rename and convert timestamp to datetime index
         df = df.copy()
         df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')

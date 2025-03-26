@@ -27,6 +27,7 @@ class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
         except Exception as e:
             context.set_details(str(e))
             context.set_code(grpc.StatusCode.INTERNAL)  # or appropriate error code
+            print(f"Error: {e}")
             return solvexity_pb2.SolveResponse(status=solvexity_pb2.FAILURE, message="error")
 
 def serve():
@@ -41,6 +42,8 @@ def serve():
     print("Solvexity gRPC Server started on port 50052...")
     server.start()
     server.wait_for_termination()
+    redis_client.close()
+    sql_engine.dispose()
 
 if __name__ == "__main__":
     serve()

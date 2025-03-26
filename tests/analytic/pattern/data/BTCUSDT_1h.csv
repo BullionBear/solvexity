@@ -1,5 +1,4 @@
-head -n 25 verbose/BTCUSDT_1h_2025-03-25_05-00-00.csv
-symbol,interval,close_time,open_x,high_px,low_px,close_px,number_of_trades,base_asset_volume,quote_asset_volume,taker_buy_base_asset_volume,taker_buy_quote_asset_volume,is_closed
+symbol,interval,close_time,open_px,high_px,low_px,close_px,number_of_trades,base_asset_volume,quote_asset_volume,taker_buy_base_asset_volume,taker_buy_quote_asset_volume,is_closed
 BTCUSDT,1h,1742774399999,85444.35,86129.64,85415.68,86082.5,100074,879.2564100000001,75444027.91935089,552.1811399999999,47397758.91415569,True
 BTCUSDT,1h,1742777999999,86082.5,86641.13,85865.64,86021.74,160949,1253.7973999999997,108088688.07490312,681.5562700000003,58778136.62779472,True
 BTCUSDT,1h,1742781599999,86021.74,86038.78,85528.38,85563.04,109018,808.3178599999998,69304283.03954442,349.28166000000004,29951276.538623296,True

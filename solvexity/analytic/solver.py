@@ -33,7 +33,7 @@ class Solver:
         for interval, ref in self.closed_klines.items():
             interval_ms = to_ms_interval(interval)
             ref_ = timestamp // interval_ms
-            print(f"Checking for {interval} interval, ref: {ref}, ref_: {ref_}")
+            print(f"Checking for {interval} interval, ref: {ref}, ref_: {ref_}, timestamp: {timestamp}, interval_ms: {interval_ms}")
             if ref_ > ref:
                 print(f"New data available for {interval} interval")
                 n_data = 30
@@ -44,13 +44,15 @@ class Solver:
         return res
 
     def plot_kline(self, df: pd.DataFrame, symbol: str, interval: str, timestamp: int):
+        print(f"Plotting kline for {symbol} at {timestamp}")
         if df.empty:
             print("No data to plot.")
             return
         # Rename and convert timestamp to datetime index
         df = df.copy()
-        filename = f"./verbose/{symbol}_{interval}_{date_str}.png"
-        df.to_csv(filename.replace('.png', '.csv'), index=True)
+        date_str = pd.to_datetime(timestamp, unit='ms').strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f"./verbose/{symbol}_{interval}_{date_str}.csv"
+        df.to_csv(filename, index=True)
 
         df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
         df.set_index('open_time', inplace=True)
@@ -67,8 +69,8 @@ class Solver:
         df_plot = df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
 
         # Format filename
-        date_str = pd.to_datetime(timestamp, unit='ms').strftime('%Y-%m-%d_%H-%M-%S')
         
+        filename = f"./verbose/{symbol}_{interval}_{date_str}.png"
         # Plot and save the candlestick chart
         mpf.plot(
             df_plot,

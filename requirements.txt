@@ -6,6 +6,7 @@ psycopg2-binary
 redis
 python-dotenv
 mplfinance
+pwlf
 # grpc
 grpcio-tools
 grpcio

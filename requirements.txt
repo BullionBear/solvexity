@@ -15,3 +15,6 @@ mypy
 pytest
 pytest-grpc
 grpcio-testing
+# jupyter
+jupyter
+nbformat

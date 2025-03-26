@@ -7,6 +7,8 @@ redis
 python-dotenv
 mplfinance
 pwlf
+GPy
+GPyOpt
 # grpc
 grpcio-tools
 grpcio

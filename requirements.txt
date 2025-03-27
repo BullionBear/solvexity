@@ -9,6 +9,7 @@ mplfinance
 pwlf
 GPy
 GPyOpt
+hmmlearn
 # grpc
 grpcio-tools
 grpcio

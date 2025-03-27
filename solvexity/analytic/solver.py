@@ -19,7 +19,6 @@ class Solver:
             "1d": 0
         }
 
-
     def solve(self, symbol: str, timestamp: int) -> int:
         res = -1
         print(f"Checking for new data for {symbol} at {timestamp}")
@@ -39,46 +38,7 @@ class Solver:
                 n_data = 30
                 df = self.feed.get_klines(symbol, interval, timestamp - n_data * interval_ms + 1, timestamp + 1) 
                 self.closed_klines[interval] = ref_
-                self.plot_kline(df, symbol, interval, timestamp)
+                Pattern.recognize("liquidity", df)
                 res += 1
         return res
 
-    def plot_kline(self, df: pd.DataFrame, symbol: str, interval: str, timestamp: int):
-        print(f"Plotting kline for {symbol} at {timestamp}")
-        if df.empty:
-            print("No data to plot.")
-            return
-        # Rename and convert timestamp to datetime index
-        df = df.copy()
-        date_str = pd.to_datetime(timestamp, unit='ms').strftime('%Y-%m-%d_%H-%M-%S')
-        filename = f"./verbose/{symbol}_{interval}_{date_str}.csv"
-        df.to_csv(filename, index=True)
-
-        df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
-        df.set_index('open_time', inplace=True)
-        # Rename columns to match mplfinance expectations
-        df.rename(columns={
-            'open_px': 'Open',
-            'high_px': 'High',
-            'low_px': 'Low',
-            'close_px': 'Close',
-            'base_asset_volume': 'Volume'
-        }, inplace=True)
-
-        # Select only the required columns for plotting
-        df_plot = df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
-
-        # Format filename
-        
-        filename = f"./verbose/{symbol}_{interval}_{date_str}.png"
-        # Plot and save the candlestick chart
-        mpf.plot(
-            df_plot,
-            type='candle',
-            style='charles',
-            volume=True,
-            title=f"{symbol} Candlestick - {date_str}",
-            savefig=dict(fname=filename, dpi=150)
-        )
-
-        print(f"Saved candlestick chart to {filename}")

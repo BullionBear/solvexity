@@ -10,6 +10,7 @@ pwlf
 GPy
 GPyOpt
 hmmlearn
+arch
 # grpc
 grpcio-tools
 grpcio

@@ -21,10 +21,10 @@ class Feed:
         "4h": 6 * 120, # 120 days
         "1d": 365 * 2, # 2 year
     }
-    def __init__(self, cache: redis.Redis, sql_engine: Engine):
+    def __init__(self, cache: redis.Redis, sql_engine: Engine | None = None):
         self.client: binance.Client = binance.Client()
         self.redis: redis.Redis = cache
-        self.sql_engine: Engine = sql_engine
+        self.sql_engine: Engine | None = sql_engine
         self.cache_keys: set[str] = set()
 
     def _request_binance_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
@@ -32,6 +32,8 @@ class Feed:
         return [KLine.from_binance(kline, symbol, interval) for kline in res]
 
     def _request_sql_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
+        if self.sql_engine is None:
+            return []
         interval_ms = to_ms_interval(interval)
         query = generate_kline_aggregation_query(symbol, interval_ms, start_time, end_time)
         df = pd.read_sql(query, self.sql_engine)
@@ -44,6 +46,8 @@ class Feed:
         return key
 
     def _insert_cache(self, symbol: str, interval: str, klines: list[KLine]) -> int:
+        if not klines:
+            return 0
         key = self._get_cache_key(symbol, interval)
         res = self.redis.zadd(key, {kline.model_dump_json(): kline.open_time for kline in klines})
         return res

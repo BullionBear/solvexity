@@ -13,8 +13,8 @@ load_dotenv()
 
 if __name__ == "__main__":
     redis_client = Redis(host='localhost', port=6379, db=0)
-    sql_engine = create_engine(os.getenv("SQL_URL"))
-    feed = Feed(redis_client, sql_engine)
+    # sql_engine = create_engine(os.getenv("SQL_URL"))
+    feed = Feed(redis_client)
     pattern = Pattern(feed)
     symbol = "BTCUSDT"
     lookbacks = [("1m", 30), ("1m", 180), ("5m", 30), ("5m", 180), ("15m", 30), ("15m", 180), ("1h", 30), ("1h", 180)] # , ("4h", 30), ("4h", 180), ("1d", 30)]

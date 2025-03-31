@@ -11,6 +11,8 @@ GPy
 GPyOpt
 hmmlearn
 arch
+ngboost
+xgboost
 # grpc
 grpcio-tools
 grpcio

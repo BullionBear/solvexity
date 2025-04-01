@@ -3,6 +3,7 @@ log
 venv
 *.pyc
 __pycache__/
+model
 notebook
 verbose
 *test.json*

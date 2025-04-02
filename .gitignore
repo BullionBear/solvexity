@@ -10,5 +10,4 @@ verbose
 .DS_Store
 .env
 *.http
-experiments
 .ipynb_checkpoints/

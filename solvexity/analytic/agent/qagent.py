@@ -8,9 +8,22 @@ from sklearn.linear_model import QuantileRegressor
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.decomposition import PCA
 
-from sklearn.metrics import mean_pinball_loss
+def generate_quantile_pipeline(q: float) -> Pipeline:
+    """
+    Generate a pipeline for quantile regression.
+    :param q: Quantile to be predicted (between 0 and 1).
+    :return: A sklearn Pipeline object.
+    """
+    return Pipeline([
+        ('imputer', SimpleImputer(strategy='mean')),
+        ('scaler', StandardScaler()),
+        ('poly', PolynomialFeatures(degree=2)),
+        ('pca', PCA(n_components=0.95)),
+        ('quantile', QuantileRegressor(quantile=q))
+    ])
 
-class WJHuangPipe: # To remember my enlightener statistician WJHuang
+
+class QuantileAgent:
     def __init__(self, pipeline: Pipeline):
         self.pipeline = pipeline
         self.x_columns = ['returns_1m_30', 'volatility_1m_30', 'mdd_1m_30',

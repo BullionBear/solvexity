@@ -4,6 +4,7 @@ pandas
 sqlalchemy
 psycopg2-binary
 redis
+pyyaml
 python-dotenv
 mplfinance
 pwlf

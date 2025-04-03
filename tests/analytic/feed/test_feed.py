@@ -6,8 +6,7 @@ from solvexity.analytic.feed import Feed
 @pytest.fixture
 def mock_feed():
     mock_redis = MagicMock()
-    mock_sql_engine = MagicMock()
-    return Feed(cache=mock_redis, sql_engine=mock_sql_engine)
+    return Feed(cache=mock_redis)
 
 
 def test_get_cache_key(mock_feed):

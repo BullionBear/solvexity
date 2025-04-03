@@ -16,15 +16,12 @@ def redis_client():
     r.flushdb()  # Clean up after test
 
 @pytest.fixture(scope="module")
-def sql_engine():
-    sql_url = os.getenv("SQL_URL")
-    engine = sqlalchemy.create_engine(sql_url)
-    yield engine
-    engine.dispose()
+def feed(redis_client):
+    return Feed(cache=redis_client)
 
 @pytest.fixture(scope="module")
-def feed(redis_client, sql_engine):
-    return Feed(cache=redis_client, sql_engine=sql_engine)
+def no_redis_feed():
+    return Feed(cache=None)
 
 @pytest.mark.integration
 def test_request_binance_klines(feed):
@@ -38,36 +35,6 @@ def test_request_binance_klines(feed):
 
     assert isinstance(klines, list)
     assert len(klines) == 30
-    assert isinstance(klines[0], KLine)
-    assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field
-
-@pytest.mark.integration
-def test_request_sql_klines(feed):
-    symbol = "BTCUSDT"
-    interval = "1m"
-    start = int(datetime(year=2025, month=1, day=5, hour=9, minute=0, second=0, tzinfo=timezone.utc).timestamp() * 1000)
-    end = int(datetime(year=2025, month=1, day=5, hour=9, minute=30, second=0, tzinfo=timezone.utc).timestamp() * 1000)
-    
-
-    klines = feed._request_sql_klines(symbol, interval, start, end)
-
-    assert isinstance(klines, list)
-    assert len(klines) == 30
-    assert isinstance(klines[0], KLine)
-    assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field
-
-@pytest.mark.integration
-def test_request_sql_klines_5m(feed):
-    symbol = "BTCUSDT"
-    interval = "5m"
-    start = int(datetime(year=2025, month=1, day=5, hour=9, minute=0, second=0, tzinfo=timezone.utc).timestamp() * 1000)
-    end = int(datetime(year=2025, month=1, day=5, hour=9, minute=30, second=0, tzinfo=timezone.utc).timestamp() * 1000)
-    
-
-    klines = feed._request_sql_klines(symbol, interval, start, end)
-
-    assert isinstance(klines, list)
-    assert len(klines) == 6
     assert isinstance(klines[0], KLine)
     assert hasattr(klines[0], "open_time")  # Assuming your KLine has such a field
 
@@ -187,6 +154,7 @@ def test_request_local_klines(feed, redis_client):
     symbol = "BTCUSDT"
     interval = "5m"
     key = f"{symbol}-{interval}"
+    
     # Request data first time, it will be stored in cache
     expected_klines = feed._request_local_klines(symbol, interval, 1735113600000, 1735115400000) # 2024, 12, 25, 8:00 - 8:30
     result_klines = feed._request_cache_klines(symbol, interval, 1735113600000, 1735115400000) # 2024, 12, 25, 8:00 - 8:30
@@ -196,7 +164,8 @@ def test_request_local_klines(feed, redis_client):
         assert expected_klines[i].open_time == result_klines[i].open_time
 
     # Check Redis to verify the data was inserted correctly
-    expected_klines = feed._request_sql_klines(symbol, interval, 1735113600000, 1735122600000) # 2024, 12, 25, 8:00 - 10:30
+    # Request a larger time range to get more data
+    expected_klines = feed._request_binance_klines(symbol, interval, 1735113600000, 1735122600000) # 2024, 12, 25, 8:00 - 10:30
     result_klines = feed._request_cache_klines(symbol, interval, 1735113600000, 1735122600000) # 2024, 12, 25, 8:00 - 10:30
     assert len(result_klines) == 30
     for i in range(30):
@@ -215,3 +184,34 @@ def test_request_klines(feed, redis_client):
     assert len(expected_klines) == 6
     assert len(result_klines) == 6
     redis_client.delete(key)
+
+@pytest.mark.integration
+def test_no_redis_request_klines(no_redis_feed):
+    symbol = "BTCUSDT"
+    interval = "5m"
+
+    # Enable tracking and ensure it's applied
+    no_redis_feed.enable_tracking()
+    no_redis_feed.tracker.enable()  # Explicitly enable the tracker
+    
+    # Make the method calls
+    result_klines = no_redis_feed._request_klines(symbol, interval, 1735113600000, 1735115400000) # 2024, 12, 25, 8:00 - 8:30
+    
+    # Verify the results
+    assert len(result_klines) == 6
+
+    # Get tracking summary and verify method calls
+    summary = no_redis_feed.get_tracking_summary()
+    
+    # Verify the expected number of calls:
+    # _request_klines - called once directly
+    assert summary["solvexity.analytic.feed.feed._request_klines"]["calls"] == 1
+    # _request_local_klines - called once by _request_klines
+    assert summary["solvexity.analytic.feed.feed._request_local_klines"]["calls"] == 1
+    # _request_binance_klines - called once when no Redis is available
+    assert summary["solvexity.analytic.feed.feed._request_binance_klines"]["calls"] == 1
+    
+    # Clean up
+    no_redis_feed.reset_tracking()
+    no_redis_feed.disable_tracking()
+    

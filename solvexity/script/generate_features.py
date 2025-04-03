@@ -30,7 +30,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     redis_client = Redis(host='localhost', port=6379, db=0)
-    feed = Feed(redis_client)
+    feed = Feed(redis_client, enable_tracking=True)  # Enable tracking when creating Feed
     pattern: Pattern = Pattern(feed)
     records = []
     
@@ -126,5 +126,18 @@ if __name__ == "__main__":
     
     df = pd.DataFrame(records)
     df.to_csv(args.output, index=False)
+    
+    # Print method tracking summary before closing
+    print("\nMethod Tracking Summary:")
+    print("=" * 80)
+    summary = feed.get_tracking_summary()
+    for method, stats in sorted(summary.items()):
+        print(f"\n{method}:")
+        print("-" * 80)
+        print(f"Total calls: {stats['calls']}")
+        print(f"Total elapsed time: {stats['total_elapsed']:.4f}s")
+        print(f"Average time per call: {stats['avg_elapsed']:.4f}s")
+    print("=" * 80)
+    
     feed.close()
-    print(f"Features saved to {args.output}")
+    print(f"\nFeatures saved to {args.output}")

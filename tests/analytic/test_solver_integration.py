@@ -16,15 +16,8 @@ def redis_client():
     r.flushdb()  # Clean up after test
 
 @pytest.fixture(scope="module")
-def sql_engine():
-    sql_url = os.getenv("SQL_URL")
-    engine = sqlalchemy.create_engine(sql_url)
-    yield engine
-    engine.dispose()
-
-@pytest.fixture(scope="module")
-def feed(redis_client, sql_engine):
-    feed = Feed(cache=redis_client, sql_engine=sql_engine)
+def feed(redis_client):
+    feed = Feed(cache=redis_client)
     yield feed
     feed.close()
 

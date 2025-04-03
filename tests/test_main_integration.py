@@ -20,9 +20,7 @@ load_dotenv()
 @pytest.fixture(scope="module")
 def feed():
     redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    sql_engine = sqlalchemy.create_engine(os.getenv("SQL_URL"))
-    yield ans.Feed(redis_client, sql_engine)
-    sql_engine.dispose()
+    yield ans.Feed(redis_client)
     redis_client.flushdb()
     
 

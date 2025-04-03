@@ -1,5 +1,6 @@
-from .qagent import WJHuangPipe
+from .qagent import QuantileAgent, generate_quantile_pipeline
 
 __all__ = [
-    "WJHuangPipe"
+    "QuantileAgent",
+    "generate_quantile_pipeline"
 ]

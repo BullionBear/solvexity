@@ -1,14 +1,17 @@
 import joblib
 import numpy as np
 import pandas as pd
+import decimal
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import QuantileRegressor
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.decomposition import PCA
+from .core import Agent, ConditionalDistribution
 
-def generate_quantile_pipeline(q: float) -> Pipeline:
+
+def generate_quantile_pipeline(q: decimal.Decimal) -> Pipeline:
     """
     Generate a pipeline for quantile regression.
     :param q: Quantile to be predicted (between 0 and 1).
@@ -23,28 +26,33 @@ def generate_quantile_pipeline(q: float) -> Pipeline:
     ])
 
 
-class QuantileAgent:
-    def __init__(self, pipeline: Pipeline):
-        self.pipeline = pipeline
-        self.x_columns = ['returns_1m_30', 'volatility_1m_30', 'mdd_1m_30',
-            'skewness_1m_30', 'kurtosis_1m_30', 'returns_1m_180',
-            'volatility_1m_180', 'mdd_1m_180', 'skewness_1m_180', 'kurtosis_1m_180',
-            'returns_5m_30', 'volatility_5m_30', 'mdd_5m_30', 'skewness_5m_30',
-            'kurtosis_5m_30', 'returns_5m_180', 'volatility_5m_180', 'mdd_5m_180',
-            'skewness_5m_180', 'kurtosis_5m_180', 'returns_15m_30',
-            'volatility_15m_30', 'mdd_15m_30', 'skewness_15m_30', 'kurtosis_15m_30',
-            'returns_15m_180', 'volatility_15m_180', 'mdd_15m_180',
-            'skewness_15m_180', 'kurtosis_15m_180', 'returns_1h_30',
-            'volatility_1h_30', 'mdd_1h_30', 'skewness_1h_30', 'kurtosis_1h_30',
-            'returns_1h_180', 'volatility_1h_180', 'mdd_1h_180', 'skewness_1h_180',
-            'kurtosis_1h_180']
+class QuantileConditionalDistribution(ConditionalDistribution):
+    def __init__(self, pipelines: dict[decimal.Decimal, Pipeline], x_columns: list[str]):
+        self.pipelines = pipelines
+        assert len(pipelines) > 1, "At least two pipelines are required"
+        self.x_columns = x_columns
+    
+    def mean(self, x: pd.DataFrame) -> float:
+        quantiles = sorted(list(self.pipelines.keys()))
+        m = 0
+        for q_prev, q in zip(quantiles[:-1], quantiles[1:]):
+            m += (self.quantile(x, q_prev) + self.quantile(x, q)) * (q - q_prev) / 2
+        return m
+    
+    def quantile(self, x: pd.DataFrame, q: decimal.Decimal) -> float:
+        return self.pipeline.predict(x[self.x_columns], q)
+
+
+class QuantileAgent(Agent):
+    def __init__(self, distribution: QuantileConditionalDistribution):
+        self.distribution = distribution
         
-    def predict(self, x: pd.DataFrame) -> np.array:
+    def act(self, x: pd.DataFrame) -> np.array:
         # Ensure the input DataFrame has the correct columns
-        if not all(col in x.columns for col in self.x_columns):
-            raise ValueError(f"Input DataFrame must contain the following columns: {self.x_columns}")
+        if not all(col in x.columns for col in self.distribution.x_columns):
+            raise ValueError(f"Input DataFrame must contain the following columns: {self.distribution.x_columns}")
         # Ensure the input DataFrame has the correct shape
-        if x.shape[1] != len(self.x_columns):
+        if x.shape[1] != len(self.distribution.x_columns):
             raise ValueError(f"Input DataFrame must have {len(self.x_columns)} columns, got {x.shape[1]}")
         # Predict using the pipeline
         return self.pipeline.predict(x[self.x_columns])

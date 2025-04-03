@@ -48,7 +48,7 @@ class ConditionalDistribution(ABC):
         pass
 
 
-class Strategy(ABC):
+class Agent(ABC):
     """
     Abstract base class for strategies that operate on a probability distribution.
     Subclasses must implement the required methods to define the strategy logic.

@@ -70,7 +70,7 @@ class Agent(ABC):
         return self.distribution.x_columns
 
     @abstractmethod
-    def execute(self, x: Union[pd.DataFrame, np.array]) -> Action:
+    def act(self, x: Union[pd.DataFrame, np.array]) -> Action:
         """
         Execute the strategy logic.
         :param args: Positional arguments for the strategy.

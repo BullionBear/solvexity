@@ -4,10 +4,8 @@ import pandas as pd
 import json
 import bisect
 from sqlalchemy.engine import Engine
-
+from solvexity.helper import MethodTracker, to_ms_interval
 from solvexity.analytic.model import KLine
-from solvexity.helper import to_ms_interval
-
 from .query import generate_kline_aggregation_query
 
 
@@ -21,11 +19,53 @@ class Feed:
         "4h": 6 * 120, # 120 days
         "1d": 365 * 2, # 2 year
     }
-    def __init__(self, cache: redis.Redis, sql_engine: Engine | None = None):
+    def __init__(self, cache: redis.Redis, sql_engine: Engine | None = None, enable_tracking: bool = False):
         self.client: binance.Client = binance.Client()
         self.redis: redis.Redis = cache
         self.sql_engine: Engine | None = sql_engine
         self.cache_keys: set[str] = set()
+        
+        # Initialize tracker
+        self.tracker = MethodTracker()
+        self._tracking_enabled = enable_tracking
+        
+        # Apply tracking to methods if enabled
+        if self._tracking_enabled:
+            self._apply_tracking()
+    
+    def _apply_tracking(self) -> None:
+        """Apply tracking to all methods that should be tracked."""
+        self._request_binance_klines = self.tracker.track(self._request_binance_klines)
+        self._request_sql_klines = self.tracker.track(self._request_sql_klines)
+        self._request_cache_klines = self.tracker.track(self._request_cache_klines)
+        self._request_local_klines = self.tracker.track(self._request_local_klines)
+        self._request_klines = self.tracker.track(self._request_klines)
+        self.get_klines = self.tracker.track(self.get_klines)
+    
+    def enable_tracking(self) -> None:
+        """Enable method tracking."""
+        if not self._tracking_enabled:
+            self._tracking_enabled = True
+            self._apply_tracking()
+            self.tracker.enable()
+    
+    def disable_tracking(self) -> None:
+        """Disable method tracking."""
+        if self._tracking_enabled:
+            self._tracking_enabled = False
+            self.tracker.disable()
+    
+    def reset_tracking(self) -> None:
+        """Reset tracking data."""
+        self.tracker.reset()
+    
+    def get_tracking_summary(self) -> dict:
+        """Get a summary of tracked methods."""
+        return self.tracker.get_summary()
+    
+    def print_tracking_summary(self) -> None:
+        """Print a formatted summary of tracked methods."""
+        self.tracker.print_summary()
 
     def _request_binance_klines(self, symbol: str, interval: str, start_time: int, end_time: int) -> list[KLine]:
         res = self.client.get_klines(symbol=symbol, interval=interval, startTime=start_time, endTime=end_time - 1) # Left inclusive, right exclusive

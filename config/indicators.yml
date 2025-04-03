@@ -1,4 +1,4 @@
-patterns:
+indicators:
   lookafter:
     - name: stopping_returns_btcusdt_1m_60
       type: stopping_return
@@ -254,11 +254,3 @@ patterns:
       interval: 1h
       period: 180
 
-    # Stopping returns patterns
-    - name: stopping_returns_btcusdt_1m_60
-      type: stopping_return
-      symbol: BTCUSDT
-      interval: 1m
-      period: 60
-      stop_loss: -0.06
-      take_profit: 0.06

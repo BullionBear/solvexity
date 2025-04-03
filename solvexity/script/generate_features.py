@@ -126,4 +126,5 @@ if __name__ == "__main__":
     
     df = pd.DataFrame(records)
     df.to_csv(args.output, index=False)
+    feed.close()
     print(f"Features saved to {args.output}")

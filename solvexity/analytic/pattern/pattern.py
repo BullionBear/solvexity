@@ -87,10 +87,6 @@ class Pattern:
         return (stopping_px / df["close_px"].iat[0]) - 1
     
 
-class PatternExtractor:
-    def __init__(self, pattern: Pattern):
-        self.pattern: Pattern = pattern
-
     
 
     

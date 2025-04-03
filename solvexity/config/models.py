@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
@@ -23,13 +23,13 @@ class IndicatorType(str, Enum):
     STOPPING_RETURN = "stopping_return"
 
 
-class LookbackIndicator(BaseModel):
-    """Model for lookback indicators"""
+class BaseIndicator(BaseModel):
+    """Base model for all indicators"""
     name: str
     type: IndicatorType
     symbol: str
     interval: IntervalType
-    period: int = Field(gt=0, description="Number of periods to look back")
+    period: int = Field(gt=0, description="Number of periods")
     
     @field_validator('name')
     @classmethod
@@ -40,13 +40,13 @@ class LookbackIndicator(BaseModel):
         return v
 
 
-class LookafterIndicator(BaseModel):
+class LookbackIndicator(BaseIndicator):
+    """Model for lookback indicators"""
+    pass
+
+
+class LookafterIndicator(BaseIndicator):
     """Model for lookafter indicators"""
-    name: str
-    type: IndicatorType
-    symbol: str
-    interval: IntervalType
-    period: int = Field(gt=0, description="Number of periods to look ahead")
     stop_loss: Optional[float] = None
     stop_profit: Optional[float] = None
     
@@ -65,6 +65,44 @@ class IndicatorsConfig(BaseModel):
     lookafter: List[LookafterIndicator]
 
 
+class PipelineConfig(BaseModel):
+    """Model for pipeline configuration"""
+    q: float
+    path: str
+
+
+class DistributionConfig(BaseModel):
+    """Model for distribution configuration"""
+    pipelines: List[PipelineConfig]
+    x_columns: List[Union[str, Dict[str, Any]]]
+
+
+class AgentConfig(BaseModel):
+    """Model for agent configuration"""
+    type: str
+    distribution: DistributionConfig
+
+
+class GrpcConfig(BaseModel):
+    """Model for gRPC configuration"""
+    host: str
+    port: int
+    timeout: int
+    max_workers: int
+    max_message_length: int
+
+
+class RedisConfig(BaseModel):
+    """Model for Redis configuration"""
+    host: str
+    port: int
+    db: int
+    password: str
+
+
 class Config(BaseModel):
     """Root configuration model"""
-    indicators: IndicatorsConfig 
+    indicators: IndicatorsConfig
+    grpc: GrpcConfig
+    redis: RedisConfig
+    agent: AgentConfig 

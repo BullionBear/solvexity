@@ -35,7 +35,7 @@ class Pattern:
         df["log_return"] = np.log(df["close_px"] / df["open_px"])
         return df["log_return"].kurtosis()        
         
-    def calc_egarch(self, symbol: str, interval: str, start: int, end: int) -> float:
+    def calc_egarch(self, symbol: str, interval: str, start: int, end: int) -> dict[str, float]:
         df = self.feed.get_klines(symbol, interval, start, end)
         # Fit an EGARCH(1,1) model
         from arch import arch_model
@@ -49,7 +49,6 @@ class Pattern:
             "omega": fit.params["omega"],  # Constant term in volatility equation
             "alpha[1]": fit.params["alpha[1]"],  # ARCH term (impact of shocks)
             "beta[1]": fit.params["beta[1]"],  # GARCH term (volatility persistence)
-            # "gamma[1]": fit.params["gamma[1]"],  # Asymmetry term (captures leverage effect)
             "log_likelihood": fit.loglikelihood,  # Log-likelihood of the model
             "aic": fit.aic,  # Akaike Information Criterion
             "bic": fit.bic,  # Bayesian Information Criterion
@@ -86,8 +85,14 @@ class Pattern:
 
         # Calculate and return the stopping return
         return (stopping_px / df["close_px"].iat[0]) - 1
-        
-        
+    
+
+class PatternExtractor:
+    def __init__(self, pattern: Pattern):
+        self.pattern: Pattern = pattern
+
+    
+
     
 
     

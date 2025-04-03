@@ -7,6 +7,7 @@ from solvexity.helper import to_ms_interval
 from solvexity.analytic.feed import Feed
 from solvexity.analytic.pattern import Pattern
 
+
 from dotenv import load_dotenv
 
 load_dotenv()

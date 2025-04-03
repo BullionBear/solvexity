@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Union, List, Any
+from typing import Union
 from enum import Enum
+import pandas as pd
 import numpy as np
 
 class Action(Enum):
@@ -11,60 +12,38 @@ class Action(Enum):
     SELL = "SELL"
     HOLD = "HOLD"
 
-class Distribution(ABC):
+class ConditionalDistribution(ABC):
     """
     Abstract base class for probability distributions.
     Subclasses must implement the required methods to support basic statistical functions.
     """
+    def __init__(self, x_columns: list[str]):
+        """
+        Initialize the distribution with a list of x_columns.
+        :param x_columns: List of feature names (x_columns).
+        """
+        self.x_columns = x_columns
+
+    @property
+    def x_columns(self) -> list[str]:
+        """
+        Get the list of x_columns.
+        :return: List of x_columns.
+        """
+        return self.x_columns
 
     @abstractmethod
-    def mean(self) -> float:
+    def mean(self, x: Union[pd.DataFrame, np.array]) -> float:
         """Calculate the mean of the distribution."""
         pass
 
-    @abstractmethod
-    def median(self) -> float:
-        """Calculate the median of the distribution."""
-        pass
 
     @abstractmethod
-    def quantile(self, q: Union[float, List[float]]) -> Union[float, List[float]]:
+    def quantile(self, x: Union[pd.DataFrame, np.array], q: float) -> Union[pd.DataFrame, np.array]:
         """
         Calculate the quantile(s) of the distribution.
         :param q: A single quantile (float) or a list of quantiles (List[float]).
         :return: The quantile value(s).
-        """
-        pass
-
-    @abstractmethod
-    def variance(self) -> float:
-        """Calculate the variance of the distribution."""
-        pass
-
-    @abstractmethod
-    def sample(self, size: int = 1) -> np.ndarray:
-        """
-        Generate random samples from the distribution.
-        :param size: Number of samples to generate.
-        :return: An array of samples.
-        """
-        pass
-
-    @abstractmethod
-    def pdf(self, x: float) -> float:
-        """
-        Calculate the probability density function (PDF) at a given point.
-        :param x: The point at which to evaluate the PDF.
-        :return: The PDF value.
-        """
-        pass
-
-    @abstractmethod
-    def cdf(self, x: float) -> float:
-        """
-        Calculate the cumulative distribution function (CDF) at a given point.
-        :param x: The point at which to evaluate the CDF.
-        :return: The CDF value.
         """
         pass
 
@@ -75,15 +54,23 @@ class Strategy(ABC):
     Subclasses must implement the required methods to define the strategy logic.
     """
 
-    def __init__(self, distribution: Distribution):
+    def __init__(self, distribution: ConditionalDistribution):
         """
         Initialize the strategy with a given distribution.
         :param distribution: An instance of a Distribution subclass.
         """
-        self.distribution = distribution
+        self.distribution: ConditionalDistribution = distribution
+
+    @property
+    def x_columns(self) -> list[str]:
+        """
+        Get the list of x_columns from the distribution.
+        :return: List of x_columns.
+        """
+        return self.distribution.x_columns
 
     @abstractmethod
-    def execute(self, *args, **kwargs) -> Action:
+    def execute(self, x: Union[pd.DataFrame, np.array]) -> Action:
         """
         Execute the strategy logic.
         :param args: Positional arguments for the strategy.
@@ -92,11 +79,4 @@ class Strategy(ABC):
         """
         pass
 
-    @abstractmethod
-    def evaluate(self) -> float:
-        """
-        Evaluate the performance or outcome of the strategy.
-        :return: A numerical value representing the evaluation result.
-        """
-        pass
 

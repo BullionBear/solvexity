@@ -1,9 +1,8 @@
-from .agent import Action, Strategy, Distribution
-
+from .agent import Action, Strategy, ConditionalDistribution
 
 
 __all__ = [
     "Action",
     "Strategy",
-    "Distribution",
+    "ConditionalDistribution",
 ]

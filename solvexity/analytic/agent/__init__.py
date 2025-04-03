@@ -1,4 +1,4 @@
-from .pipe import WJHuangPipe
+from .qagent import WJHuangPipe
 
 __all__ = [
     "WJHuangPipe"

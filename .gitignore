@@ -11,3 +11,4 @@ verbose
 .env
 *.http
 .ipynb_checkpoints/
+*.csv

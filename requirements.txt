@@ -1,25 +1,6 @@
 python-binance
-pydantic
-pandas
-sqlalchemy
-psycopg2-binary
-redis
 pyyaml
 python-dotenv
-mplfinance
-pwlf
-GPy
-GPyOpt
-hmmlearn
-arch
-# grpc
-grpcio-tools
-grpcio
-# devops
-mypy
-pytest
-pytest-grpc
-grpcio-testing
-# jupyter
-jupyter
-nbformat
+pandas
+numpy
+hooklet

@@ -1,0 +1,525 @@
+indicators:
+  lookafter:
+    - name: stopping_returns_btcusdt_1m_60
+      type: stopping_return
+      symbol: BTCUSDT
+      stop_loss: -0.06
+      stop_profit: 0.06
+      interval: 1m
+      period: 60
+
+  lookback: # For convenience, we use the same columns for all patterns
+    # Returns patterns
+    - name: returns_btcusdt_1m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: returns_btcusdt_1m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: returns_btcusdt_5m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: returns_btcusdt_5m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: returns_btcusdt_15m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: returns_btcusdt_15m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: returns_btcusdt_1h_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: returns_btcusdt_1h_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Volatility patterns
+    - name: volatility_btcusdt_1m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: volatility_btcusdt_1m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: volatility_btcusdt_5m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: volatility_btcusdt_5m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: volatility_btcusdt_15m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: volatility_btcusdt_15m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: volatility_btcusdt_1h_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: volatility_btcusdt_1h_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Maximum Drawdown patterns
+    - name: mdd_btcusdt_1m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: mdd_btcusdt_1m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: mdd_btcusdt_5m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: mdd_btcusdt_5m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: mdd_btcusdt_15m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: mdd_btcusdt_15m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: mdd_btcusdt_1h_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: mdd_btcusdt_1h_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Skewness patterns
+    - name: skewness_btcusdt_1m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: skewness_btcusdt_1m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: skewness_btcusdt_5m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: skewness_btcusdt_5m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: skewness_btcusdt_15m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: skewness_btcusdt_15m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: skewness_btcusdt_1h_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: skewness_btcusdt_1h_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Kurtosis patterns
+    - name: kurtosis_btcusdt_1m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: kurtosis_btcusdt_1m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: kurtosis_btcusdt_5m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: kurtosis_btcusdt_5m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: kurtosis_btcusdt_15m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: kurtosis_btcusdt_15m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: kurtosis_btcusdt_1h_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: kurtosis_btcusdt_1h_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+grpc:
+  host: 0.0.0.0
+  port: 50051
+  timeout: 2
+  max_workers: 10
+  max_message_length: 1024
+  max_message_length: 1024
+
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: ""
+
+agent:
+  type: qagent
+  distribution:
+    pipelines:
+      - q: 0.05
+        path: ./models/qagent_0-05.pkl
+      - q: 0.5
+        path: ./models/qagent_0-5.pkl
+      - q: 0.95
+        path: ./models/qagent_0-95.pkl
+
+    x_columns: # For convenience, we use the same columns for all patterns
+    - name: returns_btcusdt_1m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: returns_btcusdt_1m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: returns_btcusdt_5m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: returns_btcusdt_5m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: returns_btcusdt_15m_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: returns_btcusdt_15m_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: returns_btcusdt_1h_30
+      type: returns
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: returns_btcusdt_1h_180
+      type: returns
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Volatility patterns
+    - name: volatility_btcusdt_1m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: volatility_btcusdt_1m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: volatility_btcusdt_5m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: volatility_btcusdt_5m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: volatility_btcusdt_15m_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: volatility_btcusdt_15m_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: volatility_btcusdt_1h_30
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: volatility_btcusdt_1h_180
+      type: volatility
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Maximum Drawdown patterns
+    - name: mdd_btcusdt_1m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: mdd_btcusdt_1m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: mdd_btcusdt_5m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: mdd_btcusdt_5m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: mdd_btcusdt_15m_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: mdd_btcusdt_15m_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: mdd_btcusdt_1h_30
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: mdd_btcusdt_1h_180
+      type: mdd
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Skewness patterns
+    - name: skewness_btcusdt_1m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: skewness_btcusdt_1m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: skewness_btcusdt_5m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: skewness_btcusdt_5m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: skewness_btcusdt_15m_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: skewness_btcusdt_15m_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: skewness_btcusdt_1h_30
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: skewness_btcusdt_1h_180
+      type: skewness
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180
+
+    # Kurtosis patterns
+    - name: kurtosis_btcusdt_1m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1m
+      period: 30
+
+    - name: kurtosis_btcusdt_1m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1m
+      period: 180
+
+    - name: kurtosis_btcusdt_5m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 5m
+      period: 30
+
+    - name: kurtosis_btcusdt_5m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 5m
+      period: 180
+
+    - name: kurtosis_btcusdt_15m_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 15m
+      period: 30
+
+    - name: kurtosis_btcusdt_15m_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 15m
+      period: 180
+
+    - name: kurtosis_btcusdt_1h_30
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1h
+      period: 30
+
+    - name: kurtosis_btcusdt_1h_180
+      type: kurtosis
+      symbol: BTCUSDT
+      interval: 1h
+      period: 180

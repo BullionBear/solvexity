@@ -1,47 +1,64 @@
-from concurrent import futures
-import redis
-import os
-import sqlalchemy
-import grpc
-import solvexity.analytic as ans
-import solvexity.generated.solvexity.solvexity_pb2 as solvexity_pb2
-import solvexity.generated.solvexity.solvexity_pb2_grpc as solvexity_pb2_grpc
-from google.protobuf.timestamp_pb2 import Timestamp
-import datetime
+#!/usr/bin/env python3
+"""
+Run both ExampleEmitter and ExampleHandler in a single script.
+"""
 
-from dotenv import load_dotenv
+import asyncio
+import logging
+import signal
+from solvexity.eventrix.collection.ccxt_ochlv_emitter import CCXTOCHLVEmitter
+from hooklet.pilot import NatsPilot
 
-load_dotenv()
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-class SolvexityServicer(solvexity_pb2_grpc.SolvexityServicer):
-    def __init__(self, solver: ans.Solver):
-        self.solver = solver
+async def handle_shutdown(shutdown_event):
+    """Handle graceful shutdown when SIGINT is received."""
+    logger.info("Shutting down...")
+    shutdown_event.set()
+
+async def main():
+    nats_pilot = NatsPilot()
+    await nats_pilot.connect()
+
+    emitter = CCXTOCHLVEmitter(pilot=nats_pilot, exchange_name='binance', symbol='ADAUSDT', timeframe='1m', subject='ochlv.ADAUSDT', executor_id='solv.ochlv.ADAUSDT')
     
-    def Solve(self, request: solvexity_pb2.SolveRequest, context: grpc.ServicerContext) -> solvexity_pb2.SolveResponse:
-        try:
-            dt = request.timestamp.ToDatetime()
-            ts = int(dt.timestamp() * 1000)
-            print(f"Received request for symbol: {request.symbol} at {dt}")
-            res = self.solver.solve(request.symbol, ts)
-            return solvexity_pb2.SolveResponse(status=solvexity_pb2.SUCCESS, message=f"result {res}")
-        except Exception as e:
-            context.set_details(str(e))
-            context.set_code(grpc.StatusCode.INTERNAL)  # or appropriate error code
-            print(f"Error: {e}")
-            return solvexity_pb2.SolveResponse(status=solvexity_pb2.FAILURE, message="error")
 
-def serve():
-    # Resource allocation
-    redis_client = redis.Redis(host='localhost', port=6379, db=0)
-    feed = ans.Feed(redis_client)
-    solver = ans.Solver(feed)
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    solvexity_pb2_grpc.add_SolvexityServicer_to_server(SolvexityServicer(solver), server)
-    server.add_insecure_port('[::]:50052')
-    print("Solvexity gRPC Server started on port 50052...")
-    server.start()
-    server.wait_for_termination()
-    redis_client.close()
+    # Run both emitter and handler concurrently
+    emitter_task = asyncio.create_task(emitter.start())
+
+    try:
+        logger.info("CCXTOCHLVEmitter are running. Press Ctrl+C to stop.")
+        # Create an event for clean shutdown
+        shutdown_event = asyncio.Event()
+        
+        # Set up a signal handler for keyboard interrupt
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(
+            signal.SIGINT,
+            lambda: asyncio.create_task(handle_shutdown(shutdown_event))
+        )
+        
+        # Wait until shutdown is triggered
+        await shutdown_event.wait()
+        
+    except asyncio.CancelledError:
+        logger.info("Task was cancelled, shutting down...")
+    finally:
+        # First, stop both components
+        await emitter.stop()
+
+        # Wait for their tasks to complete
+        await asyncio.gather(emitter_task, return_exceptions=True)
+
+        # Finally close the NATS connection
+        await nats_pilot.close()
 
 if __name__ == "__main__":
-    serve()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # This captures the KeyboardInterrupt at the top level
+        # if it escapes from the main coroutine
+        logger.info("Shutdown complete.")

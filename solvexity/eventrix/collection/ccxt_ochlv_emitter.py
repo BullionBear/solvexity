@@ -1,5 +1,4 @@
 import logging
-
 import ccxt.pro
 from ccxt.pro import Exchange
 from hooklet.base import BasePilot
@@ -25,6 +24,8 @@ class CCXTOCHLVEmitter(Emitter):
         subject: str | None = None,
         executor_id: str | None = None,
     ):
+
+    def __init__(self, pilot: BasePilot, exchange_name: str, symbol: str, timeframe: str = '1m', subject: str|None = None, executor_id: str|None = None):
         """
         Initialize the CCXTOCHLVEmitter with the specified exchange, symbol, and timeframe.
 
@@ -47,6 +48,14 @@ class CCXTOCHLVEmitter(Emitter):
             if subject is None
             else subject
         )
+        self.client: Exchange = getattr(ccxt.pro, exchange_name)({
+            'options': {'defaultType': 'future'},
+        })
+        
+        self.symbol = symbol
+        self.timeframe = timeframe
+
+        self.subject = f'{self.exchange_name}:{self.symbol}:{self.timeframe}' if subject is None else subject
 
     async def on_start(self) -> None:
         await self.client.load_markets()
@@ -62,7 +71,11 @@ class CCXTOCHLVEmitter(Emitter):
 
         :return: A dictionary with the generator function for emitting OHLCV data.
         """
-        return {self.subject: self._ohlcv_generator}
+
+        return {
+            self.subject: self._ohlcv_generator,  # Pass the function, not the generator object
+        }
+    
 
     async def _ohlcv_generator(self):
         while self.is_running():
@@ -81,3 +94,10 @@ class CCXTOCHLVEmitter(Emitter):
                 self.client = getattr(ccxt.pro, self.exchange_name)(
                     {"options": {"defaultType": "future"}}
                 )
+
+                logging.error(f"Error in CCXTOCHLVEmitter: {type(e).__name__} - {str(e)}")
+            finally:
+                await self.client.close()
+                self.client = getattr(ccxt.pro, self.exchange_name)({
+                    'options': {'defaultType': 'future'},
+                })

@@ -33,15 +33,7 @@ async def main():
         exchange_name="binance",
         symbol="ADAUSDT",
         timeframe="1m",
-        subject="ochlv.ADAUSDT",
-        executor_id="solv.ochlv.ADAUSDT",
-    )
-
-    emitter = CCXTOCHLVEmitter(
-        pilot=nats_pilot,
-        exchange_name="binance",
-        symbol="ADAUSDT",
-        timeframe="1m",
+        default_type="future",
         subject="ochlv.ADAUSDT",
         executor_id="solv.ochlv.ADAUSDT",
     )

@@ -22,13 +22,14 @@ class CCXTOCHLVEmitter(Emitter):
         exchange_name: str,
         symbol: str,
         timeframe: str = "1m",
+        default_type: str = "spot",
         subject: str | None = None,
         executor_id: str | None = None,
     ):
         super().__init__(pilot, executor_id)
         self.exchange_name = exchange_name
         self.client: Exchange = getattr(ccxt.pro, exchange_name)(
-            {"options": {"defaultType": "future"}}
+            {"options": {"defaultType": default_type}}
         )
 
         self.symbol = symbol
@@ -41,7 +42,7 @@ class CCXTOCHLVEmitter(Emitter):
         )
         self.client: Exchange = getattr(ccxt.pro, exchange_name)(
             {
-                "options": {"defaultType": "future"},
+                "options": {"defaultType": default_type},
             }
         )
 
@@ -53,6 +54,7 @@ class CCXTOCHLVEmitter(Emitter):
             if subject is None
             else subject
         )
+        self.default_type = default_type
 
     async def on_start(self) -> None:
         await self.client.load_markets()
@@ -88,6 +90,6 @@ class CCXTOCHLVEmitter(Emitter):
             finally:
                 await self.client.close()
                 self.client = getattr(ccxt.pro, self.exchange_name)(
-                    {"options": {"defaultType": "future"}}
+                    {"options": {"defaultType": self.default_type}}
                 )
                 await self.client.load_markets()

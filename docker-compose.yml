@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    container_name: nats-server
+    restart: unless-stopped
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP management port
+      # - "6222:6222"  # Cluster port (if clustering is needed)
+    # command: "--user myuser --pass mypass"  # Optional authentication
+    volumes:
+      - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
+    networks:
+      - nats-net
+
+networks:
+  nats-net:
+    driver: bridge

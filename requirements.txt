@@ -5,7 +5,8 @@ pandas
 numpy
 hooklet
 ccxt
-starlette
+# service
+fastapi[standard]
 pydantic
 uvicorn
 # Linters and formatters

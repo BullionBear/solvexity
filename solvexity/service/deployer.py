@@ -23,7 +23,7 @@ class EventrixDeployer:
         if eventrix_id in self._deployments:
             raise ValueError(f"Eventrix with ID '{eventrix_id}' is already deployed.")
 
-        eventrix_instance = eventrix_type(self._pilot, config)
+        eventrix_instance = eventrix_type(self._pilot, **dict(config))
         await eventrix_instance.start()
         self._deployments[eventrix_id] = (eventrix_instance, config)
 

@@ -12,3 +12,4 @@ verbose
 *.http
 .ipynb_checkpoints/
 *.csv
+nats-data

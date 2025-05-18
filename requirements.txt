@@ -5,7 +5,9 @@ pandas
 numpy
 hooklet
 ccxt
-
+starlette
+pydantic
+uvicorn
 # Linters and formatters
 pytest>=7.0.0
 pytest-asyncio>=0.18.3

@@ -1,12 +1,21 @@
 import logging
-
 import ccxt.pro
+from solvexity.eventrix.config import ConfigType
+from typing import Any
 from ccxt.pro import Exchange
 from hooklet.base import BasePilot
 from hooklet.eventrix.emitter import Emitter
 from hooklet.types import GeneratorFunc
 
 logger = logging.getLogger(__name__)
+
+class CCTXOCHLVConfig(ConfigType):
+    exchange_name: str
+    symbol: str
+    timeframe: str = "1m"
+    default_type: str = "spot"
+    subject: str | None = None
+    executor_id: str | None = None
 
 
 class CCXTOCHLVEmitter(Emitter):
@@ -56,9 +65,22 @@ class CCXTOCHLVEmitter(Emitter):
         )
         self.default_type = default_type
 
+
     async def on_start(self) -> None:
         await self.client.load_markets()
         await super().on_start()
+
+    @property
+    def status(self) -> dict[str, Any]:
+        base_status = super(self).status
+        curr_status = {
+            "exchange_name": self.exchange_name,
+            "symbol": self.symbol,
+            "timeframe": self.timeframe,
+            "default_type": self.default_type,
+        }
+        return {**base_status, **curr_status}
+
 
     async def on_finish(self) -> None:
         await super().on_stop()

@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import ccxt.pro
 from solvexity.eventrix.config import ConfigType
 from typing import Any
@@ -49,20 +50,6 @@ class CCXTOCHLVEmitter(Emitter):
             if subject is None
             else subject
         )
-        self.client: Exchange = getattr(ccxt.pro, exchange_name)(
-            {
-                "options": {"defaultType": default_type},
-            }
-        )
-
-        self.symbol = symbol
-        self.timeframe = timeframe
-
-        self.subject = (
-            f"{self.exchange_name}:{self.symbol}:{self.timeframe}"
-            if subject is None
-            else subject
-        )
         self.default_type = default_type
 
 
@@ -72,7 +59,7 @@ class CCXTOCHLVEmitter(Emitter):
 
     @property
     def status(self) -> dict[str, Any]:
-        base_status = super(self).status
+        base_status = super().status
         curr_status = {
             "exchange_name": self.exchange_name,
             "symbol": self.symbol,
@@ -83,8 +70,32 @@ class CCXTOCHLVEmitter(Emitter):
 
 
     async def on_finish(self) -> None:
-        await super().on_stop()
-        await self.client.close()
+        """
+        Clean up resources when the emitter is finished.
+        """
+        try:
+            # Close the CCXT connection explicitly as required
+            if hasattr(self, 'client') and self.client:
+                await self.client.close()
+                logger.info(f"Closed CCXT connection for {self.exchange_name}")
+        except Exception as e:
+            logger.error(f"Error closing CCXT client: {type(e).__name__} - {str(e)}")
+        finally:
+            # Call parent's on_finish to clean up other resources
+            await super().on_finish()
+
+    async def on_stop(self) -> None:
+        """
+        Handle cleanup when the emitter is stopped.
+        """
+        try:
+            if hasattr(self, 'client') and self.client:
+                await self.client.close()
+                logger.info(f"Closed CCXT connection on stop for {self.exchange_name}")
+        except Exception as e:
+            logger.error(f"Error closing CCXT client on stop: {type(e).__name__} - {str(e)}")
+        finally:
+            await super().on_stop()
 
     async def get_generators(self) -> dict[str, GeneratorFunc]:
         """
@@ -92,12 +103,14 @@ class CCXTOCHLVEmitter(Emitter):
 
         :return: A dictionary with the generator function for emitting OHLCV data.
         """
-
         return {
             self.subject: self._ohlcv_generator,  # Pass the function, not the generator object
         }
 
     async def _ohlcv_generator(self):
+        """
+        Generator function that emits OHLCV data.
+        """
         while self.is_running():
             try:
                 ochlvs = await self.client.watch_ohlcv(self.symbol, self.timeframe)
@@ -109,9 +122,17 @@ class CCXTOCHLVEmitter(Emitter):
                 logging.error(
                     f"Error in CCXTOCHLVEmitter: {type(e).__name__} - {str(e)}"
                 )
-            finally:
-                await self.client.close()
-                self.client = getattr(ccxt.pro, self.exchange_name)(
-                    {"options": {"defaultType": self.default_type}}
-                )
-                await self.client.load_markets()
+                # Brief pause to prevent tight error loop
+                await asyncio.sleep(1)
+                
+                # If client is in a bad state, try to reconnect
+                try:
+                    if hasattr(self, 'client') and self.client:
+                        await self.client.close()
+                    self.client = getattr(ccxt.pro, self.exchange_name)(
+                        {"options": {"defaultType": self.default_type}}
+                    )
+                    await self.client.load_markets()
+                except Exception as reconnect_error:
+                    logging.error(f"Failed to reconnect: {type(reconnect_error).__name__} - {str(reconnect_error)}")
+                    await asyncio.sleep(5)  # Longer pause after reconnect failure

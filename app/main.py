@@ -1,5 +1,8 @@
 from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
 from pydantic import BaseModel
+import asyncio
+import logging
 from typing import Type
 from hooklet.base import BaseEventrix
 from hooklet.pilot import NatsPilot
@@ -7,9 +10,17 @@ from solvexity.eventrix.collection.ccxt_ochlv_emitter import CCXTOCHLVEmitter, C
 from solvexity.eventrix.config import ConfigType
 from solvexity.service.deployer import EventrixDeployer
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Define the FastAPI app
 app = FastAPI()
 
+# Initialize the NatsPilot and EventrixDeployer
 pilot = NatsPilot(nats_url="nats://localhost:4222")
 deployer = EventrixDeployer(pilot)
 
@@ -21,6 +32,43 @@ class DeployRequest(BaseModel):
 
 class UndeployRequest(BaseModel):
     eventrix_id: str
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handle application startup and shutdown events.
+    Replaces the deprecated @app.on_event("startup") and @app.on_event("shutdown") decorators.
+    """
+    # Startup code
+    logger.info("Starting application and connecting to NATS...")
+    await pilot.connect()
+    logger.info("Application startup complete")
+
+    yield  # This separates startup from shutdown code
+
+    # Shutdown code
+    logger.info("Application shutdown initiated")
+    
+    # Shutdown the deployer first to stop all eventrix instances
+    await deployer.shutdown()
+    
+    # Then stop the pilot
+    try:
+        await pilot.close()
+        logger.info("Pilot stopped successfully")
+    except Exception as e:
+        logger.error(f"Error stopping pilot: {type(e).__name__} - {str(e)}")
+    
+    # Ensure any remaining tasks are cleaned up
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    for task in tasks:
+        if not task.done():
+            task.cancel()
+            
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+    
+    logger.info("Application shutdown complete")
 
 @app.post("/deploy")
 async def deploy_eventrix(request: DeployRequest):

@@ -1,22 +1,14 @@
-import logging
 import asyncio
-import ccxt.pro
-from solvexity.eventrix.config import ConfigType
+import logging
 from typing import Any
+
+import ccxt.pro
 from ccxt.pro import Exchange
 from hooklet.base import BasePilot
 from hooklet.eventrix.emitter import Emitter
 from hooklet.types import GeneratorFunc
 
 logger = logging.getLogger(__name__)
-
-class CCTXOCHLVConfig(ConfigType):
-    exchange_name: str
-    symbol: str
-    timeframe: str = "1m"
-    default_type: str = "spot"
-    subject: str | None = None
-    executor_id: str | None = None
 
 
 class CCXTOCHLVEmitter(Emitter):
@@ -52,7 +44,6 @@ class CCXTOCHLVEmitter(Emitter):
         )
         self.default_type = default_type
 
-
     async def on_start(self) -> None:
         await self.client.load_markets()
         await super().on_start()
@@ -68,14 +59,13 @@ class CCXTOCHLVEmitter(Emitter):
         }
         return {**base_status, **curr_status}
 
-
     async def on_finish(self) -> None:
         """
         Clean up resources when the emitter is finished.
         """
         try:
             # Close the CCXT connection explicitly as required
-            if hasattr(self, 'client') and self.client:
+            if hasattr(self, "client") and self.client:
                 await self.client.close()
                 logger.info(f"Closed CCXT connection for {self.exchange_name}")
         except Exception as e:
@@ -89,11 +79,13 @@ class CCXTOCHLVEmitter(Emitter):
         Handle cleanup when the emitter is stopped.
         """
         try:
-            if hasattr(self, 'client') and self.client:
+            if hasattr(self, "client") and self.client:
                 await self.client.close()
                 logger.info(f"Closed CCXT connection on stop for {self.exchange_name}")
         except Exception as e:
-            logger.error(f"Error closing CCXT client on stop: {type(e).__name__} - {str(e)}")
+            logger.error(
+                f"Error closing CCXT client on stop: {type(e).__name__} - {str(e)}"
+            )
         finally:
             await super().on_stop()
 
@@ -124,15 +116,18 @@ class CCXTOCHLVEmitter(Emitter):
                 )
                 # Brief pause to prevent tight error loop
                 await asyncio.sleep(1)
-                
+
                 # If client is in a bad state, try to reconnect
                 try:
-                    if hasattr(self, 'client') and self.client:
+                    if hasattr(self, "client") and self.client:
                         await self.client.close()
                     self.client = getattr(ccxt.pro, self.exchange_name)(
                         {"options": {"defaultType": self.default_type}}
                     )
                     await self.client.load_markets()
                 except Exception as reconnect_error:
-                    logging.error(f"Failed to reconnect: {type(reconnect_error).__name__} - {str(reconnect_error)}")
+                    logging.error(
+                        "Failed to reconnect: "
+                        f"{type(reconnect_error).__name__} - {str(reconnect_error)}"
+                    )
                     await asyncio.sleep(5)  # Longer pause after reconnect failure

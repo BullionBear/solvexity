@@ -1,13 +1,15 @@
 import asyncio
 import logging
-from typing import Type, Any
-from hooklet.base import BasePilot, BaseEventrix
+from typing import Any, Type
+
+from hooklet.base import BaseEventrix, BasePilot
 
 logger = logging.getLogger(__name__)
 
+
 class EventrixDeployer:
     """
-    EventrixDeployer is a class that provides an interface for deploying, undeploying, 
+    EventrixDeployer is a class that provides an interface for deploying, undeploying,
     and managing Eventrix instances.
     """
 
@@ -25,7 +27,12 @@ class EventrixDeployer:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.shutdown()
 
-    async def deploy(self, eventrix_id: str, eventrix_type: Type[BaseEventrix], config: dict[str, Any]):
+    async def deploy(
+        self,
+        eventrix_id: str,
+        eventrix_type: Type[BaseEventrix],
+        config: dict[str, Any],
+    ):
         """
         Deploys an Eventrix instance.
         """
@@ -40,7 +47,9 @@ class EventrixDeployer:
             logger.info(f"Successfully deployed Eventrix: {eventrix_id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to deploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}")
+            logger.error(
+                f"Failed to deploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
+            )
             # Clean up if initialization succeeded but start failed
             if eventrix_id in self._deployments:
                 eventrix_instance, _ = self._deployments.pop(eventrix_id)
@@ -63,7 +72,9 @@ class EventrixDeployer:
             logger.info(f"Successfully undeployed Eventrix: {eventrix_id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to undeploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}")
+            logger.error(
+                f"Failed to undeploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
+            )
             raise
 
     def get_status(self, eventrix_id: str) -> dict:
@@ -89,7 +100,7 @@ class EventrixDeployer:
             }
             for eventrix_id, (eventrix_instance, config) in self._deployments.items()
         ]
-    
+
     async def shutdown(self, timeout=10.0):
         """
         Shuts down all deployed Eventrix instances within the specified timeout.
@@ -104,12 +115,16 @@ class EventrixDeployer:
                 task = asyncio.create_task(eventrix_instance.stop())
                 shutdown_tasks.append(task)
             except Exception as e:
-                logger.error(f"Error stopping eventrix {eventrix_id}: {type(e).__name__} - {str(e)}")
+                logger.error(
+                    f"Error stopping eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
+                )
 
         # Wait with timeout if there are any tasks
         if shutdown_tasks:
             try:
-                await asyncio.wait_for(asyncio.gather(*shutdown_tasks, return_exceptions=True), timeout)
+                await asyncio.wait_for(
+                    asyncio.gather(*shutdown_tasks, return_exceptions=True), timeout
+                )
             except asyncio.TimeoutError:
                 logger.warning(f"Shutdown timed out after {timeout}s")
 

@@ -12,7 +12,7 @@ from solvexity.service.deployer import EventrixDeployer
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed to DEBUG for more verbose logging
+    level=logging.INFO,  # Changed to DEBUG for more verbose logging
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -45,25 +45,45 @@ async def lifespan(app: FastAPI):
     # Print deployment state before shutdown for debugging
     logger.debug(f"Active deployments before shutdown: {deployer.get_all_deployments()}")
     
-    # Shutdown the deployer first to stop all eventrix instances
-    await deployer.shutdown()
+    # First cancel any background tasks to prevent new work
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    logger.info(f"Cancelling {len(tasks)} running tasks")
     
-    # Then stop the pilot
+    # Cancel all tasks first to prevent new work being scheduled
+    for task in tasks:
+        task.cancel()
+    
+    # Wait a short time for tasks to acknowledge cancellation
+    if tasks:
+        try:
+            await asyncio.wait(tasks, timeout=2.0)
+            logger.info("Task cancellation phase complete")
+        except asyncio.CancelledError:
+            logger.warning("Caught CancelledError during task cancellation")
+        except Exception as e:
+            logger.error(f"Error during task cancellation: {type(e).__name__} - {str(e)}")
+    
+    # Shutdown the deployer to stop all eventrix instances
     try:
+        logger.info("Shutting down the deployer")
+        await deployer.shutdown()
+        logger.info("Deployer shutdown complete")
+    except Exception as e:
+        logger.error(f"Error during deployer shutdown: {type(e).__name__} - {str(e)}")
+    
+    # Then stop the pilot 
+    try:
+        logger.info("Closing pilot connection")
         await pilot.close()
         logger.info("Pilot stopped successfully")
     except Exception as e:
         logger.error(f"Error stopping pilot: {type(e).__name__} - {str(e)}")
     
-    # Ensure any remaining tasks are cleaned up
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        if not task.done():
-            task.cancel()
-            
-    if tasks:
-        await asyncio.gather(*tasks, return_exceptions=True)
-    
+    # Final check for any remaining tasks
+    remaining = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    if remaining:
+        logger.warning(f"{len(remaining)} tasks still pending after shutdown")
+        
     logger.info("Application shutdown complete")
 
 # Define the FastAPI app with lifespan

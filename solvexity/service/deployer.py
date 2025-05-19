@@ -1,8 +1,7 @@
 import asyncio
 import logging
-from typing import Type, Dict, List
+from typing import Type, Any
 from hooklet.base import BasePilot, BaseEventrix
-from solvexity.eventrix.config import ConfigType
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +16,16 @@ class EventrixDeployer:
         Initializes the EventrixDeployer instance.
         """
         self._pilot = pilot
-        self._deployments: dict[str, tuple[BaseEventrix, ConfigType]] = {}
-        self._tasks: list[asyncio.Task] = []
+        self._deployments: dict[str, tuple[BaseEventrix, dict[str, Any]]] = {}
         self._shutdown_event = asyncio.Event()
 
-    async def deploy(self, eventrix_id: str, eventrix_type: Type[BaseEventrix], config: ConfigType):
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.shutdown()
+
+    async def deploy(self, eventrix_id: str, eventrix_type: Type[BaseEventrix], config: dict[str, Any]):
         """
         Deploys an Eventrix instance.
         """
@@ -29,7 +33,7 @@ class EventrixDeployer:
             raise ValueError(f"Eventrix with ID '{eventrix_id}' is already deployed.")
 
         try:
-            eventrix_instance = eventrix_type(self._pilot, **dict(config))
+            eventrix_instance = eventrix_type(self._pilot, **config)
             # Start the eventrix instance
             await eventrix_instance.start()
             self._deployments[eventrix_id] = (eventrix_instance, config)
@@ -86,14 +90,14 @@ class EventrixDeployer:
             for eventrix_id, (eventrix_instance, config) in self._deployments.items()
         ]
     
-    async def shutdown(self):
+    async def shutdown(self, timeout=10.0):
         """
-        Shuts down all deployed Eventrix instances and cleans up resources.
+        Shuts down all deployed Eventrix instances within the specified timeout.
         """
-        logger.info("Shutting down EventrixDeployer...")
+        logger.info(f"Shutting down EventrixDeployer with {timeout}s timeout...")
         self._shutdown_event.set()
-        
-        # Stop all deployed eventrix instances
+
+        # Create shutdown tasks
         shutdown_tasks = []
         for eventrix_id, (eventrix_instance, _) in list(self._deployments.items()):
             try:
@@ -101,18 +105,14 @@ class EventrixDeployer:
                 shutdown_tasks.append(task)
             except Exception as e:
                 logger.error(f"Error stopping eventrix {eventrix_id}: {type(e).__name__} - {str(e)}")
-        
+
+        # Wait with timeout if there are any tasks
         if shutdown_tasks:
-            await asyncio.gather(*shutdown_tasks, return_exceptions=True)
-        
-        # Clear all deployments and tasks
+            try:
+                await asyncio.wait_for(asyncio.gather(*shutdown_tasks, return_exceptions=True), timeout)
+            except asyncio.TimeoutError:
+                logger.warning(f"Shutdown timed out after {timeout}s")
+
+        # Clear deployments
         self._deployments.clear()
-        for task in self._tasks:
-            if not task.done():
-                task.cancel()
-        
-        if self._tasks:
-            await asyncio.gather(*self._tasks, return_exceptions=True)
-        
-        self._tasks.clear()
         logger.info("EventrixDeployer shutdown complete")

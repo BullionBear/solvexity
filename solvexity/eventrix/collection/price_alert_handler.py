@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Any
 from hooklet.base import BasePilot
@@ -17,7 +16,7 @@ class OCHLVPriceAlert(Handler):
 
     def get_handlers(self) -> dict[str, MessageHandlerCallback]:
         return {
-            self._subject: self.on_ochlv,
+            self._subject: self.on_ohlcv,
         }
     
     async def on_ochlv(self, data: dict[str, Any]) -> None:

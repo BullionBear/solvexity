@@ -9,7 +9,7 @@ verbose
 *test.json*
 .DS_Store
 .env
-*.http
+test.*
 .ipynb_checkpoints/
 *.csv
 nats-data

@@ -43,7 +43,7 @@ class OCHLVPriceAlert(Handler):
                 await self._weebhook.send_price_alert(
                     symbol=data["symbol"],
                     price=self._current_price,
-                    threshold=self._price_threshold[prev],
+                    threshold=self._price_threshold[prev] if prev < curr else self._price_threshold[curr],
                     condition="above" if prev < curr else "below"
                 )
             self._prev_price = self._current_price

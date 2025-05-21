@@ -3,7 +3,6 @@ import logging
 import time
 from typing import Dict, List, Optional, Any, Union
 import aiohttp
-import asyncio
 
 logger = logging.getLogger(__name__)
 

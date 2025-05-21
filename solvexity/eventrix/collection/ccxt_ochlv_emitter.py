@@ -105,11 +105,20 @@ class CCXTOCHLVEmitter(Emitter):
         """
         while self.is_running():
             try:
-                ochlvs = await self.client.watch_ohlcv(self.symbol, self.timeframe)
-                logging.info(f"Received OHLCV data: {ochlvs}")
-                for ochlv in ochlvs:
+                ohlcvs = await self.client.watch_ohlcv(self.symbol, self.timeframe)
+                logging.info(f"Received OHLCV data: {ohlcvs}")
+                for ohlcv in ohlcvs:
                     # Emit the OHLCV data
-                    yield {"ochlv": ochlv}
+                    yield {
+                        "symbol": self.symbol,
+                        "timeframe": self.timeframe,
+                        "timestamp": ohlcv[0],
+                        "open": ohlcv[1],
+                        "high": ohlcv[2],
+                        "low": ohlcv[3],
+                        "close": ohlcv[4],
+                        "volume": ohlcv[5],
+                    }
             except Exception as e:
                 logging.error(
                     f"Error in CCXTOCHLVEmitter: {type(e).__name__} - {str(e)}"

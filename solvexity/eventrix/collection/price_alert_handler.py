@@ -19,8 +19,10 @@ class OCHLVPriceAlert(Handler):
             self._subject: self.on_ohlcv,
         }
     
-    async def on_ochlv(self, data: dict[str, Any]) -> None:
+    async def on_ohlcv(self, data: dict[str, Any]) -> None:
         logger.info(f"Received data: {data}")
+        if self._current_price is None:
+            self._current_price = data["ohlcv"]
 
     
 

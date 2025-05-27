@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 import bisect
 from solvexity.alert import DiscordWebhook
@@ -9,7 +8,6 @@ from hooklet.types import MessageHandlerCallback
 class OCHLVPriceAlert(Handler):
     def __init__(self, pilot: BasePilot, price_thresholds: list[float], webhook_url: str, subject: str, executor_id: str|None = None):
         super().__init__(pilot, executor_id)
-        self.logger = logging.getLogger(__name__)
         self._price_threshold: list[float] = price_thresholds
         self._current_price: float|None = None
         self._prev_price: float|None = None

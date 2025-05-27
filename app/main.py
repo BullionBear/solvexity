@@ -1,20 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-import asyncio
-import logging
-from typing import Type, Dict, List
-from hooklet.base import BaseEventrix
 from hooklet.pilot import NatsPilot
 from solvexity.service.deployer import EventrixDeployer
 from solvexity.service.registry import eventrix_registry
+from hooklet.logger import get_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,  # Changed to DEBUG for more verbose logging
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
 
 # Initialize the NatsPilot
 pilot = NatsPilot(nats_url="nats://localhost:4222")

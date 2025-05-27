@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from typing import Any
 
 import ccxt.pro
@@ -7,8 +6,6 @@ from ccxt.pro import Exchange
 from hooklet.base import BasePilot
 from hooklet.eventrix.emitter import Emitter
 from hooklet.types import GeneratorFunc
-
-logger = logging.getLogger(__name__)
 
 
 class CCXTOCHLVEmitter(Emitter):
@@ -67,9 +64,9 @@ class CCXTOCHLVEmitter(Emitter):
             # Close the CCXT connection explicitly as required
             if hasattr(self, "client") and self.client:
                 await self.client.close()
-                logger.info(f"Closed CCXT connection for {self.exchange_name}")
+                self.logger.info(f"Closed CCXT connection for {self.exchange_name}")
         except Exception as e:
-            logger.error(f"Error closing CCXT client: {type(e).__name__} - {str(e)}")
+            self.logger.error(f"Error closing CCXT client: {type(e).__name__} - {str(e)}")
         finally:
             # Call parent's on_finish to clean up other resources
             await super().on_finish()
@@ -81,9 +78,9 @@ class CCXTOCHLVEmitter(Emitter):
         try:
             if hasattr(self, "client") and self.client:
                 await self.client.close()
-                logger.info(f"Closed CCXT connection on stop for {self.exchange_name}")
+                self.logger.info(f"Closed CCXT connection on stop for {self.exchange_name}")
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 f"Error closing CCXT client on stop: {type(e).__name__} - {str(e)}"
             )
         finally:
@@ -106,7 +103,7 @@ class CCXTOCHLVEmitter(Emitter):
         while self.is_running():
             try:
                 ohlcvs = await self.client.watch_ohlcv(self.symbol, self.timeframe)
-                logging.info(f"Received OHLCV data: {ohlcvs}")
+                self.logger.info(f"Received OHLCV data: {ohlcvs}")
                 for ohlcv in ohlcvs:
                     # Emit the OHLCV data
                     yield {
@@ -120,7 +117,7 @@ class CCXTOCHLVEmitter(Emitter):
                         "volume": ohlcv[5],
                     }
             except Exception as e:
-                logging.error(
+                self.logger.error(
                     f"Error in CCXTOCHLVEmitter: {type(e).__name__} - {str(e)}"
                 )
                 # Brief pause to prevent tight error loop
@@ -135,7 +132,7 @@ class CCXTOCHLVEmitter(Emitter):
                     )
                     await self.client.load_markets()
                 except Exception as reconnect_error:
-                    logging.error(
+                    self.logger.error(
                         "Failed to reconnect: "
                         f"{type(reconnect_error).__name__} - {str(reconnect_error)}"
                     )

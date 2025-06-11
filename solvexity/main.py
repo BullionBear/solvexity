@@ -9,7 +9,7 @@ import signal
 
 from hooklet.pilot import NatsPilot
 
-from solvexity.eventrix.collection.ccxt_ochlv_emitter import CCXTOCHLVEmitter
+from solvexity.trader.collection.ccxt_ochlv_emitter import CCXTOCHLVEmitter
 
 # Configure logging
 logging.basicConfig(

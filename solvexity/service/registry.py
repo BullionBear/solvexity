@@ -8,8 +8,6 @@ import logging
 from typing import Dict, Type, Optional
 
 from hooklet.base import BaseEventrix
-from solvexity.eventrix.collection.ccxt_ochlv_emitter import CCXTOCHLVEmitter
-from solvexity.eventrix.collection.price_alert_handler import OCHLVPriceAlert
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +68,7 @@ class EventrixRegistry:
 
 # Create the global registry and register available Eventrix types
 eventrix_registry = EventrixRegistry()
-eventrix_registry.register("CCXTOCHLVEmitter", CCXTOCHLVEmitter)
-eventrix_registry.register("OCHLVPriceAlert", OCHLVPriceAlert)
+
 
 # For easy imports
 __all__ = ["eventrix_registry"]

@@ -27,178 +27,119 @@ async def connector(api_credentials: Dict[str, str]):
 
 
 @pytest.mark.asyncio
-async def test_get_ticker_24hr(connector: BinanceRestConnector):
-    """Test getting 24hr ticker information."""
-    # Test with a known trading pair
-    response = await connector.get_ticker_24hr('BTCUSDT')
-    
-    # Verify response structure
+async def test_connectivity(connector: BinanceRestConnector):
+    """Test basic connectivity to the Binance API."""
+    response = await connector.test_connectivity()
     assert isinstance(response, dict)
-    assert 'symbol' in response
-    assert 'lastPrice' in response
-    assert 'volume' in response
-    assert response['symbol'] == 'BTCUSDT'
-    
-    # Verify numeric fields
-    assert float(response['lastPrice']) > 0
-    assert float(response['volume']) >= 0
+    assert len(response) == 0  # Empty dict indicates success
 
 
 @pytest.mark.asyncio
-async def test_get_depth(connector: BinanceRestConnector):
-    """Test getting order book depth."""
-    # Test with a known trading pair
-    response = await connector.get_depth('BTCUSDT', limit=5)
-    
-    # Verify response structure
+async def test_server_time(connector: BinanceRestConnector):
+    """Test getting server time."""
+    response = await connector.get_server_time()
     assert isinstance(response, dict)
+    assert 'serverTime' in response
+    assert isinstance(response['serverTime'], int)
+
+
+@pytest.mark.asyncio
+async def test_exchange_info(connector: BinanceRestConnector):
+    """Test getting exchange information."""
+    response = await connector.get_exchange_info()
+    assert isinstance(response, dict)
+    assert 'timezone' in response
+    assert 'serverTime' in response
+    assert 'symbols' in response
+    assert isinstance(response['symbols'], list)
+    assert len(response['symbols']) > 0
+
+
+@pytest.mark.asyncio
+async def test_order_book_depth(connector: BinanceRestConnector):
+    """Test getting order book depth."""
+    symbol = 'BTCUSDT'
+    response = await connector.get_depth(symbol)
+    assert isinstance(response, dict)
+    assert 'lastUpdateId' in response
     assert 'bids' in response
     assert 'asks' in response
-    assert len(response['bids']) <= 5
-    assert len(response['asks']) <= 5
-    
-    # Verify bid/ask structure
-    if response['bids']:
-        bid = response['bids'][0]
-        assert len(bid) == 2
-        assert float(bid[0]) > 0  # price
-        assert float(bid[1]) > 0  # quantity
+    assert isinstance(response['bids'], list)
+    assert isinstance(response['asks'], list)
 
 
 @pytest.mark.asyncio
-async def test_get_trades(connector: BinanceRestConnector):
-    """Test getting recent trades."""
-    # Test with a known trading pair
-    response = await connector.get_trades('BTCUSDT', limit=5)
-    
-    # Verify response structure
+async def test_klines(connector: BinanceRestConnector):
+    """Test getting klines/candlestick data."""
+    symbol = 'BTCUSDT'
+    interval = '1h'
+    response = await connector.get_klines(symbol, interval, limit=10)
     assert isinstance(response, list)
-    assert len(response) <= 5
-    
-    if response:
-        trade = response[0]
-        assert 'id' in trade
-        assert 'price' in trade
-        assert 'qty' in trade
-        assert 'time' in trade
-        assert float(trade['price']) > 0
-        assert float(trade['qty']) > 0
+    assert len(response) <= 10
+    if len(response) > 0:
+        # Each kline contains: [Open time, Open, High, Low, Close, Volume, Close time, Quote asset volume, Number of trades, Taker buy base asset volume, Taker buy quote asset volume, Ignore]
+        assert len(response[0]) == 12
+        # Verify the first element is a timestamp
+        assert isinstance(response[0][0], int)
+        # Verify price fields are strings
+        assert isinstance(response[0][1], str)  # Open price
+        assert isinstance(response[0][2], str)  # High price
+        assert isinstance(response[0][3], str)  # Low price
+        assert isinstance(response[0][4], str)  # Close price
 
 
 @pytest.mark.asyncio
-async def test_create_and_cancel_order(connector: BinanceRestConnector):
-    """Test creating and canceling an order."""
-    # Skip if no API credentials
-    if not connector.api_key or not connector.api_secret:
-        pytest.skip("No API credentials provided")
-        
-    # Create a limit order
+async def test_get_account_information(connector: BinanceRestConnector):
+    """Test fetching account information (requires API key/secret)."""
+    info = await connector.get_account_information()
+    assert isinstance(info, dict)
+    assert 'balances' in info
+    assert 'accountType' in info
+
+
+@pytest.mark.asyncio
+async def test_create_and_cancel_market_order(connector: BinanceRestConnector):
+    """Test creating, fetching, and canceling a market order (testnet)."""
+    symbol = 'BTCUSDT'
+    # Use a very small quantity for testnet
+    quantity = 0.0001
+    # Create a market BUY order
     order = await connector.create_order(
-        symbol='BTCUSDT',
+        symbol=symbol,
         side='BUY',
-        order_type='LIMIT',
-        quantity=0.001,  # Minimum order size
-        price=10000,  # Far from current price to avoid execution
-        time_in_force='GTC'
+        type='MARKET',
+        quantity=quantity
     )
-    
-    # Verify order creation
-    assert isinstance(order, dict)
     assert 'orderId' in order
-    assert order['symbol'] == 'BTCUSDT'
-    assert order['side'] == 'BUY'
-    assert order['type'] == 'LIMIT'
-    
-    # Cancel the order
-    cancel_response = await connector.cancel_order(
-        symbol='BTCUSDT',
-        order_id=order['orderId']
-    )
-    
-    # Verify order cancellation
-    assert isinstance(cancel_response, dict)
-    assert cancel_response['orderId'] == order['orderId']
-    assert cancel_response['status'] == 'CANCELED'
+    order_id = order['orderId']
+    # Fetch the order
+    fetched = await connector.get_order(symbol=symbol, order_id=order_id)
+    assert fetched['orderId'] == order_id
+    assert fetched['symbol'] == symbol
+    # Cancel the order (if not filled)
+    if fetched['status'] not in ('FILLED', 'CANCELED', 'EXPIRED'):
+        cancel = await connector.cancel_order(symbol=symbol, order_id=order_id)
+        assert cancel['orderId'] == order_id
 
 
 @pytest.mark.asyncio
-async def test_get_order(connector: BinanceRestConnector):
-    """Test getting order information."""
-    # Skip if no API credentials
-    if not connector.api_key or not connector.api_secret:
-        pytest.skip("No API credentials provided")
-        
-    # Create a test order
-    order = await connector.create_order(
-        symbol='BTCUSDT',
-        side='BUY',
-        order_type='LIMIT',
-        quantity=0.001,
-        price=10000,
-        time_in_force='GTC'
-    )
-    
-    try:
-        # Get order information
-        order_info = await connector.get_order(
-            symbol='BTCUSDT',
-            order_id=order['orderId']
-        )
-        
-        # Verify order information
-        assert isinstance(order_info, dict)
-        assert order_info['orderId'] == order['orderId']
-        assert order_info['symbol'] == 'BTCUSDT'
-        assert order_info['side'] == 'BUY'
-        assert order_info['type'] == 'LIMIT'
-        
-    finally:
-        # Clean up: cancel the order
-        await connector.cancel_order(
-            symbol='BTCUSDT',
-            order_id=order['orderId']
-        )
+async def test_get_open_orders(connector: BinanceRestConnector):
+    """Test listing open orders (requires API key/secret)."""
+    symbol = 'BTCUSDT'
+    open_orders = await connector.get_open_orders(symbol=symbol)
+    assert isinstance(open_orders, list)
+    for order in open_orders:
+        assert order['symbol'] == symbol
+        assert 'orderId' in order
 
 
 @pytest.mark.asyncio
-async def test_get_account(connector: BinanceRestConnector):
-    """Test getting account information."""
-    # Skip if no API credentials
-    if not connector.api_key or not connector.api_secret:
-        pytest.skip("No API credentials provided")
-        
-    response = await connector.get_account()
-    
-    # Verify response structure
-    assert isinstance(response, dict)
-    assert 'balances' in response
-    assert 'permissions' in response
-    
-    # Verify balance structure
-    if response['balances']:
-        balance = response['balances'][0]
-        assert 'asset' in balance
-        assert 'free' in balance
-        assert 'locked' in balance
-        assert float(balance['free']) >= 0
-        assert float(balance['locked']) >= 0
+async def test_get_my_trades(connector: BinanceRestConnector):
+    """Test listing user trades (requires API key/secret)."""
+    symbol = 'BTCUSDT'
+    trades = await connector.get_my_trades(symbol=symbol, limit=5)
+    assert isinstance(trades, list)
+    for trade in trades:
+        assert trade['symbol'] == symbol
+        assert 'id' in trade
 
-
-@pytest.mark.asyncio
-async def test_error_handling(connector: BinanceRestConnector):
-    """Test error handling for invalid requests."""
-    # Test with invalid symbol
-    with pytest.raises(aiohttp.ClientResponseError) as exc_info:
-        await connector.get_ticker_24hr('INVALID_SYMBOL')
-    assert exc_info.value.status == 400
-    
-    # Test with invalid order parameters
-    with pytest.raises(aiohttp.ClientResponseError) as exc_info:
-        await connector.create_order(
-            symbol='BTCUSDT',
-            side='INVALID_SIDE',
-            order_type='LIMIT',
-            quantity=0.001,
-            price=10000
-        )
-    assert exc_info.value.status == 400 

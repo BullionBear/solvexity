@@ -2,14 +2,11 @@ from typing import Optional, Dict, Any, List, Callable
 import websockets
 import json
 import asyncio
-import hmac
-import hashlib
 import time
-from datetime import datetime
-from .rest import BinanceRestConnector
+from .rest import BinanceRestClient
 
-class BinanceWebSocketConnector:
-    """Binance WebSocket API connector for real-time data streaming."""
+class BinanceWebSocketClient:
+    """Binance WebSocket API client for real-time data streaming."""
 
     BASE_URL = "wss://stream.binance.com/ws"
     TESTNET_URL = "wss://stream.testnet.binance.vision/ws"
@@ -24,7 +21,7 @@ class BinanceWebSocketConnector:
         self._subscriptions: Dict[str, List[Callable]] = {}
         self._running = False
         self._listen_task: Optional[asyncio.Task] = None
-        self._rest_connector = None  # Will be initialized in connect()
+        self._rest_connector: Optional[BinanceRestClient] = None  # Will be initialized in connect()
         self._listen_key: Optional[str] = None
         self._keep_alive_task: Optional[asyncio.Task] = None
 

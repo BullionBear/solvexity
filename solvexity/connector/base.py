@@ -8,33 +8,23 @@ from datetime import datetime
 import hmac
 import hashlib
 import time
-
+from solvexity.connector.types import OHLCV
 
 class ExchangeConnector(ABC):
     """Abstract base class for exchange connectors implementing REST and WebSocket functionality."""
-    
-    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None, passphrase: Optional[str] = None):
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.passphrase = passphrase
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.ws: Optional[websockets.WebSocketClientProtocol] = None
-        
+    @abstractmethod
     async def __aenter__(self):
-        """Async context manager entry."""
-        self.session = aiohttp.ClientSession()
-        return self
-        
+        """Async context manager enter."""
+        pass
+
+    @abstractmethod
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-        if self.session:
-            await self.session.close()
-        if self.ws:
-            await self.ws.close()
+        pass
             
     @abstractmethod
-    async def get_ticker(self, symbol: str) -> Dict[str, Any]:
-        """Get current ticker information for a symbol."""
+    async def get_ohlcv(self, symbol: str, interval: str, limit: int = 100) -> List[OHLCV]:
+        """Get current OHLCV information for a symbol."""
         pass
         
     @abstractmethod

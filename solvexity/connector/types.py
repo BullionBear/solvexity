@@ -2,6 +2,11 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from decimal import Decimal
 
+class Exchange(Enum):
+    BINANCE = "BINANCE"
+    BINANCE_FUTURES = "BINANCE_FUTURES"
+    BYBIT = "BYBIT"
+
 class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
@@ -44,4 +49,19 @@ class OrderBook(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book")
     bids: list[tuple[Decimal, Decimal]] = Field(..., description="The bids of the order book")
     asks: list[tuple[Decimal, Decimal]] = Field(..., description="The asks of the order book")
+
+class OHLCV(BaseModel):
+    symbol: Symbol = Field(..., description="The symbol of the OHLCV")
+    open_time: int = Field(..., description="The open time of the OHLCV")
+    open: Decimal = Field(..., description="The open price of the OHLCV")
+    high: Decimal = Field(..., description="The high price of the OHLCV")
+    low: Decimal = Field(..., description="The low price of the OHLCV")
+    close: Decimal = Field(..., description="The close price of the OHLCV")
+    volume: Decimal = Field(..., description="The volume of the OHLCV")
+    close_time: int = Field(..., description="The close time of the OHLCV")
+    quote_volume: Decimal = Field(..., description="The quote volume of the OHLCV")
+    n_trades: int|None = Field(None, description="The number of trades of the OHLCV")
+    taker_buy_base_asset_volume: Decimal|None = Field(None, description="The taker buy base asset volume of the OHLCV")
+    taker_buy_quote_asset_volume: Decimal|None = Field(None, description="The taker buy quote asset volume of the OHLCV")
+    ignore: int|None = Field(None, description="The ignore of the OHLCV")
 

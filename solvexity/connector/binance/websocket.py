@@ -31,7 +31,7 @@ class BinanceWebSocketClient:
             return
         
         # Initialize REST connector with async context manager
-        self._rest_connector = BinanceRestConnector(self.api_key, self.api_secret, self.use_testnet)
+        self._rest_connector = BinanceRestClient(self.api_key, self.api_secret, self.use_testnet)
         await self._rest_connector.__aenter__()
         
         self.ws = await websockets.connect(self.ws_url)

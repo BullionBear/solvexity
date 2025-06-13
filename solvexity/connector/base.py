@@ -8,7 +8,7 @@ from datetime import datetime
 import hmac
 import hashlib
 import time
-from solvexity.connector.types import OHLCV
+from solvexity.connector.types import OHLCV, OrderBook
 
 class ExchangeConnector(ABC):
     """Abstract base class for exchange connectors implementing REST and WebSocket functionality."""
@@ -28,13 +28,13 @@ class ExchangeConnector(ABC):
         pass
         
     @abstractmethod
-    async def get_orderbook(self, symbol: str, depth: int = 20) -> Dict[str, Any]:
+    async def get_orderbook(self, symbol: str, depth: int = 20) -> OrderBook:
         """Get order book for a symbol."""
         pass
         
     @abstractmethod
-    async def get_recent_trades(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get recent trades for a symbol."""
+    async def get_trades(self, symbol: str, limit: int = 100) -> List[Trade]:
+        """Get aggregate trades for a symbol."""
         pass
         
     @abstractmethod

@@ -270,6 +270,36 @@ class BinanceRestConnector:
             params["limit"] = limit
         return await self._request("GET", f"/api/v3/myTrades", signed=True, params=params)
     
+    async def generate_listen_key(self) -> Dict:
+        """Generate a new listen key.
+        
+        Returns:
+            Dictionary with listen key
+        """
+        return await self._request("POST", f"/api/v3/userDataStream", signed=False)
+    
+    async def keep_alive_listen_key(self, listen_key: str) -> Dict:
+        """Keep a listen key alive.
+        
+        Args:
+            listen_key: Listen key
+            
+        Returns:   
+            None
+        """
+        return await self._request("PUT", f"/api/v3/userDataStream", signed=False, data={"listenKey": listen_key})
+    
+    async def delete_listen_key(self, listen_key: str) -> Dict:
+        """Delete a listen key.
+        
+        Args:
+            listen_key: Listen key
+            
+        Returns:
+            None
+        """
+        return await self._request("DELETE", f"/api/v3/userDataStream", signed=False, data={"listenKey": listen_key})
+    
     async def get_depth(self, symbol: str, limit: Optional[int] = None) -> Dict:
         """Get order book depth.
         
@@ -334,4 +364,5 @@ class BinanceRestConnector:
         if time_zone is not None:
             params["timeZone"] = time_zone
         return await self._request("GET", f"/api/v3/klines", signed=False, params=params)
+    
     

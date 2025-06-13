@@ -13,3 +13,4 @@ test.*
 .ipynb_checkpoints/
 *.csv
 nats-data
+script/integration.sh

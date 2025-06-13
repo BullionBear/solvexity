@@ -1,14 +1,10 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
-import aiohttp
 import websockets
-import json
 import asyncio
-from datetime import datetime
-import hmac
-import hashlib
-import time
-from solvexity.connector.types import OHLCV, OrderBook
+from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade
+from solvexity.connector.types import OrderSide, OrderType
 
 class ExchangeConnector(ABC):
     """Abstract base class for exchange connectors implementing REST and WebSocket functionality."""
@@ -23,38 +19,38 @@ class ExchangeConnector(ABC):
         pass
             
     @abstractmethod
-    async def get_ohlcv(self, symbol: str, interval: str, limit: int = 100) -> List[OHLCV]:
+    async def get_ohlcv(self, symbol: Symbol, interval: str, limit: int = 100) -> List[OHLCV]:
         """Get current OHLCV information for a symbol."""
         pass
         
     @abstractmethod
-    async def get_orderbook(self, symbol: str, depth: int = 20) -> OrderBook:
+    async def get_orderbook(self, symbol: Symbol, depth: int = 20) -> OrderBook:
         """Get order book for a symbol."""
         pass
         
     @abstractmethod
-    async def get_trades(self, symbol: str, limit: int = 100) -> List[Trade]:
+    async def get_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
         """Get aggregate trades for a symbol."""
         pass
         
     @abstractmethod
-    async def create_order(self, symbol: str, side: str, order_type: str, 
-                         quantity: float, price: Optional[float] = None) -> Dict[str, Any]:
+    async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, 
+                         quantity: Decimal, price: Optional[Decimal] = None) -> Dict[str, Any]:
         """Create a new order."""
         pass
         
     @abstractmethod
-    async def cancel_order(self, order_id: str, symbol: str) -> Dict[str, Any]:
+    async def cancel_order(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
         """Cancel an existing order."""
         pass
         
     @abstractmethod
-    async def get_order_status(self, order_id: str, symbol: str) -> Dict[str, Any]:
+    async def get_order_status(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
         """Get status of an order."""
         pass
         
     @abstractmethod
-    async def get_account_balance(self) -> Dict[str, float]:
+    async def get_account_balance(self) -> Dict[str, Decimal]:
         """Get account balance information."""
         pass
         

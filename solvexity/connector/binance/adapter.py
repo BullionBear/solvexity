@@ -5,7 +5,7 @@ from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStat
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
-from solvexity.connector.logger import SolvexityLogger
+from solvexity.logger import SolvexityLogger
 from solvexity.connector.exceptions import (
     MarketOrderWithPriceError, InvalidOrderPriceError, OrderIdOrClientOrderIdRequiredError
 )
@@ -69,7 +69,6 @@ class BinanceRestAdapter(ExchangeConnector):
             data["time_in_force"] = time_in_force.value
         if client_order_id is not None:
             data["client_order_id"] = client_order_id
-        print(data)
         order = await self.rest_client.create_order(**data)
         self.logger.info(f"Created order for {symbol.base_asset + symbol.quote_asset}: {order}")
         return order

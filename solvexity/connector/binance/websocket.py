@@ -7,6 +7,7 @@ import hashlib
 import time
 from datetime import datetime
 from .rest import BinanceRestClient
+from solvexity.logger import SolvexityLogger
 
 class BinanceWebSocketClient:
     """Binance WebSocket API client for real-time data streaming."""
@@ -27,6 +28,7 @@ class BinanceWebSocketClient:
         self._rest_connector = None  # Will be initialized in connect()
         self._listen_key: Optional[str] = None
         self._keep_alive_task: Optional[asyncio.Task] = None
+        self.logger = SolvexityLogger().get_logger(__name__)
 
     async def connect(self) -> None:
         """Establish WebSocket connection."""
@@ -72,7 +74,7 @@ class BinanceWebSocketClient:
                 await self._rest_connector.keep_alive_listen_key(self._listen_key)
                 await asyncio.sleep(30 * 60)  # Keep alive every 30 minutes
             except Exception as e:
-                print(f"Error keeping listen key alive: {e}")
+                self.logger.error(f"Error keeping listen key alive: {e}")
                 await asyncio.sleep(5)
 
     async def _get_listen_key(self) -> str:
@@ -103,13 +105,13 @@ class BinanceWebSocketClient:
                 message = await self.ws.recv()
                 await self._handle_message(json.loads(message))
             except websockets.exceptions.ConnectionClosed:
-                print("WebSocket connection closed. Attempting to reconnect...")
+                self.logger.warning("WebSocket connection closed. Attempting to reconnect...")
                 await asyncio.sleep(5)
                 await self.connect()
                 # Resubscribe to all streams after reconnection
                 await self._resubscribe_all()
             except Exception as e:
-                print(f"Error in WebSocket listener: {e}")
+                self.logger.error(f"Error in WebSocket listener: {e}")
                 await asyncio.sleep(5)
 
     async def _handle_message(self, message: Dict[str, Any]) -> None:

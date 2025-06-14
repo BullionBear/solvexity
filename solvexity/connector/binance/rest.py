@@ -5,7 +5,7 @@ import hashlib
 import time
 import json
 import urllib.parse
-
+from solvexity.logger import SolvexityLogger
 
 class BinanceRestClient:
     """Binance REST API client for making direct API calls."""
@@ -19,6 +19,7 @@ class BinanceRestClient:
         self.api_secret = api_secret
         self.base_url = self.TESTNET_URL if use_testnet else self.BASE_URL
         self.session: Optional[aiohttp.ClientSession] = None
+        self.logger = SolvexityLogger().get_logger(__name__)
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -99,10 +100,10 @@ class BinanceRestClient:
             
         headers = self._get_headers()
         
-        print(f"Making {method} request to {url}")  # Debug log
-        print(f"Params: {params}")  # Debug log
-        print(f"Data: {data}")  # Debug log
-        print(f"Headers: {headers}")  # Debug log
+        self.logger.debug(f"Making {method} request to {url}")  # Debug log
+        self.logger.debug(f"Params: {params}")  # Debug log
+        self.logger.debug(f"Data: {data}")  # Debug log
+        self.logger.debug(f"Headers: {headers}")  # Debug log
         
         async with self.session.request(
             method, 
@@ -173,7 +174,6 @@ class BinanceRestClient:
             "type": type,
             "quantity": quantity,
         }
-        print(data)
         if price is not None:
             data["price"] = price
         if time_in_force is not None:
@@ -222,7 +222,6 @@ class BinanceRestClient:
         if orig_client_order_id is not None:
             params["origClientOrderId"] = orig_client_order_id
             
-        print(f"Cancel order params: {params}")  # Debug log
         return await self._request("DELETE", "/api/v3/order", signed=True, params=params)
     
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[Dict]:
@@ -275,7 +274,6 @@ class BinanceRestClient:
             params["fromId"] = from_id
         if limit is not None:
             params["limit"] = limit
-        print(f"My trades params: {params}")
         return await self._request("GET", f"/api/v3/myTrades", signed=True, params=params)
     
     async def generate_listen_key(self) -> Dict:

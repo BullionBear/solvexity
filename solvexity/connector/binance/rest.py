@@ -110,7 +110,7 @@ class BinanceRestClient:
             return await response.json()
         
     async def get_account_information(self) -> Dict:
-        """Get current account information (USER_DATA).
+        """Get current account  (USER_DATA).
         
         Returns:
             Account information including balances
@@ -314,6 +314,18 @@ class BinanceRestClient:
         if limit is not None:
             params["limit"] = limit
         return await self._request("GET", f"/api/v3/depth", signed=False, params=params)
+    
+    async def get_recent_trades(self, symbol: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get recent trades.
+        
+        Args:
+            symbol: Trading pair (e.g., BTCUSDT)
+            limit: Optional limit for the trades (default: 500)
+        """
+        params = {"symbol": symbol}
+        if limit is not None:
+            params["limit"] = limit
+        return await self._request("GET", f"/api/v3/trades", signed=False, params=params)
     
     async def get_agg_trades(self, symbol: str, from_id: Optional[int] = None, start_time: Optional[int] = None, end_time: Optional[int] = None, limit: Optional[int] = None) -> List[Dict]:
         """Get aggregate trades.

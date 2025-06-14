@@ -11,7 +11,7 @@ from solvexity.connector.logger import SolvexityLogger
 class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         self.rest_client = BinanceRestClient(api_key, api_secret, use_testnet)
-        self.logger = SolvexityLogger.get_logger(__name__)
+        self.logger = SolvexityLogger().get_logger(__name__)
 
     async def __aenter__(self):
         await self.rest_client.__aenter__()
@@ -21,10 +21,11 @@ class BinanceRestAdapter(ExchangeConnector):
         await self.rest_client.__aexit__(exc_type, exc_val, exc_tb)
     
     async def get_orderbook(self, symbol: Symbol, depth: int = 20) -> OrderBook:
-        orderbook = await self.rest_client.get_orderbook(symbol.base_asset + symbol.quote_asset, depth)
+        orderbook = await self.rest_client.get_depth(symbol.base_asset + symbol.quote_asset, depth)
         self.logger.info(f"Orderbook for {symbol.base_asset + symbol.quote_asset}: {orderbook}")
         return OrderBook(
             symbol=symbol,
+            last_update_id=orderbook['lastUpdateId'],
             bids=[(Decimal(bid[0]), Decimal(bid[1])) for bid in orderbook['bids']],
             asks=[(Decimal(ask[0]), Decimal(ask[1])) for ask in orderbook['asks']]
         )
@@ -32,13 +33,14 @@ class BinanceRestAdapter(ExchangeConnector):
     async def get_recent_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
         trades = await self.rest_client.get_recent_trades(symbol.base_asset + symbol.quote_asset, limit)
         self.logger.info(f"Recent trades for {symbol.base_asset + symbol.quote_asset}: {trades}")
+        side_of_trade = lambda x: OrderSide.SELL if x['isBuyerMaker'] else OrderSide.BUY
         return [Trade(
+            id=trade['id'],
             symbol=symbol,
-            price=Decimal(trade[0]),
-            quantity=Decimal(trade[1]),
-            time=trade[2],
-            is_buyer_maker=trade[3],
-            is_best_match=trade[4]
+            price=Decimal(trade['price']),
+            quantity=Decimal(trade['qty']),
+            time=trade['time'],
+            side=side_of_trade(trade)
         ) for trade in trades]
     
     async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, quantity: Decimal, price: Optional[Decimal] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
@@ -75,13 +77,13 @@ class BinanceRestAdapter(ExchangeConnector):
         return order
     
     async def get_account_balance(self) -> List[AccountBalance]:
-        balance = await self.rest_client.get_account_balance()
-        self.logger.info(f"Account balance: {balance}")
+        account_info = await self.rest_client.get_account_information()
+        self.logger.debug(f"Account balance: {account_info}")
         return [AccountBalance(
             asset=balance['asset'],
-            free=Decimal(balance['free']),
+            free=Decimal(balance['free']), 
             locked=Decimal(balance['locked'])
-        ) for balance in balance]
+        ) for balance in account_info['balances']]
     
     async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
         trades = await self.rest_client.get_my_trades(symbol.base_asset + symbol.quote_asset, limit)

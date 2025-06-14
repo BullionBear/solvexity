@@ -77,7 +77,6 @@ class Trade(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
-    quote_quantity: Decimal = Field(..., description="The quote quantity of the trade")
     time: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
 

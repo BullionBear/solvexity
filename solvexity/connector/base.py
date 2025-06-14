@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union, AsyncGenerator
 import websockets
 import asyncio
-from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, AccountBalance
+from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, AccountBalance, OrderBookUpdate
 from solvexity.connector.types import OrderSide, OrderType
 
 class ExchangeConnector(ABC):
@@ -60,7 +60,7 @@ class ExchangeConnector(ABC):
         pass
 
 
-class ExchangeWebSocketConnector(ABC):
+class ExchangeStreamConnector(ABC):
 
     @abstractmethod
     async def __aenter__(self):
@@ -73,7 +73,7 @@ class ExchangeWebSocketConnector(ABC):
         pass
 
     @abstractmethod
-    async def depth_diff_iterator(self, symbol: Symbol) -> AsyncGenerator[OrderBook, None]:
+    async def depth_diff_iterator(self, symbol: Symbol) -> AsyncGenerator[OrderBookUpdate, None]:
         """Return an async generator that yields the latest order book updates for a symbol.
         
         Usage:

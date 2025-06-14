@@ -46,8 +46,17 @@ class Symbol(BaseModel):
 
 class OrderBook(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book")
+    last_update_id: int = Field(..., description="The last update id of the order book")
     bids: list[tuple[Decimal, Decimal]] = Field(..., description="The bids of the order book")
     asks: list[tuple[Decimal, Decimal]] = Field(..., description="The asks of the order book")
+
+class OrderBookUpdate(BaseModel):
+    symbol: Symbol = Field(..., description="The symbol of the order book update")
+    first_update_id: int = Field(..., description="The first update id of the order book update")
+    last_update_id: int = Field(..., description="The last update id of the order book update")
+    prev_last_update_id: int = Field(..., description="The previous last update id of the order book update")
+    bids: list[tuple[Decimal, Decimal]] = Field(..., description="The bids of the order book update")
+    asks: list[tuple[Decimal, Decimal]] = Field(..., description="The asks of the order book update")
 
 class OHLCV(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the OHLCV")

@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import Type, Dict, Any
 
-from solvexity.connector.binance.rest import BinanceRestConnector
-from solvexity.connector.binance.websocket import BinanceWebSocketConnector
-from solvexity.connector.types import Exchange, ExchangeRestConnector, ExchangeWebSocketConnector
+from solvexity.connector.binance.adapter import BinanceRestAdapter, BinanceWebSocketAdapter
+from solvexity.connector.types import Exchange
+from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
 
 
 class ExchangeConnectorFactory(ABC):
     
-    def create_rest_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeRestConnector]:
+    def create_rest_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeConnector]:
         """
         Create a REST connector for the specified exchange.
         
@@ -19,7 +19,7 @@ class ExchangeConnectorFactory(ABC):
                    For Bybit: {'api_key': str, 'api_secret': str, 'passphrase': str, 'use_testnet': bool}
         """
         if exchange == Exchange.BINANCE:
-            return BinanceRestConnector(
+            return BinanceRestAdapter(
                 api_key=config['api_key'],
                 api_secret=config['api_secret'],
                 use_testnet=config.get('use_testnet', False)
@@ -31,7 +31,7 @@ class ExchangeConnectorFactory(ABC):
         raise ValueError(f"Unsupported exchange: {exchange}")
 
     
-    def create_websocket_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeWebSocketConnector]:
+    def create_websocket_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeStreamConnector]:
         """
         Create a WebSocket connector for the specified exchange.
         
@@ -42,7 +42,7 @@ class ExchangeConnectorFactory(ABC):
                    For Bybit: {'api_key': str, 'api_secret': str, 'passphrase': str, 'use_testnet': bool}
         """
         if exchange == Exchange.BINANCE:
-            return BinanceWebSocketConnector(
+            return BinanceWebSocketAdapter(
                 api_key=config['api_key'],
                 api_secret=config['api_secret'],
                 use_testnet=config.get('use_testnet', False)

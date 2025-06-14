@@ -86,8 +86,8 @@ class BinanceRestClient:
             # Add timestamp for signed requests
             timestamp = int(time.time() * 1000)
             
-            if method == "GET":
-                # For GET requests, add timestamp to query parameters
+            if method in ["GET", "DELETE"]:
+                # For GET and DELETE requests, add timestamp to query parameters
                 params["timestamp"] = timestamp
                 signature = self._generate_signature(params)
                 params["signature"] = signature
@@ -99,11 +99,16 @@ class BinanceRestClient:
             
         headers = self._get_headers()
         
+        print(f"Making {method} request to {url}")  # Debug log
+        print(f"Params: {params}")  # Debug log
+        print(f"Data: {data}")  # Debug log
+        print(f"Headers: {headers}")  # Debug log
+        
         async with self.session.request(
             method, 
             url, 
-            params=params if method == "GET" else None,
-            data=data if method != "GET" else None,
+            params=params if method in ["GET", "DELETE"] else None,
+            data=data if method not in ["GET", "DELETE"] else None,
             headers=headers
         ) as response:
             response.raise_for_status()
@@ -142,8 +147,9 @@ class BinanceRestClient:
         return await self._request("GET", "/api/v3/exchangeInfo")
     
     async def create_order(self, symbol: str, side: str, type: str, 
-                          quantity: float, price: Optional[float] = None,
-                          time_in_force: Optional[str] = None,
+                          quantity: str, price: Optional[str] = None,
+                          time_in_force: Optional[str] = None, 
+                          client_order_id: Optional[str] = None,
                           new_order_resp_type: Optional[str] = None,
                           stop_price: Optional[float] = None) -> Dict:
         """Create a new order (TRADE).
@@ -167,11 +173,13 @@ class BinanceRestClient:
             "type": type,
             "quantity": quantity,
         }
-        
+        print(data)
         if price is not None:
             data["price"] = price
         if time_in_force is not None:
             data["timeInForce"] = time_in_force
+        if client_order_id is not None:
+            data["newClientOrderId"] = client_order_id
         if new_order_resp_type is not None:
             data["newOrderRespType"] = new_order_resp_type
         if stop_price is not None:
@@ -197,14 +205,13 @@ class BinanceRestClient:
             params["origClientOrderId"] = orig_client_order_id
         return await self._request("GET", f"/api/v3/order", signed=True, params=params)
     
-    async def cancel_order(self, symbol: str, order_id: Optional[int] = None, orig_client_order_id: Optional[str] = None, new_client_order_id: Optional[str] = None) -> Dict:
+    async def cancel_order(self, symbol: str, order_id: Optional[int] = None, orig_client_order_id: Optional[str] = None) -> Dict:
         """Cancel an order.
         
         Args:
             symbol: Trading pair (e.g., BTCUSDT)
             order_id: Order ID
             orig_client_order_id: Original client order ID
-            new_client_order_id: New client order ID
             
         Returns:
             Order cancellation response
@@ -214,9 +221,9 @@ class BinanceRestClient:
             params["orderId"] = order_id
         if orig_client_order_id is not None:
             params["origClientOrderId"] = orig_client_order_id
-        if new_client_order_id is not None:
-            params["newClientOrderId"] = new_client_order_id
-        return await self._request("DELETE", f"/api/v3/order", signed=True, params=params)
+            
+        print(f"Cancel order params: {params}")  # Debug log
+        return await self._request("DELETE", "/api/v3/order", signed=True, params=params)
     
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[Dict]:
         """Get open orders.

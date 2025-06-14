@@ -6,7 +6,9 @@ from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
 from solvexity.connector.logger import SolvexityLogger
-
+from solvexity.connector.exceptions import (
+    MarketOrderWithPriceError, InvalidOrderPriceError, OrderIdOrClientOrderIdRequiredError
+)
 
 class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
@@ -43,15 +45,52 @@ class BinanceRestAdapter(ExchangeConnector):
             side=side_of_trade(trade)
         ) for trade in trades]
     
-    async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, quantity: Decimal, price: Optional[Decimal] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
-        order = await self.rest_client.create_order(symbol.base_asset + symbol.quote_asset, side, order_type, quantity, price, client_order_id)
+    async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, quantity: Decimal, price: Optional[Decimal] = None, time_in_force: Optional[TimeInForce] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
+        # validate input before sending to rest client
+        if order_type == OrderType.MARKET and price is not None:
+            raise MarketOrderWithPriceError()
+        if order_type == OrderType.LIMIT and price is None:
+            raise InvalidOrderPriceError()
+        if order_type == OrderType.STOP_LIMIT and price is None:
+            raise InvalidOrderPriceError()
+        if time_in_force is None:
+            time_in_force = TimeInForce.GTC
+        
+        data = {
+            "symbol": symbol.base_asset + symbol.quote_asset,
+            "side": side.value,
+            "type": order_type.value,
+            "quantity": str(quantity),
+        }
+        
+        if price is not None:
+            data["price"] = str(price)
+        if time_in_force is not None and order_type != OrderType.MARKET:
+            data["time_in_force"] = time_in_force.value
+        if client_order_id is not None:
+            data["client_order_id"] = client_order_id
+        print(data)
+        order = await self.rest_client.create_order(**data)
         self.logger.info(f"Created order for {symbol.base_asset + symbol.quote_asset}: {order}")
         return order
     
-    async def cancel_order(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
-        order = await self.rest_client.cancel_order(order_id, symbol.base_asset + symbol.quote_asset)
-        self.logger.info(f"Cancelled order for {symbol.base_asset + symbol.quote_asset}: {order}")
-        return order
+    async def cancel_order(self, symbol: Symbol, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
+        if order_id is not None:
+            order = await self.rest_client.cancel_order(
+                symbol=symbol.base_asset + symbol.quote_asset,
+                order_id=int(order_id)
+            )
+            self.logger.info(f"Cancelled order for {symbol.base_asset + symbol.quote_asset}: {order}")
+            return order
+        elif client_order_id is not None:
+            order = await self.rest_client.cancel_order(
+                symbol=symbol.base_asset + symbol.quote_asset,
+                orig_client_order_id=client_order_id
+            )
+            self.logger.info(f"Cancelled order for {symbol.base_asset + symbol.quote_asset}: {order}")
+            return order
+        else:
+            raise OrderIdOrClientOrderIdRequiredError()
     
     async def get_open_orders(self, symbol: Symbol) -> List[Order]:
         orders = await self.rest_client.get_open_orders(symbol.base_asset + symbol.quote_asset)

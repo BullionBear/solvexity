@@ -98,3 +98,4 @@ class AccountBalance(BaseModel):
     asset: str = Field(..., description="The asset of the account balance")
     free: Decimal = Field(..., description="The free balance of the account balance")
     locked: Decimal = Field(..., description="The locked balance of the account balance")
+    

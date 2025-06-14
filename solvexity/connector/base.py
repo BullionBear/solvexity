@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Union, AsyncGenerator
+from typing import Any, Dict, List, Optional, AsyncGenerator
 import websockets
 import asyncio
-from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, AccountBalance, OrderBookUpdate
+from solvexity.connector.types import OrderBook, Symbol, Trade, Order, AccountBalance, OrderBookUpdate, MyTrade
 from solvexity.connector.types import OrderSide, OrderType
 
 class ExchangeConnector(ABC):
@@ -55,7 +55,7 @@ class ExchangeConnector(ABC):
         pass
 
     @abstractmethod
-    async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
+    async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[MyTrade]:
         """Get my trades for a symbol."""
         pass
 

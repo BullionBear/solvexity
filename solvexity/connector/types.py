@@ -98,4 +98,15 @@ class AccountBalance(BaseModel):
     asset: str = Field(..., description="The asset of the account balance")
     free: Decimal = Field(..., description="The free balance of the account balance")
     locked: Decimal = Field(..., description="The locked balance of the account balance")
+
+class MyTrade(BaseModel):
+    id: int = Field(..., description="The id of the trade")
+    symbol: Symbol = Field(..., description="The symbol of the trade")
+    price: Decimal = Field(..., description="The price of the trade")
+    quantity: Decimal = Field(..., description="The quantity of the trade")
+    time: int = Field(..., description="The time of the trade")
+    side: OrderSide = Field(..., description="The side of the trade")
+    is_maker: bool = Field(..., description="Whether the trade is a maker")
+    commission: Decimal = Field(..., description="The commission of the trade")
+    commission_asset: str = Field(..., description="The commission asset of the trade")
     

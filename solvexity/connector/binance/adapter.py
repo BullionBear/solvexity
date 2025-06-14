@@ -1,7 +1,7 @@
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
-from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance
+from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance, MyTrade
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
@@ -145,17 +145,21 @@ class BinanceRestAdapter(ExchangeConnector):
             locked=Decimal(balance['locked'])
         ) for balance in account_info['balances']]
     
-    async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
-        trades = await self.rest_client.get_my_trades(symbol.base_asset + symbol.quote_asset, limit)
-        self.logger.info(f"My trades for {symbol.base_asset + symbol.quote_asset}: {trades}")
-        return [Trade(
+    async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[MyTrade]:
+        my_trades = await self.rest_client.get_my_trades(symbol.base_asset + symbol.quote_asset, limit=limit)
+        self.logger.info(f"My trades for {symbol.base_asset + symbol.quote_asset}: {my_trades}")
+        side_of_my_trade = lambda x: OrderSide.BUY if x['isBuyer'] else OrderSide.SELL
+        return [MyTrade(
             id=trade['id'],
             symbol=symbol,
-            price=Decimal(trade[0]),
-            quantity=Decimal(trade[1]),
-            time=trade[2],
-            side=OrderSide(trade['side']),
-        ) for trade in trades]
+            price=Decimal(trade['price']),
+            quantity=Decimal(trade['qty']),
+            time=trade['time'],
+            side=side_of_my_trade(trade),
+            is_maker=trade['isMaker'],
+            commission=Decimal(trade['commission']),
+            commission_asset=trade['commissionAsset'],
+        ) for trade in my_trades]
     
 class BinanceWebSocketAdapter(ExchangeStreamConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):

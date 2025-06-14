@@ -275,6 +275,7 @@ class BinanceRestClient:
             params["fromId"] = from_id
         if limit is not None:
             params["limit"] = limit
+        print(f"My trades params: {params}")
         return await self._request("GET", f"/api/v3/myTrades", signed=True, params=params)
     
     async def generate_listen_key(self) -> Dict:

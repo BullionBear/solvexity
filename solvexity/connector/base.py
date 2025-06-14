@@ -35,7 +35,7 @@ class ExchangeConnector(ABC):
         pass
         
     @abstractmethod
-    async def cancel_order(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
+    async def cancel_order(self, symbol: Symbol, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
         """Cancel an existing order."""
         pass
 
@@ -45,7 +45,7 @@ class ExchangeConnector(ABC):
         pass
         
     @abstractmethod
-    async def get_order_status(self, order_id: str|int, symbol: Symbol) -> Order:
+    async def get_order_status(self, symbol: Symbol, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> Order:
         """Get status of an order."""
         pass
         

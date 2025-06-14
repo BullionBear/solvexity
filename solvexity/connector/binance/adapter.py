@@ -109,11 +109,32 @@ class BinanceRestAdapter(ExchangeConnector):
             timestamp=order['transactTime'],
             update_time=order['updateTime']
         ) for order in orders]
-    
-    async def get_order_status(self, order_id: str|int, symbol: Symbol) -> Order:
-        order = await self.rest_client.get_order_status(order_id, symbol.base_asset + symbol.quote_asset)
+
+    async def get_order_status(self, symbol: Symbol, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> Order:
+        if order_id is not None:
+            order = await self.rest_client.get_order(symbol.base_asset + symbol.quote_asset, order_id=int(order_id))
+        elif client_order_id is not None:
+            order = await self.rest_client.get_order(symbol.base_asset + symbol.quote_asset, orig_client_order_id=client_order_id)
+        else:
+            raise OrderIdOrClientOrderIdRequiredError()
+            
         self.logger.info(f"Order status for {symbol.base_asset + symbol.quote_asset}: {order}")
-        return order
+        
+        # Convert string values to appropriate types
+        return Order(
+            symbol=symbol,
+            order_id=str(order['orderId']),
+            client_order_id=order['clientOrderId'],
+            price=Decimal(order['price']),
+            original_quantity=Decimal(order['origQty']),
+            executed_quantity=Decimal(order['executedQty']),
+            side=OrderSide(order['side']),
+            order_type=OrderType(order['type']),
+            time_in_force=TimeInForce(order['timeInForce']),
+            status=OrderStatus(order['status']),
+            timestamp=order['time'],
+            update_time=order['updateTime']
+        )
     
     async def get_account_balance(self) -> List[AccountBalance]:
         account_info = await self.rest_client.get_account_information()

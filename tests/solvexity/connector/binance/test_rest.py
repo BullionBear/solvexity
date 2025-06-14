@@ -1,7 +1,7 @@
 import pytest
 import os
 from typing import Dict, Any
-from solvexity.connector.binance.rest import BinanceRestConnector
+from solvexity.connector.binance.rest import BinanceRestClient
 import aiohttp
 
 
@@ -17,7 +17,7 @@ def api_credentials() -> Dict[str, str]:
 @pytest.fixture
 async def connector(api_credentials: Dict[str, str]):
     """Create a test connector instance."""
-    connector = BinanceRestConnector(
+    connector = BinanceRestClient(
         api_key=api_credentials['api_key'],
         api_secret=api_credentials['api_secret'],
         use_testnet=True  # Always use testnet for tests
@@ -27,7 +27,7 @@ async def connector(api_credentials: Dict[str, str]):
 
 
 @pytest.mark.asyncio
-async def test_connectivity(connector: BinanceRestConnector):
+async def test_connectivity(connector: BinanceRestClient):
     """Test basic connectivity to the Binance API."""
     response = await connector.test_connectivity()
     assert isinstance(response, dict)
@@ -35,7 +35,7 @@ async def test_connectivity(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_server_time(connector: BinanceRestConnector):
+async def test_server_time(connector: BinanceRestClient):
     """Test getting server time."""
     response = await connector.get_server_time()
     assert isinstance(response, dict)
@@ -44,7 +44,7 @@ async def test_server_time(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_exchange_info(connector: BinanceRestConnector):
+async def test_exchange_info(connector: BinanceRestClient):
     """Test getting exchange information."""
     response = await connector.get_exchange_info()
     assert isinstance(response, dict)
@@ -56,7 +56,7 @@ async def test_exchange_info(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_order_book_depth(connector: BinanceRestConnector):
+async def test_order_book_depth(connector: BinanceRestClient):
     """Test getting order book depth."""
     symbol = 'BTCUSDT'
     response = await connector.get_depth(symbol)
@@ -69,7 +69,7 @@ async def test_order_book_depth(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_klines(connector: BinanceRestConnector):
+async def test_klines(connector: BinanceRestClient):
     """Test getting klines/candlestick data."""
     symbol = 'BTCUSDT'
     interval = '1h'
@@ -89,7 +89,7 @@ async def test_klines(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_get_account_information(connector: BinanceRestConnector):
+async def test_get_account_information(connector: BinanceRestClient):
     """Test fetching account information (requires API key/secret)."""
     info = await connector.get_account_information()
     assert isinstance(info, dict)
@@ -98,7 +98,7 @@ async def test_get_account_information(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_create_and_cancel_market_order(connector: BinanceRestConnector):
+async def test_create_and_cancel_market_order(connector: BinanceRestClient):
     """Test creating, fetching, and canceling a market order (testnet)."""
     symbol = 'BTCUSDT'
     # Use a very small quantity for testnet
@@ -123,7 +123,7 @@ async def test_create_and_cancel_market_order(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_get_open_orders(connector: BinanceRestConnector):
+async def test_get_open_orders(connector: BinanceRestClient):
     """Test listing open orders (requires API key/secret)."""
     symbol = 'BTCUSDT'
     open_orders = await connector.get_open_orders(symbol=symbol)
@@ -134,7 +134,7 @@ async def test_get_open_orders(connector: BinanceRestConnector):
 
 
 @pytest.mark.asyncio
-async def test_get_my_trades(connector: BinanceRestConnector):
+async def test_get_my_trades(connector: BinanceRestClient):
     """Test listing user trades (requires API key/secret)."""
     symbol = 'BTCUSDT'
     trades = await connector.get_my_trades(symbol=symbol, limit=5)

@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any, List, Callable, Awaitable
 import websockets
 import json
 import asyncio
@@ -21,7 +21,7 @@ class BinanceWebSocketClient:
         self.use_testnet = use_testnet
         self.ws_url = self.TESTNET_URL if use_testnet else self.BASE_URL
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
-        self._subscriptions: Dict[str, List[Callable]] = {}
+        self._subscriptions: Dict[str, List[Callable[[Dict[str, Any]], Awaitable[None]]]] = {}
         self._running = False
         self._listen_task: Optional[asyncio.Task] = None
         self._rest_connector = None  # Will be initialized in connect()
@@ -152,27 +152,27 @@ class BinanceWebSocketClient:
                     for callback in self._subscriptions[self._listen_key]:
                         await callback(message)
 
-    async def subscribe_ticker(self, symbol: str, callback: Callable) -> None:
+    async def subscribe_ticker(self, symbol: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to ticker updates for a symbol."""
         stream = f"{symbol.lower()}@ticker"
         await self._subscribe_stream(stream, callback)
 
-    async def subscribe_orderbook(self, symbol: str, callback: Callable) -> None:
+    async def subscribe_orderbook(self, symbol: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to orderbook updates for a symbol."""
         stream = f"{symbol.lower()}@depth"
         await self._subscribe_stream(stream, callback)
 
-    async def subscribe_trades(self, symbol: str, callback: Callable) -> None:
+    async def subscribe_trades(self, symbol: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to trade updates for a symbol."""
         stream = f"{symbol.lower()}@trade"
         await self._subscribe_stream(stream, callback)
 
-    async def subscribe_kline(self, symbol: str, interval: str, callback: Callable) -> None:
+    async def subscribe_kline(self, symbol: str, interval: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to kline/candlestick updates for a symbol."""
         stream = f"{symbol.lower()}@kline_{interval}"
         await self._subscribe_stream(stream, callback)
 
-    async def subscribe_user_data(self, callback: Callable) -> None:
+    async def subscribe_user_data(self, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to user data updates (orders, balance, etc.)."""
         if not self.api_key or not self.api_secret:
             raise ValueError("API key and secret are required for user data stream")
@@ -184,7 +184,7 @@ class BinanceWebSocketClient:
         stream = f"{listen_key}"
         await self._subscribe_stream(stream, callback)
 
-    async def _subscribe_stream(self, stream: str, callback: Callable) -> None:
+    async def _subscribe_stream(self, stream: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to a WebSocket stream."""
         if not self.ws:
             await self.connect()

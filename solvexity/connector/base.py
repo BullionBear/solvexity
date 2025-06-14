@@ -30,7 +30,7 @@ class ExchangeConnector(ABC):
         
     @abstractmethod
     async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, 
-                         quantity: Decimal, price: Optional[Decimal] = None) -> Dict[str, Any]:
+                         quantity: Decimal, price: Optional[Decimal] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new order."""
         pass
         

@@ -6,10 +6,10 @@ import hmac
 import hashlib
 import time
 from datetime import datetime
-from .rest import BinanceRestConnector
+from .rest import BinanceRestClient
 
-class BinanceWebSocketConnector:
-    """Binance WebSocket API connector for real-time data streaming."""
+class BinanceWebSocketClient:
+    """Binance WebSocket API client for real-time data streaming."""
 
     BASE_URL = "wss://stream.binance.com/ws"
     TESTNET_URL = "wss://stream.testnet.binance.vision/ws"
@@ -34,7 +34,7 @@ class BinanceWebSocketConnector:
             return
         
         # Initialize REST connector with async context manager
-        self._rest_connector = BinanceRestConnector(self.api_key, self.api_secret, self.use_testnet)
+        self._rest_connector = BinanceRestClient(self.api_key, self.api_secret, self.use_testnet)
         await self._rest_connector.__aenter__()
         
         self.ws = await websockets.connect(self.ws_url)

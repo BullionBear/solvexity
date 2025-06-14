@@ -1,9 +1,10 @@
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
 from solvexity.connector.base import ExchangeRestConnector, ExchangeWebSocketConnector
-from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade
-from typing import List
+from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce
+from typing import List, Dict, Any, Optional
 from decimal import Decimal
+from solvexity.connector.types import OrderSide, OrderType
 
 class BinanceRestAdapter(ExchangeRestConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
@@ -16,24 +17,6 @@ class BinanceRestAdapter(ExchangeRestConnector):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.rest_client.__aexit__(exc_type, exc_val, exc_tb)
     
-    async def get_ohlcv(self, symbol: Symbol, interval: str, limit: int = 100) -> List[OHLCV]:
-        ohlcvs = await self.rest_client.get_ohlcv(symbol.base_asset + symbol.quote_asset, interval, limit)
-        return [OHLCV(
-            symbol=symbol,
-            open_time=ohlcv[0],
-            open=Decimal(ohlcv[1]),
-            high=Decimal(ohlcv[2]),
-            low=Decimal(ohlcv[3]),
-            close=Decimal(ohlcv[4]),
-            volume=Decimal(ohlcv[5]),
-            close_time=ohlcv[6],
-            quote_volume=Decimal(ohlcv[7]),
-            n_trades=ohlcv[8],
-            taker_buy_base_asset_volume=Decimal(ohlcv[9]),
-            taker_buy_quote_asset_volume=Decimal(ohlcv[10]),
-            ignore=ohlcv[11]
-        ) for ohlcv in ohlcvs]
-    
     async def get_orderbook(self, symbol: Symbol, depth: int = 20) -> OrderBook:
         orderbook = await self.rest_client.get_orderbook(symbol.base_asset + symbol.quote_asset, depth)
         return OrderBook(
@@ -42,8 +25,8 @@ class BinanceRestAdapter(ExchangeRestConnector):
             asks=[(Decimal(ask[0]), Decimal(ask[1])) for ask in orderbook['asks']]
         )
     
-    async def get_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
-        trades = await self.rest_client.get_trades(symbol.base_asset + symbol.quote_asset, limit)
+    async def get_recent_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
+        trades = await self.rest_client.get_recent_trades(symbol.base_asset + symbol.quote_asset, limit)
         return [Trade(
             symbol=symbol,
             price=Decimal(trade[0]),
@@ -52,6 +35,43 @@ class BinanceRestAdapter(ExchangeRestConnector):
             is_buyer_maker=trade[3],
             is_best_match=trade[4]
         ) for trade in trades]
+    
+    async def create_order(self, symbol: Symbol, side: OrderSide, order_type: OrderType, quantity: Decimal, price: Optional[Decimal] = None, client_order_id: Optional[str] = None) -> Dict[str, Any]:
+        order = await self.rest_client.create_order(symbol.base_asset + symbol.quote_asset, side, order_type, quantity, price, client_order_id)
+        return order
+    
+    async def cancel_order(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
+        order = await self.rest_client.cancel_order(order_id, symbol.base_asset + symbol.quote_asset)
+        return order
+    
+    async def get_open_orders(self, symbol: Symbol) -> List[Order]:
+        orders = await self.rest_client.get_open_orders(symbol.base_asset + symbol.quote_asset)
+        return [Order(
+            symbol=symbol,
+            order_id=order['orderId'],
+            client_order_id=order['clientOrderId'],
+            price=Decimal(order['price']),
+            original_quantity=Decimal(order['origQty']),
+            executed_quantity=Decimal(order['executedQty']),
+            side=OrderSide(order['side']),
+            order_type=OrderType(order['type']),
+            time_in_force=TimeInForce(order['timeInForce']),
+            status=OrderStatus(order['status']),
+            timestamp=order['transactTime'],
+            update_time=order['updateTime']
+        ) for order in orders]
+    
+    async def get_order_status(self, order_id: str|int, symbol: Symbol) -> Order:
+        order = await self.rest_client.get_order_status(order_id, symbol.base_asset + symbol.quote_asset)
+        return order
+    
+    async def get_account_balance(self) -> List[AccountBalance]:
+        balance = await self.rest_client.get_account_balance()
+        return [AccountBalance(
+            asset=balance['asset'],
+            free=Decimal(balance['free']),
+            locked=Decimal(balance['locked'])
+        ) for balance in balance]
 
 class BinanceWebSocketAdapter(ExchangeWebSocketConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):

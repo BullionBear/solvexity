@@ -29,7 +29,7 @@ class ExchangeConnector(ABC):
         pass
         
     @abstractmethod
-    async def get_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
+    async def get_recent_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
         """Get aggregate trades for a symbol."""
         pass
         
@@ -42,6 +42,11 @@ class ExchangeConnector(ABC):
     @abstractmethod
     async def cancel_order(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
         """Cancel an existing order."""
+        pass
+
+    @abstractmethod
+    async def get_open_orders(self, symbol: str) -> List[Order]:
+        """Get open orders for a symbol."""
         pass
         
     @abstractmethod

@@ -63,12 +63,13 @@ class OHLCV(BaseModel):
     n_trades: int|None = Field(None, description="The number of trades of the OHLCV")
     taker_buy_base_asset_volume: Decimal|None = Field(None, description="The taker buy base asset volume of the OHLCV")
     taker_buy_quote_asset_volume: Decimal|None = Field(None, description="The taker buy quote asset volume of the OHLCV")
-    ignore: int|None = Field(None, description="The ignore of the OHLCV")
 
 class Trade(BaseModel):
+    id: int = Field(..., description="The id of the trade")
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
+    quote_quantity: Decimal = Field(..., description="The quote quantity of the trade")
     time: int = Field(..., description="The time of the trade")
-    is_buyer_maker: bool = Field(..., description="Whether the trade is a buyer maker")
-    is_best_match: bool = Field(..., description="Whether the trade is a best match")
+    side: OrderSide = Field(..., description="The side of the trade")
+

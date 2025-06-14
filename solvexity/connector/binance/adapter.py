@@ -1,14 +1,15 @@
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
-from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance, MyTrade
-from typing import List, Dict, Any, Optional
+from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance, MyTrade, OrderBookUpdate
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
 from solvexity.logger import SolvexityLogger
 from solvexity.connector.exceptions import (
     MarketOrderWithPriceError, InvalidOrderPriceError, OrderIdOrClientOrderIdRequiredError
 )
+import asyncio
 
 class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
@@ -160,13 +161,64 @@ class BinanceRestAdapter(ExchangeConnector):
             commission_asset=trade['commissionAsset'],
         ) for trade in my_trades]
     
+    
 class BinanceWebSocketAdapter(ExchangeStreamConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         super().__init__(api_key, api_secret, use_testnet)
         self.websocket_client = BinanceWebSocketClient(api_key, api_secret, use_testnet)
 
-    def connect(self):
-        self.websocket_client.connect()
-
-    def disconnect(self):
-        self.websocket_client.disconnect()
+    async def __aenter__(self):
+        await self.websocket_client.__aenter__()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.websocket_client.__aexit__(exc_type, exc_val, exc_tb)
+    
+    async def depth_diff_iterator(self, symbol: Symbol) -> AsyncGenerator[OrderBookUpdate, None]:
+        queue = asyncio.Queue()
+        ws_symbol = (symbol.base_asset + symbol.quote_asset).lower()
+        async def orderbook_callback(data: Dict[str, Any]) -> None:
+            await queue.put(data)
+        
+        await self.websocket_client.subscribe_orderbook(
+            ws_symbol,
+            orderbook_callback
+        )
+        
+        try:
+            while True:
+                data = await queue.get()
+                yield OrderBookUpdate(
+                    symbol=symbol,
+                    event_time=data['E'],
+                    first_update_id=data['U'],
+                    last_update_id=data['u'],
+                    prev_last_update_id=data['U'],
+                    bids=[(Decimal(bid[0]), Decimal(bid[1])) for bid in data['b']],
+                    asks=[(Decimal(ask[0]), Decimal(ask[1])) for ask in data['a']]
+                )
+        finally:
+            # Cleanup subscription when generator is closed
+            await self.websocket_client.unsubscribe_orderbook(ws_symbol)
+    
+    async def public_trades_iterator(self, symbol: Symbol) -> AsyncGenerator[Trade, None]:
+        queue = asyncio.Queue()
+        ws_symbol = (symbol.base_asset + symbol.quote_asset).lower()
+        async def trade_callback(data: Dict[str, Any]) -> None:
+            await queue.put(data)
+        await self.websocket_client.subscribe_trades(ws_symbol, trade_callback)
+        
+        try:
+            while True:
+                data = await queue.get()
+                yield Trade(
+                    id=data['t'], 
+                    symbol=symbol,
+                    price=Decimal(data['p']),
+                    quantity=Decimal(data['q']),
+                    time=data['T'],
+                    side=OrderSide.BUY if data['m'] else OrderSide.SELL
+                )
+        finally:
+            await self.websocket_client.unsubscribe_trades(ws_symbol)
+        

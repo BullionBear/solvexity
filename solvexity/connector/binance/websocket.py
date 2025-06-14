@@ -164,15 +164,68 @@ class BinanceWebSocketClient:
         stream = f"{symbol.lower()}@depth"
         await self._subscribe_stream(stream, callback)
 
+    async def unsubscribe_orderbook(self, symbol: str) -> None:
+        """Unsubscribe from orderbook updates for a symbol."""
+        stream = f"{symbol.lower()}@depth"
+        if stream in self._subscriptions:
+            del self._subscriptions[stream]
+            if self.ws:
+                await self.ws.send(json.dumps({
+                    "method": "UNSUBSCRIBE",
+                    "params": [stream],
+                    "id": int(time.time() * 1000)
+                }))
+
+    async def subscribe_orderbook_100ms(self, symbol: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
+        """Subscribe to orderbook updates for a symbol at 100ms intervals."""
+        stream = f"{symbol.lower()}@depth@100ms"
+        await self._subscribe_stream(stream, callback)
+
+    async def unsubscribe_orderbook_100ms(self, symbol: str) -> None:
+        """Unsubscribe from orderbook updates for a symbol at 100ms intervals."""
+        stream = f"{symbol.lower()}@depth@100ms"
+        if stream in self._subscriptions:
+            del self._subscriptions[stream]
+            if self.ws:
+                await self.ws.send(json.dumps({
+                    "method": "UNSUBSCRIBE",
+                    "params": [stream],
+                    "id": int(time.time() * 1000)
+                }))
+
     async def subscribe_trades(self, symbol: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to trade updates for a symbol."""
         stream = f"{symbol.lower()}@trade"
         await self._subscribe_stream(stream, callback)
 
+    async def unsubscribe_trades(self, symbol: str) -> None:
+        """Unsubscribe from trade updates for a symbol."""
+        stream = f"{symbol.lower()}@trade"
+        if stream in self._subscriptions:
+            del self._subscriptions[stream]
+            if self.ws:
+                await self.ws.send(json.dumps({
+                    "method": "UNSUBSCRIBE",
+                    "params": [stream],
+                    "id": int(time.time() * 1000)
+                }))
+
     async def subscribe_kline(self, symbol: str, interval: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to kline/candlestick updates for a symbol."""
         stream = f"{symbol.lower()}@kline_{interval}"
         await self._subscribe_stream(stream, callback)
+    
+    async def unsubscribe_kline(self, symbol: str, interval: str) -> None:
+        """Unsubscribe from kline/candlestick updates for a symbol."""
+        stream = f"{symbol.lower()}@kline_{interval}"
+        if stream in self._subscriptions:
+            del self._subscriptions[stream]
+            if self.ws:
+                await self.ws.send(json.dumps({
+                    "method": "UNSUBSCRIBE",
+                    "params": [stream],
+                    "id": int(time.time() * 1000)
+                }))
 
     async def subscribe_user_data(self, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to user data updates (orders, balance, etc.)."""
@@ -185,6 +238,21 @@ class BinanceWebSocketClient:
         # Subscribe to user data stream
         stream = f"{listen_key}"
         await self._subscribe_stream(stream, callback)
+
+    async def unsubscribe_user_data(self) -> None:
+        """Unsubscribe from user data updates."""
+        if self._listen_key in self._subscriptions:
+            del self._subscriptions[self._listen_key]
+            if self.ws:
+                await self.ws.send(json.dumps({
+                    "method": "UNSUBSCRIBE",
+                    "params": [self._listen_key],
+                    "id": int(time.time() * 1000)
+                }))
+            self._listen_key = None
+            if self._keep_alive_task:
+                self._keep_alive_task.cancel()
+                self._keep_alive_task = None
 
     async def _subscribe_stream(self, stream: str, callback: Callable[[Dict[str, Any]], Awaitable[None]]) -> None:
         """Subscribe to a WebSocket stream."""
@@ -201,7 +269,7 @@ class BinanceWebSocketClient:
             }))
         
         self._subscriptions[stream].append(callback)
-
+    
     async def __aenter__(self):
         """Async context manager entry."""
         await self.connect()

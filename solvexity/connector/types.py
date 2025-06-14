@@ -52,6 +52,7 @@ class OrderBook(BaseModel):
 
 class OrderBookUpdate(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book update")
+    event_time: int = Field(..., description="The event time of the order book update")
     first_update_id: int = Field(..., description="The first update id of the order book update")
     last_update_id: int = Field(..., description="The last update id of the order book update")
     prev_last_update_id: int = Field(..., description="The previous last update id of the order book update")

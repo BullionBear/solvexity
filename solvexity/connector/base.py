@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
 import websockets
 import asyncio
-from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade
+from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, AccountBalance
 from solvexity.connector.types import OrderSide, OrderType
 
 class ExchangeConnector(ABC):
@@ -45,20 +45,31 @@ class ExchangeConnector(ABC):
         pass
 
     @abstractmethod
-    async def get_open_orders(self, symbol: str) -> List[Order]:
+    async def get_open_orders(self, symbol: Symbol) -> List[Order]:
         """Get open orders for a symbol."""
         pass
         
     @abstractmethod
-    async def get_order_status(self, order_id: str, symbol: Symbol) -> Dict[str, Any]:
+    async def get_order_status(self, order_id: str|int, symbol: Symbol) -> Order:
         """Get status of an order."""
         pass
         
     @abstractmethod
-    async def get_account_balance(self) -> Dict[str, Decimal]:
+    async def get_account_balance(self) -> List[AccountBalance]:
         """Get account balance information."""
         pass
-        
+
+class ExchangeWebSocketConnector(ABC):
+
+    @abstractmethod
+    async def __aenter__(self):
+        """Async context manager enter."""
+        pass
+
+    @abstractmethod
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        pass
     # WebSocket methods
     @abstractmethod
     async def connect_websocket(self) -> None:

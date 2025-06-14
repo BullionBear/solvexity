@@ -84,6 +84,18 @@ class BinanceWebSocketConnector:
             self._keep_alive_task = asyncio.create_task(self._keep_alive_listen_key())
         return self._listen_key
 
+    async def _resubscribe_all(self) -> None:
+        """Resubscribe to all previously subscribed streams."""
+        if not self.ws:
+            return
+            
+        for stream in self._subscriptions.keys():
+            await self.ws.send(json.dumps({
+                "method": "SUBSCRIBE",
+                "params": [stream],
+                "id": int(time.time() * 1000)
+            }))
+
     async def _listen(self) -> None:
         """Listen for incoming WebSocket messages."""
         while self._running:
@@ -94,6 +106,8 @@ class BinanceWebSocketConnector:
                 print("WebSocket connection closed. Attempting to reconnect...")
                 await asyncio.sleep(5)
                 await self.connect()
+                # Resubscribe to all streams after reconnection
+                await self._resubscribe_all()
             except Exception as e:
                 print(f"Error in WebSocket listener: {e}")
                 await asyncio.sleep(5)

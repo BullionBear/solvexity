@@ -1,12 +1,12 @@
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
-from solvexity.connector.base import ExchangeRestConnector, ExchangeWebSocketConnector
-from solvexity.connector.types import OHLCV, OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce
+from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
+from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance
 from typing import List, Dict, Any, Optional
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
 
-class BinanceRestAdapter(ExchangeRestConnector):
+class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         self.rest_client = BinanceRestClient(api_key, api_secret, use_testnet)
 
@@ -72,8 +72,19 @@ class BinanceRestAdapter(ExchangeRestConnector):
             free=Decimal(balance['free']),
             locked=Decimal(balance['locked'])
         ) for balance in balance]
-
-class BinanceWebSocketAdapter(ExchangeWebSocketConnector):
+    
+    async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
+        trades = await self.rest_client.get_my_trades(symbol.base_asset + symbol.quote_asset, limit)
+        return [Trade(
+            id=trade['id'],
+            symbol=symbol,
+            price=Decimal(trade[0]),
+            quantity=Decimal(trade[1]),
+            time=trade[2],
+            side=OrderSide(trade['side']),
+        ) for trade in trades]
+    
+class BinanceWebSocketAdapter(ExchangeStreamConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         super().__init__(api_key, api_secret, use_testnet)
         self.websocket_client = BinanceWebSocketClient(api_key, api_secret, use_testnet)

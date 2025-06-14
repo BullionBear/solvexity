@@ -116,7 +116,7 @@ class BinanceWebSocketClient:
 
     async def _handle_message(self, message: Dict[str, Any]) -> None:
         """Handle incoming WebSocket messages."""
-        print(f"Received message: {message}")  # Debug log
+        self.logger.debug(f"Received message: {message}")  # Debug log
         
         if 'stream' in message:
             # Handle combined stream messages

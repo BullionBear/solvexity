@@ -1,4 +1,4 @@
-from .discord_webhook import DiscordWebhook, DiscordColor
+from .discord_webhook import DiscordColor, DiscordWebhook
 
 __all__ = [
     "DiscordWebhook",

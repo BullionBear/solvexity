@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import Any, Dict, Type
 
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
@@ -7,7 +6,7 @@ from solvexity.connector.binance.adapter import (BinanceRestAdapter,
 from solvexity.connector.types import Exchange
 
 
-class ExchangeConnectorFactory(ABC):
+class ExchangeConnectorFactory:
     @classmethod
     def create_rest_connector(
         self, exchange: Exchange, config: Dict[str, Any]
@@ -17,9 +16,14 @@ class ExchangeConnectorFactory(ABC):
 
         Args:
             exchange: The exchange to create a connector for
-            config: A dictionary containing connector-specific configuration parameters
-                   For Binance: {'api_key': str, 'api_secret': str, 'use_testnet': bool}
-                   For Bybit: {'api_key': str, 'api_secret': str, 'passphrase': str, 'use_testnet': bool}
+            config: A dictionary containing connector-specific configuration
+                parameters
+                For Binance: {
+                    'api_key': str, 'api_secret': str, 'use_testnet': bool
+                }
+                For Bybit: {
+                    'api_key': str, 'api_secret': str, 'use_testnet': bool
+                }
         """
         if exchange == Exchange.BINANCE:
             return BinanceRestAdapter(
@@ -42,9 +46,14 @@ class ExchangeConnectorFactory(ABC):
 
         Args:
             exchange: The exchange to create a connector for
-            config: A dictionary containing connector-specific configuration parameters
-                   For Binance: {'api_key': str, 'api_secret': str, 'use_testnet': bool}
-                   For Bybit: {'api_key': str, 'api_secret': str, 'passphrase': str, 'use_testnet': bool}
+            config: A dictionary containing connector-specific configuration
+                parameters
+                For Binance: {
+                    'api_key': str, 'api_secret': str, 'use_testnet': bool
+                }
+                For Bybit: {
+                    'api_key': str, 'api_secret': str, 'use_testnet': bool
+                }
         """
         if exchange == Exchange.BINANCE:
             return BinanceWebSocketAdapter(

@@ -79,7 +79,11 @@ class DiscordWebhook:
             title: Embed title
             description: Embed description text
             color: Color of the embed sidebar (use DiscordColor enum or int)
-            fields: List of field dicts with {'name': 'Field Name', 'value': 'Field Value', 'inline': True/False}
+            fields: List of field dicts with {
+                'name': 'Field Name',
+                'value': 'Field Value',
+                'inline': True/False
+            }
             thumbnail_url: URL for small thumbnail image
             image_url: URL for main embed image
             footer_text: Text to display in footer

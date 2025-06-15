@@ -1,9 +1,6 @@
-import asyncio
 from abc import ABC, abstractmethod
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Dict, List, Optional
-
-import websockets
 
 from solvexity.connector.types import (AccountBalance, MyTrade, Order,
                                        OrderBook, OrderBookUpdate, OrderSide,

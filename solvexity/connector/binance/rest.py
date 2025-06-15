@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import json
 import time
 import urllib.parse
 from typing import Any, Dict, List, Optional, Union
@@ -227,7 +226,7 @@ class BinanceRestClient:
             params["orderId"] = order_id
         if orig_client_order_id is not None:
             params["origClientOrderId"] = orig_client_order_id
-        return await self._request("GET", f"/api/v3/order", signed=True, params=params)
+        return await self._request("GET", "/api/v3/order", signed=True, params=params)
 
     async def cancel_order(
         self,
@@ -268,7 +267,7 @@ class BinanceRestClient:
         if symbol is not None:
             params["symbol"] = symbol
         return await self._request(
-            "GET", f"/api/v3/openOrders", signed=True, params=params
+            "GET", "/api/v3/openOrders", signed=True, params=params
         )
 
     async def cancel_all_orders(self, symbol: str) -> Dict:
@@ -281,7 +280,7 @@ class BinanceRestClient:
             Order cancellation response
         """
         return await self._request(
-            "DELETE", f"/api/v3/openOrders", signed=True, params={"symbol": symbol}
+            "DELETE", "/api/v3/openOrders", signed=True, params={"symbol": symbol}
         )
 
     async def get_my_trades(
@@ -318,7 +317,7 @@ class BinanceRestClient:
         if limit is not None:
             params["limit"] = limit
         return await self._request(
-            "GET", f"/api/v3/myTrades", signed=True, params=params
+            "GET", "/api/v3/myTrades", signed=True, params=params
         )
 
     async def generate_listen_key(self) -> Dict:
@@ -327,7 +326,7 @@ class BinanceRestClient:
         Returns:
             Dictionary with listen key
         """
-        return await self._request("POST", f"/api/v3/userDataStream", signed=False)
+        return await self._request("POST", "/api/v3/userDataStream", signed=False)
 
     async def keep_alive_listen_key(self, listen_key: str) -> Dict:
         """Keep a listen key alive.
@@ -340,7 +339,7 @@ class BinanceRestClient:
         """
         return await self._request(
             "PUT",
-            f"/api/v3/userDataStream",
+            "/api/v3/userDataStream",
             signed=False,
             data={"listenKey": listen_key},
         )
@@ -356,7 +355,7 @@ class BinanceRestClient:
         """
         return await self._request(
             "DELETE",
-            f"/api/v3/userDataStream",
+            "/api/v3/userDataStream",
             signed=False,
             data={"listenKey": listen_key},
         )
@@ -374,7 +373,7 @@ class BinanceRestClient:
         params = {"symbol": symbol}
         if limit is not None:
             params["limit"] = limit
-        return await self._request("GET", f"/api/v3/depth", signed=False, params=params)
+        return await self._request("GET", "/api/v3/depth", signed=False, params=params)
 
     async def get_recent_trades(
         self, symbol: str, limit: Optional[int] = None
@@ -388,9 +387,7 @@ class BinanceRestClient:
         params = {"symbol": symbol}
         if limit is not None:
             params["limit"] = limit
-        return await self._request(
-            "GET", f"/api/v3/trades", signed=False, params=params
-        )
+        return await self._request("GET", "/api/v3/trades", signed=False, params=params)
 
     async def get_agg_trades(
         self,
@@ -422,7 +419,7 @@ class BinanceRestClient:
         if limit is not None:
             params["limit"] = limit
         return await self._request(
-            "GET", f"/api/v3/aggTrades", signed=False, params=params
+            "GET", "/api/v3/aggTrades", signed=False, params=params
         )
 
     async def get_klines(
@@ -457,6 +454,4 @@ class BinanceRestClient:
             params["endTime"] = end_time
         if time_zone is not None:
             params["timeZone"] = time_zone
-        return await self._request(
-            "GET", f"/api/v3/klines", signed=False, params=params
-        )
+        return await self._request("GET", "/api/v3/klines", signed=False, params=params)

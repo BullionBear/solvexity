@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from aiocache import cached
-from aiocache.serializers import JsonSerializer
 from cachetools import TTLCache
 
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
@@ -53,7 +52,6 @@ class BinanceRestAdapter(ExchangeConnector):
         self.logger.info(
             f"Recent trades for {symbol.base_asset + symbol.quote_asset}: {trades}"
         )
-        side_of_trade = lambda x: OrderSide.SELL if x["isBuyerMaker"] else OrderSide.BUY
         return [
             Trade(
                 id=trade["id"],
@@ -61,10 +59,13 @@ class BinanceRestAdapter(ExchangeConnector):
                 price=Decimal(trade["price"]),
                 quantity=Decimal(trade["qty"]),
                 time=trade["time"],
-                side=side_of_trade(trade),
+                side=self.determine_side(trade),
             )
             for trade in trades
         ]
+
+    def determine_side(self, trade: Dict[str, Any]) -> OrderSide:
+        return OrderSide.SELL if trade["isBuyerMaker"] else OrderSide.BUY
 
     async def create_order(
         self,
@@ -213,7 +214,6 @@ class BinanceRestAdapter(ExchangeConnector):
         self.logger.info(
             f"My trades for {symbol.base_asset + symbol.quote_asset}: {my_trades}"
         )
-        side_of_my_trade = lambda x: OrderSide.BUY if x["isBuyer"] else OrderSide.SELL
         return [
             MyTrade(
                 id=trade["id"],
@@ -222,7 +222,7 @@ class BinanceRestAdapter(ExchangeConnector):
                 price=Decimal(trade["price"]),
                 quantity=Decimal(trade["qty"]),
                 time=trade["time"],
-                side=side_of_my_trade(trade),
+                side=self.determine_side(trade),
                 is_maker=trade["isMaker"],
                 commission=Decimal(trade["commission"]),
                 commission_asset=trade["commissionAsset"],
@@ -304,10 +304,13 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     price=Decimal(data["p"]),
                     quantity=Decimal(data["q"]),
                     time=data["T"],
-                    side=OrderSide.BUY if data["m"] else OrderSide.SELL,
+                    side=self.determine_side(data),
                 )
         finally:
             await self.websocket_client.unsubscribe_trades(ws_symbol)
+
+    def determine_side(self, data: Dict[str, Any]) -> OrderSide:
+        return OrderSide.BUY if data["m"] else OrderSide.SELL
 
     async def _route_user_data(self, data: Dict[str, Any]) -> None:
         if data["e"] == "outboundAccountPosition":

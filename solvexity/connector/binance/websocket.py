@@ -9,7 +9,6 @@ from solvexity.logger import SolvexityLogger
 
 from .rest import BinanceRestClient
 
-
 class BinanceWebSocketClient:
     """Binance WebSocket API client for real-time data streaming."""
 
@@ -32,7 +31,7 @@ class BinanceWebSocketClient:
         ] = {}
         self._running = False
         self._listen_task: Optional[asyncio.Task] = None
-        self._rest_connector = None  # Will be initialized in connect()
+        self._rest_connector: Optional[BinanceRestClient] = None  # Will be initialized in connect()
         self._listen_key: Optional[str] = None
         self._keep_alive_task: Optional[asyncio.Task] = None
         self.logger = SolvexityLogger().get_logger(__name__)
@@ -43,9 +42,11 @@ class BinanceWebSocketClient:
             return
 
         # Initialize REST connector with async context manager
+
         self._rest_connector = BinanceRestClient(
             self.api_key, self.api_secret, self.use_testnet
         )
+
         await self._rest_connector.__aenter__()
 
         self.ws = await websockets.connect(self.ws_url)

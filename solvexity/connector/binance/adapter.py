@@ -1,7 +1,8 @@
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
-from solvexity.connector.types import OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance, MyTrade, OrderBookUpdate
+from solvexity.connector.types import (
+    OrderBook, Symbol, Trade, Order, OrderStatus, TimeInForce, AccountBalance, MyTrade, OrderBookUpdate, InstrumentType)
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from decimal import Decimal
 from solvexity.connector.types import OrderSide, OrderType
@@ -10,6 +11,9 @@ from solvexity.connector.exceptions import (
     MarketOrderWithPriceError, InvalidOrderPriceError, OrderIdOrClientOrderIdRequiredError
 )
 import asyncio
+from aiocache import cached
+from aiocache.serializers import JsonSerializer
+from cachetools import TTLCache
 
 class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
@@ -151,6 +155,7 @@ class BinanceRestAdapter(ExchangeConnector):
         side_of_my_trade = lambda x: OrderSide.BUY if x['isBuyer'] else OrderSide.SELL
         return [MyTrade(
             id=trade['id'],
+            order_id=trade['orderId'],
             symbol=symbol,
             price=Decimal(trade['price']),
             quantity=Decimal(trade['qty']),
@@ -163,9 +168,18 @@ class BinanceRestAdapter(ExchangeConnector):
     
     
 class BinanceWebSocketAdapter(ExchangeStreamConnector):
+    _exchange_info_cache = TTLCache(maxsize=5, ttl=3600)  # Stores multiple exchange responses
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
-        super().__init__(api_key, api_secret, use_testnet)
         self.websocket_client = BinanceWebSocketClient(api_key, api_secret, use_testnet)
+        self.logger = SolvexityLogger().get_logger(__name__)
+        # user data stream fields
+        self.is_user_data_stream_subscribed = False
+        self.user_data_queue = {"trade": asyncio.Queue(),
+                                "order": asyncio.Queue(),
+                                "account": asyncio.Queue()}
+        self.is_trade_stream_subscribed = False
+        self.is_order_stream_subscribed = False
+        self.is_account_stream_subscribed = False
 
     async def __aenter__(self):
         await self.websocket_client.__aenter__()
@@ -221,4 +235,95 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                 )
         finally:
             await self.websocket_client.unsubscribe_trades(ws_symbol)
+
+    async def _route_user_data(self, data: Dict[str, Any]) -> None:
+        if data['e'] == 'outboundAccountPosition':
+            if self.is_account_stream_subscribed:
+                await self.user_data_queue['account'].put(data)
+        elif data['e'] == 'executionReport':
+            if self.is_order_stream_subscribed:
+                await self.user_data_queue['order'].put(data)
+            if self.is_trade_stream_subscribed and data['x'] == 'TRADE':
+                await self.user_data_queue['trade'].put(data)
+        else:
+            self.logger.warning(f"Unknown user data event: {data}")
+
+    @cached(_exchange_info_cache, key=lambda self, symbol: symbol)
+    async def _to_symbol(self, symbol: str) -> Symbol:
+        exchange_info = await self.rest_client.get_exchange_info()
+        for pair in exchange_info['symbols']:
+            if pair['symbol'] == symbol:
+                return Symbol(
+                    base_asset=pair['baseAsset'], 
+                    quote_asset=pair['quoteAsset'], 
+                    instrument_type=InstrumentType.SPOT
+                    )
+        raise ValueError(f"Symbol {symbol} not found in exchange info")
+
+    async def order_updates_iterator(self) -> AsyncGenerator[Order, None]:
+        if not self.is_user_data_stream_subscribed:
+            await self.websocket_client.subscribe_user_data(self._route_user_data)
+            self.is_user_data_stream_subscribed = True
         
+        try:
+            while True:
+                data = await self.user_data_queue['order'].get()
+                symbol = await self._to_symbol(data['s'])
+                yield Order(
+                    symbol=symbol,
+                    order_id=data['i'],
+                    client_order_id=data['c'],
+                    price=Decimal(data['p']),
+                    original_quantity=Decimal(data['q']),
+                    executed_quantity=Decimal(data['z']),
+                    side=OrderSide(data['S']),
+                    order_type=OrderType(data['o']),
+                    time_in_force=TimeInForce(data['f']),
+                    status=OrderStatus(data['X']),
+                    timestamp=data['W'],
+                    update_time=data['T']
+                )
+        except Exception as e:
+            self.logger.error(f"Error in order_updates_iterator: {e}")
+            raise e
+    
+    async def execution_updates_iterator(self) -> AsyncGenerator[MyTrade, None]:
+        if not self.is_user_data_stream_subscribed:
+            await self.websocket_client.subscribe_user_data(self._route_user_data)
+            self.is_user_data_stream_subscribed = True
+        
+        try:
+            while True:
+                data = await self.user_data_queue['trade'].get()
+                symbol = await self._to_symbol(data['s'])
+                yield MyTrade(
+                    id=data['t'],
+                    symbol=symbol,
+                    price=Decimal(data['p']),
+                    quantity=Decimal(data['q']),
+                    time=data['T'],
+                    side=OrderSide(data['S']),
+                    is_maker=data['m'],
+                    commission=Decimal(data['c']),
+                    commission_asset=data['n']
+                )
+        except Exception as e:
+            self.logger.error(f"Error in execution_updates_iterator: {e}")
+            raise e
+
+    async def account_updates_iterator(self) -> AsyncGenerator[AccountBalance, None]:
+        if not self.is_user_data_stream_subscribed:
+            await self.websocket_client.subscribe_user_data(self._route_user_data)
+            self.is_user_data_stream_subscribed = True
+        
+        try:
+            while True:
+                data = await self.user_data_queue['account'].get()
+                yield AccountBalance(
+                    asset=data['a'],
+                    free=Decimal(data['f']),
+                    locked=Decimal(data['l'])
+                )
+        except Exception as e:
+            self.logger.error(f"Error in account_updates_iterator: {e}")
+            raise e

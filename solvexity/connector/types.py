@@ -102,6 +102,7 @@ class AccountBalance(BaseModel):
 
 class MyTrade(BaseModel):
     id: int = Field(..., description="The id of the trade")
+    order_id: int = Field(..., description="The id of the order")
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")

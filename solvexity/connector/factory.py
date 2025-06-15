@@ -7,7 +7,7 @@ from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
 
 
 class ExchangeConnectorFactory(ABC):
-    
+    @classmethod
     def create_rest_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeConnector]:
         """
         Create a REST connector for the specified exchange.
@@ -30,7 +30,7 @@ class ExchangeConnectorFactory(ABC):
             raise NotImplementedError("Bybit not implemented")
         raise ValueError(f"Unsupported exchange: {exchange}")
 
-    
+    @classmethod
     def create_websocket_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeStreamConnector]:
         """
         Create a WebSocket connector for the specified exchange.

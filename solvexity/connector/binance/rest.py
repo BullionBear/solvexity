@@ -5,7 +5,10 @@ import hashlib
 import time
 import json
 import urllib.parse
+from aiocache import cached
+from aiocache.serializers import JsonSerializer
 from solvexity.logger import SolvexityLogger
+
 
 class BinanceRestClient:
     """Binance REST API client for making direct API calls."""
@@ -138,7 +141,8 @@ class BinanceRestClient:
             Dictionary with server time in milliseconds
         """
         return await self._request("GET", "/api/v3/time")
-        
+    
+    @cached(ttl=86400, serializer=JsonSerializer())
     async def get_exchange_info(self) -> Dict:
         """Get current exchange trading rules and symbol information.
         

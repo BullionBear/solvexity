@@ -1,15 +1,19 @@
-from enum import Enum
-from pydantic import BaseModel, Field
 from decimal import Decimal
+from enum import Enum
+
+from pydantic import BaseModel, Field
+
 
 class Exchange(Enum):
     BINANCE = "BINANCE"
     BINANCE_FUTURES = "BINANCE_FUTURES"
     BYBIT = "BYBIT"
 
+
 class OrderSide(Enum):
     BUY = "BUY"
     SELL = "SELL"
+
 
 class OrderType(Enum):
     LIMIT = "LIMIT"
@@ -19,10 +23,12 @@ class OrderType(Enum):
     TAKE_PROFIT_LIMIT = "TAKE_PROFIT_LIMIT"
     TAKE_PROFIT_MARKET = "TAKE_PROFIT_MARKET"
 
+
 class TimeInForce(Enum):
     GTC = "GTC"
     IOC = "IOC"
     FOK = "FOK"
+
 
 class OrderStatus(Enum):
     NEW = "NEW"
@@ -32,6 +38,7 @@ class OrderStatus(Enum):
     PENDING_CANCEL = "PENDING_CANCEL"
     REJECTED = "REJECTED"
 
+
 class InstrumentType(Enum):
     SPOT = "SPOT"
     FUTURES = "FUTURES"
@@ -39,25 +46,43 @@ class InstrumentType(Enum):
     PERPETUAL = "PERPETUAL"
     OPTION = "OPTION"
 
+
 class Symbol(BaseModel):
     base_asset: str = Field(..., description="The base asset of the symbol")
     quote_asset: str = Field(..., description="The quote asset of the symbol")
     instrument_type: InstrumentType = Field(..., description="The type of instrument")
 
+
 class OrderBook(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book")
     last_update_id: int = Field(..., description="The last update id of the order book")
-    bids: list[tuple[Decimal, Decimal]] = Field(..., description="The bids of the order book")
-    asks: list[tuple[Decimal, Decimal]] = Field(..., description="The asks of the order book")
+    bids: list[tuple[Decimal, Decimal]] = Field(
+        ..., description="The bids of the order book"
+    )
+    asks: list[tuple[Decimal, Decimal]] = Field(
+        ..., description="The asks of the order book"
+    )
+
 
 class OrderBookUpdate(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book update")
     event_time: int = Field(..., description="The event time of the order book update")
-    first_update_id: int = Field(..., description="The first update id of the order book update")
-    last_update_id: int = Field(..., description="The last update id of the order book update")
-    prev_last_update_id: int = Field(..., description="The previous last update id of the order book update")
-    bids: list[tuple[Decimal, Decimal]] = Field(..., description="The bids of the order book update")
-    asks: list[tuple[Decimal, Decimal]] = Field(..., description="The asks of the order book update")
+    first_update_id: int = Field(
+        ..., description="The first update id of the order book update"
+    )
+    last_update_id: int = Field(
+        ..., description="The last update id of the order book update"
+    )
+    prev_last_update_id: int = Field(
+        ..., description="The previous last update id of the order book update"
+    )
+    bids: list[tuple[Decimal, Decimal]] = Field(
+        ..., description="The bids of the order book update"
+    )
+    asks: list[tuple[Decimal, Decimal]] = Field(
+        ..., description="The asks of the order book update"
+    )
+
 
 class OHLCV(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the OHLCV")
@@ -69,9 +94,14 @@ class OHLCV(BaseModel):
     volume: Decimal = Field(..., description="The volume of the OHLCV")
     close_time: int = Field(..., description="The close time of the OHLCV")
     quote_volume: Decimal = Field(..., description="The quote volume of the OHLCV")
-    n_trades: int|None = Field(None, description="The number of trades of the OHLCV")
-    taker_buy_base_asset_volume: Decimal|None = Field(None, description="The taker buy base asset volume of the OHLCV")
-    taker_buy_quote_asset_volume: Decimal|None = Field(None, description="The taker buy quote asset volume of the OHLCV")
+    n_trades: int | None = Field(None, description="The number of trades of the OHLCV")
+    taker_buy_base_asset_volume: Decimal | None = Field(
+        None, description="The taker buy base asset volume of the OHLCV"
+    )
+    taker_buy_quote_asset_volume: Decimal | None = Field(
+        None, description="The taker buy quote asset volume of the OHLCV"
+    )
+
 
 class Trade(BaseModel):
     id: int = Field(..., description="The id of the trade")
@@ -81,24 +111,35 @@ class Trade(BaseModel):
     time: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
 
+
 class Order(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order")
-    order_id: str|int = Field(..., description="The id of the order")
+    order_id: str | int = Field(..., description="The id of the order")
     client_order_id: str = Field(..., description="The client id of the order")
     price: Decimal = Field(..., description="The price of the order")
-    original_quantity: Decimal = Field(..., description="The original quantity of the order")
-    executed_quantity: Decimal = Field(..., description="The executed quantity of the order")
+    original_quantity: Decimal = Field(
+        ..., description="The original quantity of the order"
+    )
+    executed_quantity: Decimal = Field(
+        ..., description="The executed quantity of the order"
+    )
     side: OrderSide = Field(..., description="The side of the order")
     order_type: OrderType = Field(..., description="The type of the order")
-    time_in_force: TimeInForce = Field(..., description="The time in force of the order")
+    time_in_force: TimeInForce = Field(
+        ..., description="The time in force of the order"
+    )
     status: OrderStatus = Field(..., description="The status of the order")
     timestamp: int = Field(..., description="The timestamp of the order")
     update_time: int = Field(..., description="The update time of the order")
 
+
 class AccountBalance(BaseModel):
     asset: str = Field(..., description="The asset of the account balance")
     free: Decimal = Field(..., description="The free balance of the account balance")
-    locked: Decimal = Field(..., description="The locked balance of the account balance")
+    locked: Decimal = Field(
+        ..., description="The locked balance of the account balance"
+    )
+
 
 class MyTrade(BaseModel):
     id: int = Field(..., description="The id of the trade")
@@ -111,4 +152,3 @@ class MyTrade(BaseModel):
     is_maker: bool = Field(..., description="Whether the trade is a maker")
     commission: Decimal = Field(..., description="The commission of the trade")
     commission_asset: str = Field(..., description="The commission asset of the trade")
-    

@@ -1,17 +1,20 @@
 from abc import ABC, abstractmethod
-from typing import Type, Dict, Any
+from typing import Any, Dict, Type
 
-from solvexity.connector.binance.adapter import BinanceRestAdapter, BinanceWebSocketAdapter
-from solvexity.connector.types import Exchange
 from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
+from solvexity.connector.binance.adapter import (BinanceRestAdapter,
+                                                 BinanceWebSocketAdapter)
+from solvexity.connector.types import Exchange
 
 
 class ExchangeConnectorFactory(ABC):
     @classmethod
-    def create_rest_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeConnector]:
+    def create_rest_connector(
+        self, exchange: Exchange, config: Dict[str, Any]
+    ) -> Type[ExchangeConnector]:
         """
         Create a REST connector for the specified exchange.
-        
+
         Args:
             exchange: The exchange to create a connector for
             config: A dictionary containing connector-specific configuration parameters
@@ -20,9 +23,9 @@ class ExchangeConnectorFactory(ABC):
         """
         if exchange == Exchange.BINANCE:
             return BinanceRestAdapter(
-                api_key=config['api_key'],
-                api_secret=config['api_secret'],
-                use_testnet=config.get('use_testnet', False)
+                api_key=config["api_key"],
+                api_secret=config["api_secret"],
+                use_testnet=config.get("use_testnet", False),
             )
         elif exchange == Exchange.BINANCE_FUTURES:
             raise NotImplementedError("Binance futures not implemented")
@@ -31,10 +34,12 @@ class ExchangeConnectorFactory(ABC):
         raise ValueError(f"Unsupported exchange: {exchange}")
 
     @classmethod
-    def create_websocket_connector(self, exchange: Exchange, config: Dict[str, Any]) -> Type[ExchangeStreamConnector]:
+    def create_websocket_connector(
+        self, exchange: Exchange, config: Dict[str, Any]
+    ) -> Type[ExchangeStreamConnector]:
         """
         Create a WebSocket connector for the specified exchange.
-        
+
         Args:
             exchange: The exchange to create a connector for
             config: A dictionary containing connector-specific configuration parameters
@@ -43,13 +48,12 @@ class ExchangeConnectorFactory(ABC):
         """
         if exchange == Exchange.BINANCE:
             return BinanceWebSocketAdapter(
-                api_key=config['api_key'],
-                api_secret=config['api_secret'],
-                use_testnet=config.get('use_testnet', False)
+                api_key=config["api_key"],
+                api_secret=config["api_secret"],
+                use_testnet=config.get("use_testnet", False),
             )
         elif exchange == Exchange.BINANCE_FUTURES:
             raise NotImplementedError("Binance futures not implemented")
         elif exchange == Exchange.BYBIT:
             raise NotImplementedError("Bybit not implemented")
-        raise ValueError(f"Unsupported exchange: {exchange}")   
-    
+        raise ValueError(f"Unsupported exchange: {exchange}")

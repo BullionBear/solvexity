@@ -250,7 +250,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
 
     @cached(_exchange_info_cache, key=lambda self, symbol: symbol)
     async def _to_symbol(self, symbol: str) -> Symbol:
-        exchange_info = await self.rest_client.get_exchange_info()
+        exchange_info = await self.websocket_client._rest_connector.get_exchange_info()
         for pair in exchange_info['symbols']:
             if pair['symbol'] == symbol:
                 return Symbol(
@@ -264,7 +264,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         if not self.is_user_data_stream_subscribed:
             await self.websocket_client.subscribe_user_data(self._route_user_data)
             self.is_user_data_stream_subscribed = True
-        
+        self.is_order_stream_subscribed = True
         try:
             while True:
                 data = await self.user_data_queue['order'].get()
@@ -286,12 +286,14 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         except Exception as e:
             self.logger.error(f"Error in order_updates_iterator: {e}")
             raise e
+        finally:
+            self.is_order_stream_subscribed = False
     
     async def execution_updates_iterator(self) -> AsyncGenerator[MyTrade, None]:
         if not self.is_user_data_stream_subscribed:
             await self.websocket_client.subscribe_user_data(self._route_user_data)
             self.is_user_data_stream_subscribed = True
-        
+        self.is_trade_stream_subscribed = True
         try:
             while True:
                 data = await self.user_data_queue['trade'].get()
@@ -310,20 +312,26 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         except Exception as e:
             self.logger.error(f"Error in execution_updates_iterator: {e}")
             raise e
+        finally:
+            self.is_trade_stream_subscribed = False
 
     async def account_updates_iterator(self) -> AsyncGenerator[AccountBalance, None]:
         if not self.is_user_data_stream_subscribed:
             await self.websocket_client.subscribe_user_data(self._route_user_data)
             self.is_user_data_stream_subscribed = True
-        
+        self.is_account_stream_subscribed = True
         try:
             while True:
                 data = await self.user_data_queue['account'].get()
-                yield AccountBalance(
-                    asset=data['a'],
-                    free=Decimal(data['f']),
-                    locked=Decimal(data['l'])
-                )
+                for balance in data['B']:
+                    yield AccountBalance(
+                        asset=balance['a'],
+                        free=Decimal(balance['f']),
+                        locked=Decimal(balance['l'])
+                    )
+                
         except Exception as e:
             self.logger.error(f"Error in account_updates_iterator: {e}")
             raise e
+        finally:
+            self.is_account_stream_subscribed = False

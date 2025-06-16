@@ -2,23 +2,27 @@ import asyncio
 import logging
 from typing import Any, Type
 
-from hooklet.base import BaseEventrix, BasePilot
+from hooklet.base import BasePilot
+from solvexity.trader.base import ConfigNode
+from solvexity.trader.factory import TraderFactory
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class EventrixDeployer:
+class Deployer:
     """
-    EventrixDeployer is a class that provides an interface for deploying, undeploying,
-    and managing Eventrix instances.
+    Deployer is a class that provides an interface for deploying, undeploying,
+    and managing trader instances.
     """
 
     def __init__(self, pilot: BasePilot):
         """
-        Initializes the EventrixDeployer instance.
+        Initializes the Deployer instance.
         """
         self._pilot = pilot
-        self._deployments: dict[str, tuple[BaseEventrix, dict[str, Any]]] = {}
+        self._trader_factory = TraderFactory(pilot)
+        self._deployments: list[tuple[ConfigNode, BaseModel]] = []
         self._shutdown_event = asyncio.Event()
 
     async def __aenter__(self):
@@ -29,63 +33,58 @@ class EventrixDeployer:
 
     async def deploy(
         self,
-        eventrix_id: str,
-        eventrix_type: Type[BaseEventrix],
+        node_type: Type[ConfigNode],
         config: dict[str, Any],
     ):
         """
         Deploys an Eventrix instance.
         """
-        if eventrix_id in self._deployments:
-            raise ValueError(f"Eventrix with ID '{eventrix_id}' is already deployed.")
-
         try:
-            eventrix_instance = eventrix_type.from_config(self._pilot, config)
-            # Start the eventrix instance
-            await eventrix_instance.start()
-            self._deployments[eventrix_id] = (eventrix_instance, config)
-            logger.info(f"Successfully deployed Eventrix: {eventrix_id}")
+            node = self._trader_factory.create(node_type, config)
+            # Start the node
+            await node.start()
+            self._deployments.append((node, config))
+            logger.info(f"Successfully deployed {node_type.__name__}: {node.node_id}")
             return True
         except Exception as e:
             logger.error(
-                f"Failed to deploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
+                f"Failed to deploy {node_type.__name__}: {type(e).__name__} - {str(e)}"
             )
             # Clean up if initialization succeeded but start failed
-            if eventrix_id in self._deployments:
-                eventrix_instance, _ = self._deployments.pop(eventrix_id)
+            if node.node_id in self._deployments:
+                node, _ = self._deployments.pop(node.node_id)
                 try:
-                    await eventrix_instance.stop()
+                    await node.stop()
                 except Exception:
                     pass
             raise
 
-    async def undeploy(self, eventrix_id: str):
+    async def undeploy(self, node_id: str) -> bool:
         """
-        Undeploys an existing Eventrix instance.
+        Undeploys an existing node instance.
         """
-        if eventrix_id not in self._deployments:
-            raise ValueError(f"No deployed Eventrix found with ID '{eventrix_id}'.")
+        if node_id not in [node.node_id for node, _ in self._deployments]:
+            return False
 
         try:
-            eventrix_instance, _ = self._deployments.pop(eventrix_id)
-            await eventrix_instance.stop()
-            logger.info(f"Successfully undeployed Eventrix: {eventrix_id}")
+            node, _ = self._deployments.pop(node_id)
+            await node.stop()
+            logger.info(f"Successfully undeployed {node.node_id}")
             return True
         except Exception as e:
             logger.error(
-                f"Failed to undeploy Eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
+                f"Failed to undeploy {node.node_id}: {type(e).__name__} - {str(e)}"
             )
-            raise
+            return False
 
-    def get_status(self, eventrix_id: str) -> dict:
+    def get_status(self, node_id: str) -> dict:
         """
         Retrieves the status of a deployed Eventrix instance.
         """
-        if eventrix_id not in self._deployments:
-            raise ValueError(f"No deployed Eventrix found with ID '{eventrix_id}'.")
-
-        eventrix_instance, _ = self._deployments[eventrix_id]
-        return eventrix_instance.status
+        for node, _ in self._deployments:
+            if node.node_id == node_id:
+                return node.status
+        return {}
 
     def get_all_deployments(self) -> list[dict]:
         """
@@ -93,31 +92,28 @@ class EventrixDeployer:
         """
         return [
             {
-                "id": eventrix_id,
-                "type": type(eventrix_instance).__name__,
-                "status": eventrix_instance.status,
+                "id": node.node_id,
+                "type": type(node).__name__,
+                "status": node.status,
                 "config": dict(config),
             }
-            for eventrix_id, (eventrix_instance, config) in self._deployments.items()
+            for node, config in self._deployments
         ]
 
     async def shutdown(self, timeout=10.0):
         """
-        Shuts down all deployed Eventrix instances within the specified timeout.
+        Shuts down all deployed config nodes within the specified timeout.
         """
-        logger.info(f"Shutting down EventrixDeployer with {timeout}s timeout...")
+        logger.info(f"Shutting down Deployer with {timeout}s timeout...")
         self._shutdown_event.set()
 
         # Create shutdown tasks
         shutdown_tasks = []
-        for eventrix_id, (eventrix_instance, _) in list(self._deployments.items()):
+        for node, _ in self._deployments:
             try:
-                task = asyncio.create_task(eventrix_instance.stop())
-                shutdown_tasks.append(task)
-            except Exception as e:
-                logger.error(
-                    f"Error stopping eventrix {eventrix_id}: {type(e).__name__} - {str(e)}"
-                )
+                shutdown_tasks.append(node.stop())
+            except Exception:
+                pass
 
         # Wait with timeout if there are any tasks
         if shutdown_tasks:
@@ -130,4 +126,4 @@ class EventrixDeployer:
 
         # Clear deployments
         self._deployments.clear()
-        logger.info("EventrixDeployer shutdown complete")
+        logger.info("Deployer shutdown complete")

@@ -1,3 +1,3 @@
-from .trade_feed import TradeFeed
+from .trade_feed import TradeFeed, TradeFeedConfig
 
-__all__ = ["TradeFeed"]
+__all__ = ["TradeFeed", "TradeFeedConfig"]

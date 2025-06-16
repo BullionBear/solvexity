@@ -27,8 +27,8 @@ class ExchangeConnectorFactory:
         """
         if exchange == Exchange.BINANCE:
             return BinanceRestAdapter(
-                api_key=config["api_key"],
-                api_secret=config["api_secret"],
+                api_key=config.get("api_key", ""),
+                api_secret=config.get("api_secret", ""),
                 use_testnet=config.get("use_testnet", False),
             )
         elif exchange == Exchange.BINANCE_FUTURES:

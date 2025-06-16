@@ -8,7 +8,7 @@ This module provides a factory for creating trader instances.
 from typing import Any
 from hooklet.base import BasePilot
 from solvexity.logger import get_logger
-from solvexity.trader.feed import TradeFeed, TradeFeedConfig
+from solvexity.trader.collection.feed import TradeFeed, TradeFeedConfig
 from solvexity.trader.base import ConfigNode
 
 

@@ -1,11 +1,11 @@
 from solvexity.connector.base import ExchangeStreamConnector
 from hooklet.base import BasePilot
 from hooklet.eventrix.v2.node import Node
-from solvexity.connector.types import Symbol, Exchange
+from solvexity.connector.types import Symbol, Exchange, InstrumentType
 from typing import Callable
 from hooklet.types import HookletMessage
 from typing import AsyncGenerator
-from solvexity.connector.base import ExchangeConnector
+from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
 from solvexity.connector import ExchangeConnectorFactory
 import uuid
 import random
@@ -16,17 +16,41 @@ from typing import Any
 
 class TradeFeed(Node):
     def __init__(self, 
-                 exchange: Exchange,
                  pilot: BasePilot, 
                  symbol: Symbol, 
-                 sources: list[str], 
                  router: Callable[[HookletMessage], str | None], 
                  node_id: None|str=None,
+                 rest_connector: ExchangeConnector | None = None,
+                 stream_connector: ExchangeConnector | None = None,
                  ):
-        super().__init__(pilot, sources, router, node_id)
-        self.rest_connector = ExchangeConnectorFactory.create_rest_connector(exchange, {})
-        self.stream_connector = ExchangeConnectorFactory.create_websocket_connector(exchange, {})
+        super().__init__(pilot, [], router, node_id)
+        self.rest_connector = rest_connector
+        self.stream_connector = stream_connector
         self.symbol = symbol
+
+    @classmethod
+    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeed":
+        """
+        Creates a TradeFeed instance from a configuration dictionary.
+
+        Args:
+            pilot (BasePilot): The pilot instance.
+            config (dict[str, Any]): The configuration dictionary.
+
+        Returns:
+            TradeFeed: The created TradeFeed instance.
+        """
+        exchange = Exchange(config["exchange"])
+        rest_connector = ExchangeConnectorFactory.create_rest_connector(config["exchange"], {config.get("credentials", {})})
+        stream_connector = ExchangeConnectorFactory.create_websocket_connector(config["exchange"], {config.get("credentials", {})})
+        symbol = Symbol(config["base_currency"], config["quote_currency"], InstrumentType(config["instrument_type"]))
+        return cls(
+            exchange=config["exchange"],
+            pilot=pilot,
+            symbol=config["symbol"],
+            rest_connector=rest_connector,
+            stream_connector=stream_connector,
+        )
 
     async def generator_func(self) -> AsyncGenerator[HookletMessage, None]:
         """

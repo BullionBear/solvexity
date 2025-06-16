@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Optional, Type
 
 from hooklet.base import BaseEventrix
+from solvexity.trader.feed import TradeFeed
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class EventrixRegistry:
 
 # Create the global registry and register available Eventrix types
 eventrix_registry = EventrixRegistry()
-
+eventrix_registry.register("trade_feed", TradeFeed)
 
 # For easy imports
 __all__ = ["eventrix_registry"]

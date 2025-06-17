@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from hooklet.pilot import NatsPilot
 from solvexity.app.deployer import Deployer
-from solvexity.trader.factory import eventrix_registry
-from solvexity.logger import get_logger
+from solvexity.trader.factory import TraderFactory
+from solvexity.logger import SolvexityLogger
 from solvexity.app.dependency.deployer import DeployerSingleton
 
-logger = get_logger(__name__)
+logger = SolvexityLogger().get_logger(__name__)
 
 # Load configuration
 def load_config(config_path: str = "config.yaml") -> dict:
@@ -149,7 +149,7 @@ def get_available_nodes():
     Get a list of all available nodes that can be deployed.
     """
     logger.info("Received request for available Eventrix types")
-    types = list(eventrix_registry.get_all().keys())
+    types = list(TraderFactory.available_nodes)
     return {"available_types": types}
 
 

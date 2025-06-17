@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default config path
-CONFIG=${CONFIG:-"solvexity/config/config.yml"}
+CONFIG=${CONFIG:-"config/config.yml"}
 
 # Activate virtual environment if needed
 # source venv/bin/activate

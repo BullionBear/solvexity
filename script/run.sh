@@ -1,7 +1,9 @@
 #!/bin/bash
 
+# Default config path
+CONFIG=${CONFIG:-"solvexity/config/config.yml"}
+
 # Activate virtual environment if needed
 # source venv/bin/activate
 
-# Run the FastAPI application
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m solvexity.app.main --config $CONFIG

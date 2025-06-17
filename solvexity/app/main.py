@@ -2,9 +2,9 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from hooklet.pilot import NatsPilot
-from solvexity.service.deployer import EventrixDeployer
-from solvexity.service.registry import eventrix_registry
-from hooklet.logger import get_logger
+from solvexity.app.deployer import EventrixDeployer
+from solvexity.trader.factory import eventrix_registry
+from solvexity.logger import get_logger
 
 logger = get_logger(__name__)
 

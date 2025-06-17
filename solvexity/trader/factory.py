@@ -26,6 +26,7 @@ class TraderFactory:
             "TradeFeed": TradeFeed,
         }
 
+    @property
     def available_nodes(self) -> list[str]:
         return list(self._registry.keys())
 

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Type
+from typing import Any, Dict, Type
 
 from hooklet.base import BasePilot
 from solvexity.trader.base import ConfigNode
@@ -22,14 +22,22 @@ class Deployer:
         """
         self._pilot = pilot
         self._trader_factory = TraderFactory(pilot)
-        self._deployments: list[tuple[ConfigNode, BaseModel]] = []
+        self._deployments: list[tuple[ConfigNode, Dict[str, Any]]] = []
         self._shutdown_event = asyncio.Event()
 
     async def __aenter__(self):
+        if not self._pilot.is_connected():
+            await self._pilot.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.shutdown()
+
+    def is_node_registered(self, node_id: str) -> bool:
+        for node, _ in self._deployments:
+            if node.node_id == node_id:
+                return True
+        return None
 
     async def deploy(
         self,

@@ -22,15 +22,21 @@ class TraderFactory:
 
     def __init__(self, pilot: BasePilot):
         self.pilot = pilot
+        self._registry = {
+            "TradeFeed": TradeFeed,
+        }
+
+    def available_nodes(self) -> list[str]:
+        return list(self._registry.keys())
 
     def create(self, name: str, config: dict[str, Any]) -> ConfigNode:
         """
         Create a trader instance from the registry.
         """
-        if name == "TradeFeed":
-            config = TradeFeedConfig.from_config(config)
-            return TradeFeed.from_config(self.pilot, config)
-        raise ValueError(f"Feed type {name} not found in registry")
+        if name in self.registry:
+            node_class = self.registry[name]
+            return node_class.from_config(self.pilot, config)
+        raise ValueError(f"Node type {name} not found in registry")
 
 # For easy imports
 __all__ = ["TraderFactory"]

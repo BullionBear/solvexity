@@ -1,3 +1,4 @@
-from .trade_feed import TradeFeed, TradeFeedConfig
+from .trade_feed import TradeFeed
+from .ohlcv_aggregator import OHLCVAggregator
 
-__all__ = ["TradeFeed", "TradeFeedConfig"]
+__all__ = ["TradeFeed", "OHLCVAggregator"]

@@ -33,10 +33,10 @@ class BinanceRestAdapter(ExchangeConnector):
 
     async def get_orderbook(self, symbol: Symbol, depth: int = 20) -> OrderBook:
         orderbook = await self.rest_client.get_depth(
-            symbol.base_asset + symbol.quote_asset, depth
+            symbol.base_currency + symbol.quote_currency, depth
         )
         self.logger.info(
-            f"Orderbook for {symbol.base_asset + symbol.quote_asset}: {orderbook}"
+            f"Orderbook for {symbol.base_currency + symbol.quote_currency}: {orderbook}"
         )
         return OrderBook(
             symbol=symbol,
@@ -47,10 +47,10 @@ class BinanceRestAdapter(ExchangeConnector):
 
     async def get_recent_trades(self, symbol: Symbol, limit: int = 100) -> List[Trade]:
         trades = await self.rest_client.get_recent_trades(
-            symbol.base_asset + symbol.quote_asset, limit
+            symbol.base_currency + symbol.quote_currency, limit
         )
         self.logger.info(
-            f"Recent trades for {symbol.base_asset + symbol.quote_asset}: {trades}"
+            f"Recent trades for {symbol.base_currency + symbol.quote_currency}: {trades}"
         )
         return [
             Trade(
@@ -88,7 +88,7 @@ class BinanceRestAdapter(ExchangeConnector):
             time_in_force = TimeInForce.GTC
 
         data = {
-            "symbol": symbol.base_asset + symbol.quote_asset,
+            "symbol": symbol.base_currency + symbol.quote_currency,
             "side": side.value,
             "type": order_type.value,
             "quantity": str(quantity),
@@ -102,7 +102,7 @@ class BinanceRestAdapter(ExchangeConnector):
             data["client_order_id"] = client_order_id
         order = await self.rest_client.create_order(**data)
         self.logger.info(
-            f"Created order for {symbol.base_asset + symbol.quote_asset}: {order}"
+            f"Created order for {symbol.base_currency + symbol.quote_currency}: {order}"
         )
         return order
 
@@ -114,19 +114,19 @@ class BinanceRestAdapter(ExchangeConnector):
     ) -> Dict[str, Any]:
         if order_id is not None:
             order = await self.rest_client.cancel_order(
-                symbol=symbol.base_asset + symbol.quote_asset, order_id=int(order_id)
+                symbol=symbol.base_currency + symbol.quote_currency, order_id=int(order_id)
             )
             self.logger.info(
-                f"Cancelled order for {symbol.base_asset + symbol.quote_asset}: {order}"
+                f"Cancelled order for {symbol.base_currency + symbol.quote_currency}: {order}"
             )
             return order
         elif client_order_id is not None:
             order = await self.rest_client.cancel_order(
-                symbol=symbol.base_asset + symbol.quote_asset,
+                symbol=symbol.base_currency + symbol.quote_currency,
                 orig_client_order_id=client_order_id,
             )
             self.logger.info(
-                f"Cancelled order for {symbol.base_asset + symbol.quote_asset}: {order}"
+                f"Cancelled order for {symbol.base_currency + symbol.quote_currency}: {order}"
             )
             return order
         else:
@@ -134,10 +134,10 @@ class BinanceRestAdapter(ExchangeConnector):
 
     async def get_open_orders(self, symbol: Symbol) -> List[Order]:
         orders = await self.rest_client.get_open_orders(
-            symbol.base_asset + symbol.quote_asset
+            symbol.base_currency + symbol.quote_currency
         )
         self.logger.info(
-            f"Open orders for {symbol.base_asset + symbol.quote_asset}: {orders}"
+            f"Open orders for {symbol.base_currency + symbol.quote_currency}: {orders}"
         )
         return [
             Order(
@@ -165,18 +165,18 @@ class BinanceRestAdapter(ExchangeConnector):
     ) -> Order:
         if order_id is not None:
             order = await self.rest_client.get_order(
-                symbol.base_asset + symbol.quote_asset, order_id=int(order_id)
+                symbol.base_currency + symbol.quote_currency, order_id=int(order_id)
             )
         elif client_order_id is not None:
             order = await self.rest_client.get_order(
-                symbol.base_asset + symbol.quote_asset,
+                symbol.base_currency + symbol.quote_currency,
                 orig_client_order_id=client_order_id,
             )
         else:
             raise OrderIdOrClientOrderIdRequiredError()
 
         self.logger.info(
-            f"Order status for {symbol.base_asset + symbol.quote_asset}: {order}"
+            f"Order status for {symbol.base_currency + symbol.quote_currency}: {order}"
         )
 
         # Convert string values to appropriate types
@@ -209,10 +209,10 @@ class BinanceRestAdapter(ExchangeConnector):
 
     async def get_my_trades(self, symbol: Symbol, limit: int = 100) -> List[MyTrade]:
         my_trades = await self.rest_client.get_my_trades(
-            symbol.base_asset + symbol.quote_asset, limit=limit
+            symbol.base_currency + symbol.quote_currency, limit=limit
         )
         self.logger.info(
-            f"My trades for {symbol.base_asset + symbol.quote_asset}: {my_trades}"
+            f"My trades for {symbol.base_currency + symbol.quote_currency}: {my_trades}"
         )
         return [
             MyTrade(
@@ -261,7 +261,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         self, symbol: Symbol
     ) -> AsyncGenerator[OrderBookUpdate, None]:
         queue = asyncio.Queue()
-        ws_symbol = (symbol.base_asset + symbol.quote_asset).lower()
+        ws_symbol = (symbol.base_currency + symbol.quote_currency).lower()
 
         async def orderbook_callback(data: Dict[str, Any]) -> None:
             await queue.put(data)
@@ -288,7 +288,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         self, symbol: Symbol
     ) -> AsyncGenerator[Trade, None]:
         queue = asyncio.Queue()
-        ws_symbol = (symbol.base_asset + symbol.quote_asset).lower()
+        ws_symbol = (symbol.base_currency + symbol.quote_currency).lower()
 
         async def trade_callback(data: Dict[str, Any]) -> None:
             await queue.put(data)
@@ -330,8 +330,8 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
         for pair in exchange_info["symbols"]:
             if pair["symbol"] == symbol:
                 return Symbol(
-                    base_asset=pair["baseAsset"],
-                    quote_asset=pair["quoteAsset"],
+                    base_currency=pair["baseAsset"],
+                    quote_currency=pair["quoteAsset"],
                     instrument_type=InstrumentType.SPOT,
                 )
         raise ValueError(f"Symbol {symbol} not found in exchange info")

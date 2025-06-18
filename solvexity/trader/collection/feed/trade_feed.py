@@ -48,7 +48,7 @@ class TradeFeed(ConfigNode):
                  router: Callable[[HookletMessage], str | None], 
                  node_id: None|str=None,
                  rest_connector: ExchangeConnector | None = None,
-                 stream_connector: ExchangeConnector | None = None,
+                 stream_connector: ExchangeStreamConnector | None = None,
                  ):
         super().__init__(pilot, [], router, node_id)
         self.rest_connector = rest_connector
@@ -63,8 +63,8 @@ class TradeFeed(ConfigNode):
                 e.node_id,
                 e.type,
                 config_obj.exchange.value,
-                config_obj.symbol.base_currency.value,
-                config_obj.symbol.quote_currency.value,
+                config_obj.symbol.base_currency,
+                config_obj.symbol.quote_currency,
                 config_obj.symbol.instrument_type.value
             ]
             return ".".join(components)
@@ -77,7 +77,7 @@ class TradeFeed(ConfigNode):
         Default generator function that yields nothing.
         Override this method to provide custom generator behavior.
         """
-        async for trade in self.stream_connector.execution_updates_iterator(self.symbol):
+        async for trade in self.stream_connector.public_trades_iterator(self.symbol):
             timestamp = int(time.time() * 1000)
             self.logger.info(f"Received Trade: {trade}")
             yield HookletMessage(

@@ -32,7 +32,7 @@ deployer_config = config.get("deployer", {})
 # Initialize the deployer with configuration
 DeployerSingleton.from_config(deployer_config)
 
-nodes_config = config.get("nodes", [])
+nodes_config = deployer_config.get("nodes", [])
 
 # Use the newer lifespan approach for FastAPI lifecycle management
 @asynccontextmanager
@@ -43,6 +43,8 @@ async def lifespan(app: FastAPI):
     logger.info("Connected to NATS server")
 
     for node_config in nodes_config:
+        logger.info(f"Deploying node: {node_config.get('type')}")
+        logger.info(f"Node config: {node_config.get('config')}")
         await deployer.deploy(node_config.get("type"), node_config.get("config"))
     
     yield

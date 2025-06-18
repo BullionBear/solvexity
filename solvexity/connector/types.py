@@ -48,8 +48,8 @@ class InstrumentType(Enum):
 
 
 class Symbol(BaseModel):
-    base_asset: str = Field(..., description="The base asset of the symbol")
-    quote_asset: str = Field(..., description="The quote asset of the symbol")
+    base_currency: str = Field(..., description="The base currency of the symbol")
+    quote_currency: str = Field(..., description="The quote currency of the symbol")
     instrument_type: InstrumentType = Field(..., description="The type of instrument")
 
 
@@ -95,10 +95,10 @@ class OHLCV(BaseModel):
     close_time: int = Field(..., description="The close time of the OHLCV")
     quote_volume: Decimal = Field(..., description="The quote volume of the OHLCV")
     n_trades: int | None = Field(None, description="The number of trades of the OHLCV")
-    taker_buy_base_asset_volume: Decimal | None = Field(
+    taker_buy_base_currency_volume: Decimal | None = Field(
         None, description="The taker buy base asset volume of the OHLCV"
     )
-    taker_buy_quote_asset_volume: Decimal | None = Field(
+    taker_buy_quote_currency_volume: Decimal | None = Field(
         None, description="The taker buy quote asset volume of the OHLCV"
     )
 

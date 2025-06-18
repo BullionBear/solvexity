@@ -34,8 +34,8 @@ class TraderFactory:
         """
         Create a trader instance from the registry.
         """
-        if name in self.registry:
-            node_class = self.registry[name]
+        if name in self._registry:
+            node_class = self._registry[name]
             return node_class.from_config(self.pilot, config)
         raise ValueError(f"Node type {name} not found in registry")
 

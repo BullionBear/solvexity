@@ -41,7 +41,7 @@ class Deployer:
 
     async def deploy(
         self,
-        node_type: Type[ConfigNode],
+        node_type: str,
         config: dict[str, Any],
     ):
         """
@@ -52,11 +52,11 @@ class Deployer:
             # Start the node
             await node.start()
             self._deployments.append((node, config))
-            logger.info(f"Successfully deployed {node_type.__name__}: {node.node_id}")
+            logger.info(f"Successfully deployed {node_type}: {node.node_id}")
             return True
         except Exception as e:
             logger.error(
-                f"Failed to deploy {node_type.__name__}: {type(e).__name__} - {str(e)}"
+                f"Failed to deploy {node_type}: {type(e).__name__} - {str(e)}"
             )
             # Clean up if initialization succeeded but start failed
             if node.node_id in self._deployments:

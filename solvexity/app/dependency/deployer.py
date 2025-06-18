@@ -27,7 +27,8 @@ class DeployerSingleton:
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> None:
-        PilotSingleton.from_config(config.get("pilot", {}))
+        pilot_config = config.get("pilot", {})
+        PilotSingleton.from_config(pilot_config)
         cls._deployer = Deployer(PilotSingleton.get_pilot())
 
     @classmethod

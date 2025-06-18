@@ -43,9 +43,9 @@ class Deployer:
         self,
         node_type: str,
         config: dict[str, Any],
-    ):
+    ) -> bool:
         """
-        Deploys an Eventrix instance.
+        Deploys a ConfigNode instance.
         """
         try:
             node = self._trader_factory.create(node_type, config)
@@ -58,24 +58,17 @@ class Deployer:
             logger.error(
                 f"Failed to deploy {node_type}: {type(e).__name__} - {str(e)}"
             )
-            # Clean up if initialization succeeded but start failed
-            if node.node_id in self._deployments:
-                node, _ = self._deployments.pop(node.node_id)
-                try:
-                    await node.stop()
-                except Exception:
-                    pass
-            raise
+            return False
 
     async def undeploy(self, node_id: str) -> bool:
         """
         Undeploys an existing node instance.
         """
-        if node_id not in [node.node_id for node, _ in self._deployments]:
-            return False
-
         try:
-            node, _ = self._deployments.pop(node_id)
+            node, _ = next((node for node, _ in self._deployments if node.node_id == node_id), None)
+            if node is None:
+                logger.error(f"Node {node_id} not found")
+                return False
             await node.stop()
             logger.info(f"Successfully undeployed {node.node_id}")
             return True

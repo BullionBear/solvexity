@@ -8,8 +8,8 @@ from solvexity.logger import SolvexityLogger
 
 class OHLCVAggregatorConfig(BaseModel):
     source: str
-    interval_ms: int
-    node_id: None|str=None
+    interval: str
+    node_id: str
 
 
 class OHLCVAggregator(ConfigNode):
@@ -34,15 +34,12 @@ class OHLCVAggregator(ConfigNode):
             components = [
                 e.node_id,
                 e.type,
-                config_obj.exchange.value,
-                config_obj.symbol.base_currency,
-                config_obj.symbol.quote_currency,
-                config_obj.symbol.instrument_type.value
+                config_obj.interval_ms
             ]
             return ".".join(components)
         return cls(pilot, config_obj.source, create_router_path, config_obj.interval_ms, config_obj.node_id)
 
-    async def handle_message(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
+    async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
         if message.type == "trade":
             self.logger.info(f"Received trade: {message.payload}")
             yield message

@@ -1,0 +1,14 @@
+app:
+  host: "0.0.0.0"
+  port: 8001
+
+deployer:
+  pilot:
+    type: "nats"
+    url: "nats://localhost:4222"
+  nodes:
+    - type: "OHLCVAggregator"
+      config:
+        source: "trade_feed_1.trade.BINANCE.BTC.USDT.SPOT"
+        interval: "1m"
+        node_id: "ohlcv_aggregator_1"

@@ -5,12 +5,17 @@ from hooklet.types import HookletMessage
 from solvexity.trader.base.config_node import ConfigNode
 from solvexity.connector.types import OHLCV, Symbol
 from solvexity.logger import SolvexityLogger
+from solvexity.utils import str_to_ms
 
 class OHLCVAggregatorConfig(BaseModel):
     source: str
     interval: str
     node_id: str
 
+    @classmethod
+    def from_config(cls, config: dict[str, Any]) -> "OHLCVAggregatorConfig":
+        config_obj = OHLCVAggregatorConfig(**config)
+        return config_obj
 
 class OHLCVAggregator(ConfigNode):
     def __init__(self, 
@@ -34,10 +39,11 @@ class OHLCVAggregator(ConfigNode):
             components = [
                 e.node_id,
                 e.type,
-                config_obj.interval_ms
+                config_obj.interval
             ]
             return ".".join(components)
-        return cls(pilot, config_obj.source, create_router_path, config_obj.interval_ms, config_obj.node_id)
+        interval_ms = str_to_ms(config_obj.interval)
+        return cls(pilot, config_obj.source, create_router_path, interval_ms, config_obj.node_id)
 
     async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
         if message.type == "trade":

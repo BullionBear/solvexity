@@ -19,7 +19,7 @@ class TradeFeedConfig(BaseModel):
     use_testnet: bool = False
 
     @classmethod
-    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeedConfig":
+    def from_config(cls, config: dict[str, Any]) -> "TradeFeedConfig":
         """
         Create a TradeFeedConfig from a configuration dictionary.
         Example:
@@ -57,7 +57,7 @@ class TradeFeed(ConfigNode):
 
     @classmethod
     def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeed":
-        config_obj = TradeFeedConfig.from_config(pilot, config)
+        config_obj = TradeFeedConfig.from_config(config)
         def create_router_path(e):
             components = [
                 e.node_id,

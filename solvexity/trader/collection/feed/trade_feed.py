@@ -61,11 +61,7 @@ class TradeFeed(ConfigNode):
         def create_router_path(e):
             components = [
                 e.node_id,
-                e.type,
-                config_obj.exchange.value,
-                config_obj.symbol.base_currency,
-                config_obj.symbol.quote_currency,
-                config_obj.symbol.instrument_type.value
+                e.type
             ]
             return ".".join(components)
         rest_connector = ExchangeConnectorFactory.create_rest_connector(config_obj.exchange, {"use_testnet": config_obj.use_testnet})

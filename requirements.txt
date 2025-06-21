@@ -11,6 +11,8 @@ pydantic
 uvicorn
 aiocache
 cachetools
+redis
+hiredis
 # Linters and formatters
 pytest>=7.0.0
 pytest-asyncio>=0.18.3

@@ -80,3 +80,65 @@ def ms_to_str(ms: int) -> str:
     
     # If less than 1 minute, return in seconds
     return f"{seconds}s"
+
+def str_to_bytes(byte_str: str) -> int:
+    """
+    Convert bytes representation to int.
+    
+    Args:
+        byte_str: Bytes representation in format like "100B", "100KB", "100MB", "100GB"
+        
+    Returns:
+        Bytes in int
+    """
+    if not byte_str or not isinstance(byte_str, str):
+        raise ValueError("Byte string must be a non-empty string")
+    
+    # Remove any whitespace
+    byte_str = byte_str.strip()
+    
+    # Pattern to match: number followed by unit (B, KB, MB, GB)
+    pattern = r'^(\d+)([BKMGT]B)$'
+    match = re.match(pattern, byte_str)
+    
+    if not match:
+        raise ValueError(f"Invalid byte format: {byte_str}. Expected format like '100B', '100KB', '100MB', '100GB'")
+    
+    value = int(match.group(1))
+    unit = match.group(2)
+    
+    # Convert to bytes
+    if unit == 'B':  # bytes
+        return value
+    elif unit == 'KB':  # kilobytes
+        return value * 1024
+    elif unit == 'MB':  # megabytes
+        return value * 1024 * 1024
+    elif unit == 'GB':  # gigabytes
+        return value * 1024 * 1024 * 1024
+    else:
+        raise ValueError(f"Unsupported byte unit: {unit}. Supported units: B, KB, MB, GB")
+    
+def bytes_to_str(bytes: int) -> str:
+    """
+    Convert bytes to the most appropriate byte string format.
+    
+    Args:
+        bytes: Bytes
+
+    Returns:
+        Byte string in format like "100B", "100KB", "100MB", "100GB"
+    """
+    if bytes < 0:
+        raise ValueError("Bytes must be non-negative")
+    
+    # Convert to bytes
+    if bytes < 1024:
+        return f"{bytes}B"
+    elif bytes < 1024 * 1024:
+        return f"{bytes / 1024}KB"
+    elif bytes < 1024 * 1024 * 1024:
+        return f"{bytes / 1024 / 1024}MB"
+    else:
+        return f"{bytes / 1024 / 1024 / 1024}GB"
+    

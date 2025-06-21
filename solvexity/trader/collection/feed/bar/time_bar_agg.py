@@ -17,11 +17,28 @@ class TimeBarAggregator(ConfigNode):
                  ):
         super().__init__(pilot, [source], router, node_id)
         self.interval_ms = interval_ms
-        self._count = 0
-        self._running_ohlcv: OHLCV | None = None
-        self._symbol: Symbol | None = None
+        self._current_timeslot = -1
         self.logger = SolvexityLogger().get_logger(__name__)
 
     @classmethod
     def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TimeBarAggregator":
         return cls(pilot, config["source"], config["router"], config["interval_ms"], config["node_id"])
+    
+    async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
+        if message.type == "trade":
+            trade = Trade.model_validate(message.payload)
+            async for message in self.on_trade(trade):
+                yield message
+        else:
+            self.logger.error(f"TimeBarAggregator: Invalid message type: {message.type}")
+
+    async def on_trade(self, trade: Trade) -> AsyncGenerator[HookletMessage, None]:
+        if self._current_timeslot == -1:
+            self._current_timeslot = trade.timestamp
+        else:
+            if trade.timestamp - self._current_timeslot > self.interval_ms:
+                self._current_timeslot = trade.timestamp
+                yield HookletMessage(type="bar", payload=self._current_timeslot)
+            else:
+                yield HookletMessage(type="trade", payload=trade)
+            

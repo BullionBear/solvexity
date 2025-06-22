@@ -1,0 +1,19 @@
+app:
+  host: "0.0.0.0"
+  port: 8002
+
+deployer:
+  pilot:
+    type: "nats"
+    url: "nats://localhost:4222"
+  nodes:
+    - type: "InfluxWriter"
+      config:
+        source: "feed.binance.btc.usdt.spot.trade"
+        influxdb_url: "http://localhost:8086"
+        influxdb_token: ""
+        influxdb_org: ""
+        influxdb_bucket: ""
+        measurement: "trade"
+        tags: 
+         - "symbol"

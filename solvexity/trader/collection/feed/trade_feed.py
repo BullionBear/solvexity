@@ -10,6 +10,7 @@ import uuid
 import random
 import time
 from solvexity.trader.base import ConfigNode
+from solvexity.trader.payload import TradePayload
 
 
 class TradeFeedConfig(BaseModel):
@@ -72,6 +73,14 @@ class TradeFeed(ConfigNode):
         stream_connector = ExchangeConnectorFactory.create_websocket_connector(config_obj.exchange, {"use_testnet": config_obj.use_testnet})
         return cls(pilot, config_obj.symbol, create_router_path, config_obj.node_id, rest_connector, stream_connector)
 
+    def status(self) -> dict[str, Any]:
+        status = super().status()
+        status["n_reconnects"] = self._n_reconnects
+        status["n_data"] = self._n_data
+        status["seq_id"] = self.seq_id
+        status["symbol"] = self.symbol.to_str()
+        return status
+
     async def generator_func(self) -> AsyncGenerator[HookletMessage, None]:
         """
         Default generator function that yields nothing.
@@ -85,17 +94,18 @@ class TradeFeed(ConfigNode):
             if trade.id != self.seq_id + 1:
                 self.logger.error(f"Trade ID mismatch: {trade.id} != {self.seq_id + 1}")
                 self._n_reconnects += 1
-                trades = await self.rest_connector.get_recent_trades(self.symbol, limit=100)
-                for trade in trades:
-                    if trade.id == self.seq_id + 1:
-                        self.seq_id = trade.id
+                old_trades = await self.rest_connector.get_recent_trades(self.symbol, limit=100)
+                for old_trade in old_trades:
+                    old_trade_payload = TradePayload.from_trade(old_trade)
+                    if old_trade.id == self.seq_id + 1:
+                        self.seq_id = old_trade.id
                         self._n_data += 1
                         yield HookletMessage(
                             id=uuid.uuid4(),
                             node_id=self.node_id,
                             correlation_id=random.randint(0, 2**64 - 1),
                             type="trade",
-                            payload=trade,
+                            payload=old_trade_payload,
                             start_at=timestamp,
                             finish_at=timestamp,
                         )
@@ -104,12 +114,13 @@ class TradeFeed(ConfigNode):
             else:
                 self.seq_id = trade.id
                 self._n_data += 1
+                trade_payload = TradePayload.from_trade(trade)
                 yield HookletMessage(
                     id=uuid.uuid4(),
                     node_id=self.node_id,
                     correlation_id=random.randint(0, 2**64 - 1),
                     type="trade",
-                    payload=trade,
+                    payload=trade_payload,
                     start_at=timestamp,
                     finish_at=timestamp,
                 )

@@ -52,6 +52,9 @@ class Symbol(BaseModel):
     quote_currency: str = Field(..., description="The quote currency of the symbol")
     instrument_type: InstrumentType = Field(..., description="The type of instrument")
 
+    def to_str(self) -> str:
+        return f"{self.base_currency}-{self.quote_currency}-{self.instrument_type.value}"
+
 
 class OrderBook(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book")

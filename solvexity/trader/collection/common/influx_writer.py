@@ -13,6 +13,7 @@ from influxdb_client import Point
 
 
 class InfluxWriterConfig(BaseModel):
+    source: str
     influxdb_url: str
     influxdb_token: str
     influxdb_org: str
@@ -43,6 +44,20 @@ class InfluxWriter(ConfigNode):
         self.write_api: WriteApi | None = None
 
         self.logger = SolvexityLogger().get_logger(__name__)
+
+    @classmethod
+    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "InfluxWriter":
+        config_obj = InfluxWriterConfig.from_config(config)
+        return cls(
+            pilot=pilot,
+            source=config_obj.source,
+            influxdb_url=config_obj.influxdb_url,
+            influxdb_token=config_obj.influxdb_token,
+            influxdb_org=config_obj.influxdb_org,
+            influxdb_bucket=config_obj.influxdb_bucket,
+            measurement=config_obj.measurement,
+            tags=config_obj.tags,
+        )
 
     async def on_start(self) -> None:
         await super().on_start()

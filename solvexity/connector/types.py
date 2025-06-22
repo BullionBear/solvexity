@@ -108,7 +108,7 @@ class Trade(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
-    time: int = Field(..., description="The time of the trade")
+    timestamp: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
 
 
@@ -147,7 +147,7 @@ class MyTrade(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
-    time: int = Field(..., description="The time of the trade")
+    timestamp: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
     is_maker: bool = Field(..., description="Whether the trade is a maker")
     commission: Decimal = Field(..., description="The commission of the trade")

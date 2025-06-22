@@ -1,4 +1,4 @@
 from .trade_feed import TradeFeed
-from .ohlcv_aggregator import OHLCVAggregator
+from .influx_writer import InfluxWriter
 
-__all__ = ["TradeFeed", "OHLCVAggregator"]
+__all__ = ["TradeFeed", "InfluxWriter"]

@@ -19,7 +19,7 @@ class InfluxWriterConfig(BaseModel):
     influxdb_org: str
     influxdb_bucket: str
     measurement: str
-    tags: list[str] | None = None
+    tags: dict[str, str] | None = None
 
 class InfluxWriter(ConfigNode):
     def __init__(self, 
@@ -30,7 +30,7 @@ class InfluxWriter(ConfigNode):
                  influxdb_org: str,
                  influxdb_bucket: str,
                  measurement: str,
-                 tags: list[str] | None = None,
+                 tags: dict[str, str] | None = None,
                  node_id: None|str=None,
                  ):
         super().__init__(pilot, [source], lambda message: None, node_id)
@@ -47,7 +47,7 @@ class InfluxWriter(ConfigNode):
 
     @classmethod
     def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "InfluxWriter":
-        config_obj = InfluxWriterConfig.from_config(config)
+        config_obj = InfluxWriterConfig.model_validate(config)
         return cls(
             pilot=pilot,
             source=config_obj.source,
@@ -73,21 +73,27 @@ class InfluxWriter(ConfigNode):
         if message.type == "trade":
             trade = Trade(**message.payload)
             self.write_trade(trade)
+            yield message  # Yield the original message after processing
         else:
             self.logger.error(f"Invalid message type: {message.type}")
-            return
-        
-    
+            # Don't yield anything for invalid message types
+
     def write_trade(self, trade: Trade) -> None:
-        point = Point(self.measurement) \
-        .tag(*self.tags) \
+        point = Point(self.measurement)
+        
+        # Add tags if they exist
+        for tag, value in self.tags.items():
+            point = point.tag(tag, value)
+            
+        point = point \
         .field("id", trade.id) \
         .field("symbol", f"{trade.symbol.base_currency}-{trade.symbol.quote_currency}-{trade.symbol.instrument_type.value}") \
         .field("price", trade.price) \
         .field("quantity", trade.quantity) \
         .field("side", trade.side.value) \
         .time(int(trade.timestamp), write_precision='ms')
-        self.write_api().write(self.influxdb_bucket, self.influxdb_org, point)
+        self.logger.info(f"Writing trade to InfluxDB: {point}")
+        self.write_api.write(self.influxdb_bucket, self.influxdb_org, point)
 
     async def on_finish(self) -> None:
         self.write_api.close()

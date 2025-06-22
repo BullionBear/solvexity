@@ -25,6 +25,17 @@ services:
     networks:
       - solvexity-net
 
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb-data:/var/lib/influxdb
+    networks:
+      - solvexity-net
+
 networks:
   solvexity-net:
     driver: bridge

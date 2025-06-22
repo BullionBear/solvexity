@@ -9,22 +9,37 @@ from solvexity.utils import str_to_ms
 from redis.asyncio import Redis
 
 
-class RedisTimeSeriesCache(ConfigNode):
+class InfluxDBWriter(ConfigNode):
     def __init__(self, 
                  pilot: BasePilot, 
                  source: str,
-                 cache_interval_ms: int,
-                 cache_size_bytes: int,
+                 influxdb_url: str,
+                 influxdb_token: str,
+                 influxdb_org: str,
+                 influxdb_bucket: str,
+                 measurements: list[str] | None = None,
                  node_id: None|str=None,
                  ):
         super().__init__(pilot, [source], lambda message: None, node_id)
-        self.cache_interval_ms = cache_interval_ms
-        self.cache_size_bytes = cache_size_bytes
+        self.influxdb_url = influxdb_url
+        self.influxdb_token = influxdb_token
+        self.influxdb_org = influxdb_org
+        self.influxdb_bucket = influxdb_bucket
+        self.measurements = measurements
+
         self.logger = SolvexityLogger().get_logger(__name__)
+
+    async def on_start(self) -> None:
+        
+        
         
     def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
-        if message.type == "cache":
-            yield message
-        else:
-            yield message
+        payload = message.payload
+        await self.redis.ts().add
+
+    async def on_finish(self) -> None:
+        if self.redis:
+            await self.redis.close()
+            self.redis = None
+            
             

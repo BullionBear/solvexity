@@ -379,7 +379,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     symbol=symbol,
                     price=Decimal(data["p"]),
                     quantity=Decimal(data["q"]),
-                    time=data["T"],
+                    timestamp=data["T"],
                     side=OrderSide(data["S"]),
                     is_maker=data["m"],
                     commission=Decimal(data["c"]),

@@ -53,7 +53,11 @@ class TradeFeed(ConfigNode):
         super().__init__(pilot, [], router, node_id)
         self.rest_connector = rest_connector
         self.stream_connector = stream_connector
+        self.seq_id = 0
         self.symbol = symbol
+
+        self._n_reconnects = 0
+        self._n_data = 0
 
     @classmethod
     def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeed":
@@ -76,13 +80,37 @@ class TradeFeed(ConfigNode):
         async for trade in self.stream_connector.public_trades_iterator(self.symbol):
             timestamp = int(time.time() * 1000)
             self.logger.info(f"Received Trade: {trade}")
-            yield HookletMessage(
-                id=uuid.uuid4(),
-                node_id=self.node_id,
-                correlation_id=random.randint(0, 2**64 - 1),
-                type="trade",
-                payload=trade,
-                start_at=timestamp,
-                finish_at=timestamp,
-            )
+            if self.seq_id == 0:
+                self.seq_id = trade.id - 1 # mock the first trade
+            if trade.id != self.seq_id + 1:
+                self.logger.error(f"Trade ID mismatch: {trade.id} != {self.seq_id + 1}")
+                self._n_reconnects += 1
+                trades = await self.rest_connector.get_recent_trades(self.symbol, limit=100)
+                for trade in trades:
+                    if trade.id == self.seq_id + 1:
+                        self.seq_id = trade.id
+                        self._n_data += 1
+                        yield HookletMessage(
+                            id=uuid.uuid4(),
+                            node_id=self.node_id,
+                            correlation_id=random.randint(0, 2**64 - 1),
+                            type="trade",
+                            payload=trade,
+                            start_at=timestamp,
+                            finish_at=timestamp,
+                        )
+                    else:
+                        continue
+            else:
+                self.seq_id = trade.id
+                self._n_data += 1
+                yield HookletMessage(
+                    id=uuid.uuid4(),
+                    node_id=self.node_id,
+                    correlation_id=random.randint(0, 2**64 - 1),
+                    type="trade",
+                    payload=trade,
+                    start_at=timestamp,
+                    finish_at=timestamp,
+                )
     

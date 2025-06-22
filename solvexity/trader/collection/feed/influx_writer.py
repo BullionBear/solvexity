@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from hooklet.base import BasePilot
 from hooklet.types import HookletMessage
 from solvexity.trader.base.config_node import ConfigNode
-from solvexity.connector.types import OHLCV, Symbol, Trade
+from solvexity.trader.payload import TradePayload
 from solvexity.logger import SolvexityLogger
 from solvexity.utils import str_to_ms
 from redis.asyncio import Redis
@@ -45,7 +45,7 @@ class InfluxWriter(ConfigNode):
         self.influxdb_org = influxdb_org
         self.influxdb_bucket = influxdb_bucket
         self.measurement = measurement
-        self.tags = tags
+        self.tags = tags if tags is not None else {}
         self.influxdb_client: InfluxDBClient | None = None
         self.write_api: WriteApi | None = None
 
@@ -77,28 +77,18 @@ class InfluxWriter(ConfigNode):
         
     async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
         if message.type == "trade":
-            trade = Trade(**message.payload)
-            self.write_trade(trade)
+            trade_payload = TradePayload(**message.payload)
+            self.write_trade(trade_payload)
             yield message  # Yield the original message after processing
         else:
             self.logger.error(f"Invalid message type: {message.type}")
             # Don't yield anything for invalid message types
 
-    def write_trade(self, trade: Trade) -> None:
-        point = Point(self.measurement)
-        
-        # Add tags if they exist
+    def write_trade(self, trade: TradePayload) -> None:
+        point = trade.to_point()
         for tag, value in self.tags.items():
             point = point.tag(tag, value)
-            
-        point = point \
-        .field("id", trade.id) \
-        .field("symbol", f"{trade.symbol.base_currency}-{trade.symbol.quote_currency}-{trade.symbol.instrument_type.value}") \
-        .field("price", trade.price) \
-        .field("quantity", trade.quantity) \
-        .field("side", trade.side.value) \
-        .time(int(trade.timestamp), write_precision='ms')
-        self.logger.info(f"Writing trade to InfluxDB: {point}")
+        self.logger.info(f"Writing trade point {point} to InfluxDB")
         self.write_api.write(self.influxdb_bucket, self.influxdb_org, point)
 
     async def on_finish(self) -> None:

@@ -1,0 +1,80 @@
+from typing import Any, AsyncGenerator, Callable
+from pydantic import BaseModel
+from hooklet.base import BasePilot
+from hooklet.types import HookletMessage
+from solvexity.trader.base.config_node import ConfigNode
+from solvexity.connector.types import OHLCV, Symbol, Trade
+from solvexity.logger import SolvexityLogger
+from solvexity.utils import str_to_ms
+from redis.asyncio import Redis
+from influxdb_client import InfluxDBClient, WriteOptions
+from influxdb_client.client.write_api import ASYNCHRONOUS, WriteApi
+from influxdb_client import Point
+
+
+class InfluxWriterConfig(BaseModel):
+    influxdb_url: str
+    influxdb_token: str
+    influxdb_org: str
+    influxdb_bucket: str
+    measurement: str
+    tags: list[str] | None = None
+
+class InfluxWriter(ConfigNode):
+    def __init__(self, 
+                 pilot: BasePilot, 
+                 source: str,
+                 influxdb_url: str,
+                 influxdb_token: str,
+                 influxdb_org: str,
+                 influxdb_bucket: str,
+                 measurement: str,
+                 tags: list[str] | None = None,
+                 node_id: None|str=None,
+                 ):
+        super().__init__(pilot, [source], lambda message: None, node_id)
+        self.influxdb_url = influxdb_url
+        self.influxdb_token = influxdb_token
+        self.influxdb_org = influxdb_org
+        self.influxdb_bucket = influxdb_bucket
+        self.measurement = measurement
+        self.tags = tags
+        self.influxdb_client: InfluxDBClient | None = None
+        self.write_api: WriteApi | None = None
+
+        self.logger = SolvexityLogger().get_logger(__name__)
+
+    async def on_start(self) -> None:
+        await super().on_start()
+        self.influxdb_client = InfluxDBClient(
+            url=self.influxdb_url,
+            token=self.influxdb_token,
+            org=self.influxdb_org,
+        )
+        self.write_api = self.influxdb_client.write_api(write_options=ASYNCHRONOUS)
+        
+        
+    async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
+        if message.type == "trade":
+            trade = Trade(**message.payload)
+            self.write_trade(trade)
+        else:
+            self.logger.error(f"Invalid message type: {message.type}")
+            return
+        
+    
+    def write_trade(self, trade: Trade) -> None:
+        point = Point(self.measurement) \
+        .tag(*self.tags) \
+        .field("id", trade.id) \
+        .field("symbol", f"{trade.symbol.base_currency}-{trade.symbol.quote_currency}-{trade.symbol.instrument_type.value}") \
+        .field("price", trade.price) \
+        .field("quantity", trade.quantity) \
+        .field("side", trade.side.value) \
+        .time(int(trade.timestamp), write_precision='ms')
+        self.write_api().write(self.influxdb_bucket, self.influxdb_org, point)
+
+    async def on_finish(self) -> None:
+        self.write_api.close()
+        self.influxdb_client.close()
+        await super().on_finish()

@@ -21,6 +21,12 @@ class InfluxWriterConfig(BaseModel):
     measurement: str
     tags: dict[str, str] | None = None
 
+class InfluxQueryRequest(BaseModel):
+    query: str
+
+class InfluxQueryResponse(BaseModel):
+    data: list[dict[str, Any]]
+
 class InfluxWriter(ConfigNode):
     def __init__(self, 
                  pilot: BasePilot, 

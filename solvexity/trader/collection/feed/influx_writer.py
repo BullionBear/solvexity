@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 from influxdb_client import InfluxDBClient, WriteOptions
 from influxdb_client.client.write_api import ASYNCHRONOUS, WriteApi
 from influxdb_client import Point
-
+from aiocache import Cache
 
 
 class InfluxWriterConfig(BaseModel):
@@ -49,7 +49,7 @@ class InfluxWriter(ConfigNode):
         self.tags = tags if tags is not None else {}
         self.influxdb_client: InfluxDBClient | None = None
         self.write_api: WriteApi | None = None
-
+        self.cache = Cache(Cache.MEMORY, ttl=10) # duplicate cache to avoid writing the same trade multiple times
         self.logger = SolvexityLogger().get_logger(__name__)
 
     @classmethod
@@ -79,13 +79,19 @@ class InfluxWriter(ConfigNode):
     async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
         if message.type == "trade":
             trade_payload = TradePayload(**message.payload)
-            self.write_trade(trade_payload)
+            await self.write_trade(trade_payload)
             yield message  # Yield the original message after processing
         else:
             self.logger.error(f"Invalid message type: {message.type}")
             # Don't yield anything for invalid message types
 
-    def write_trade(self, trade: TradePayload) -> None:
+    async def write_trade(self, trade: TradePayload) -> None:
+        if await self.cache.get(trade.id) is not None:
+            self.logger.info(f"Trade {trade.id} already written to InfluxDB")
+            return
+        await self.cache.set(trade.id, trade.id)
+        self.logger.info(f"Cache set for trade {trade.id}")
+        self.logger.info(f"Writing trade {trade.id} to InfluxDB")
         point = trade.to_point()
         for tag, value in self.tags.items():
             point = point.tag(tag, value)

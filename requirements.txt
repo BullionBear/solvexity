@@ -5,6 +5,7 @@ pandas
 numpy
 hooklet
 ccxt
+aiocache
 # service
 fastapi[standard]
 pydantic

@@ -1,7 +1,7 @@
-from solvexity.connector.types import Trade, Symbol, InstrumentType, OrderSide
+from solvexity.connector.types import Trade, Symbol, InstrumentType, OrderSide, Exchange
 from pydantic import BaseModel, Field
 from decimal import Decimal, ROUND_HALF_UP
-from influxdb_client import Point
+from influxdb_client import Point, WritePrecision
 from influxdb_client.client.flux_table import FluxRecord
 from typing import Union
 
@@ -38,24 +38,25 @@ class TradePayload(BaseModel):
         )
     
     def to_point(self) -> Point:
-        """Convert to InfluxDB Point with controlled decimal precision"""
-        
+        self.timestamp = self.timestamp * 1_000_000 # from ms to ns
+        timestamp_ns = self.timestamp + self.id % 1_000_000 # add 1ns for each trade to avoid duplicates
         return Point("trades") \
             .tag("symbol", self.symbol) \
             .field("id", self.id) \
             .field("side", self.side) \
-            .field("price", str(self.price)) \
-            .field("quantity", str(self.quantity)) \
-            .field("timestamp", self.timestamp) \
-            .time(self.timestamp, write_precision='ms')
+            .field("price", self.price) \
+            .field("price_str", str(self.price)) \
+            .field("quantity", self.quantity) \
+            .field("quantity_str", str(self.quantity)) \
+            .time(timestamp_ns, write_precision=WritePrecision.NS)
     
     @classmethod
     def from_record(cls, record: FluxRecord) -> "TradePayload":
         return cls(
             id=int(record.values.get("id")),
             symbol=record.values.get("symbol"),
-            price=Decimal(record.values.get("price")),
-            quantity=Decimal(record.values.get("quantity")),
+            price=Decimal(record.values.get("price_str")),
+            quantity=Decimal(record.values.get("quantity_str")),
             timestamp=int(record.get_time().timestamp() * 1000),
             side=record.values.get("side"),
         )

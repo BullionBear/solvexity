@@ -1,7 +1,10 @@
 from solvexity.connector.types import Trade, Symbol, InstrumentType, OrderSide
 from pydantic import BaseModel, Field
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from influxdb_client import Point
+from influxdb_client.client.flux_table import FluxRecord
+from typing import Union
+
 
 class TradePayload(BaseModel):
     id: int = Field(..., description="The id of the trade")
@@ -34,26 +37,27 @@ class TradePayload(BaseModel):
             side=OrderSide(self.side),
         )
     
-    @classmethod
-    def from_point(cls, point: Point) -> "TradePayload":
-        base_currency, quote_currency, instrument_type = point.get_tag("symbol").split("-")
-        return cls(
-            id=point.get_field("id"),
-            symbol=f"{base_currency}-{quote_currency}-{instrument_type}",
-            price=point.get_field("price"),
-            quantity=point.get_field("quantity"),
-            timestamp=point.get_field("timestamp"),
-            side=point.get_field("side"),
-        )
-    
     def to_point(self) -> Point:
+        """Convert to InfluxDB Point with controlled decimal precision"""
+        
         return Point("trades") \
             .tag("symbol", self.symbol) \
+            .field("id", self.id) \
             .field("side", self.side) \
-            .field("price", self.price) \
-            .field("quantity", self.quantity) \
+            .field("price", str(self.price)) \
+            .field("quantity", str(self.quantity)) \
             .field("timestamp", self.timestamp) \
             .time(self.timestamp, write_precision='ms')
     
+    @classmethod
+    def from_record(cls, record: FluxRecord) -> "TradePayload":
+        return cls(
+            id=int(record.values.get("id")),
+            symbol=record.values.get("symbol"),
+            price=Decimal(record.values.get("price")),
+            quantity=Decimal(record.values.get("quantity")),
+            timestamp=int(record.get_time().timestamp() * 1000),
+            side=record.values.get("side"),
+        )
 
     

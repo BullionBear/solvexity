@@ -12,6 +12,7 @@ from influxdb_client.client.write_api import ASYNCHRONOUS, WriteApi
 from influxdb_client import Point
 
 
+
 class InfluxWriterConfig(BaseModel):
     source: str
     influxdb_url: str

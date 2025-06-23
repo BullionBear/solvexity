@@ -13,7 +13,7 @@ from influxdb_client import Point
 from aiocache import Cache
 
 
-class InfluxWriterConfig(BaseModel):
+class InfluxTradeWriterConfig(BaseModel):
     source: str
     influxdb_url: str
     influxdb_token: str
@@ -23,7 +23,7 @@ class InfluxWriterConfig(BaseModel):
     tags: dict[str, str] | None = None
 
 
-class InfluxWriter(ConfigNode):
+class InfluxTradeWriter(ConfigNode):
     def __init__(self, 
                  pilot: BasePilot, 
                  source: str,
@@ -48,8 +48,8 @@ class InfluxWriter(ConfigNode):
         self.logger = SolvexityLogger().get_logger(__name__)
 
     @classmethod
-    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "InfluxWriter":
-        config_obj = InfluxWriterConfig.model_validate(config)
+    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "InfluxTradeWriter":
+        config_obj = InfluxTradeWriterConfig.model_validate(config)
         return cls(
             pilot=pilot,
             source=config_obj.source,

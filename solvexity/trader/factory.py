@@ -8,7 +8,7 @@ This module provides a factory for creating trader instances.
 from typing import Any
 from hooklet.base import BasePilot
 from solvexity.logger import SolvexityLogger
-from solvexity.trader.collection.feed import TradeFeed, InfluxWriter
+from solvexity.trader.collection.feed import TradeFeed, InfluxTradeWriter, InfluxTradeReader
 from solvexity.trader.base import ConfigNode
 
 
@@ -24,7 +24,8 @@ class TraderFactory:
         self.pilot = pilot
         self._registry = {
             "TradeFeed": TradeFeed,
-            "InfluxWriter": InfluxWriter,
+            "InfluxTradeWriter": InfluxTradeWriter,
+            "InfluxTradeReader": InfluxTradeReader,
         }
 
     @property

@@ -60,5 +60,13 @@ class TradePayload(BaseModel):
             timestamp=int(record.get_time().timestamp() * 1000),
             side=record.values.get("side"),
         )
+    
+class InfluxTradeRequest(BaseModel):
+    exchange: str
+    symbol: str
+    duration: str
+
+class InfluxTradeReply(BaseModel):
+    trades: list[TradePayload]
 
     

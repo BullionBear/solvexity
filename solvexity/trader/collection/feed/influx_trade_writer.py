@@ -20,6 +20,7 @@ class InfluxTradeWriterConfig(BaseModel):
     influxdb_org: str
     influxdb_bucket: str
     measurement: str
+    node_id: str
     tags: dict[str, str] | None = None
 
 
@@ -59,6 +60,7 @@ class InfluxTradeWriter(ConfigNode):
             influxdb_bucket=config_obj.influxdb_bucket,
             measurement=config_obj.measurement,
             tags=config_obj.tags,
+            node_id=config_obj.node_id,
         )
 
     async def on_start(self) -> None:

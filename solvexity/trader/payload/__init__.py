@@ -1,4 +1,4 @@
-from .trade import TradePayload
-from .rpc import InfluxTradeQuery
+from .trade import TradePayload, InfluxTradeRequest, InfluxTradeReply
 
-__all__ = ["TradePayload", "InfluxTradeQuery"]
+
+__all__ = ["TradePayload", "InfluxTradeRequest", "InfluxTradeReply"]

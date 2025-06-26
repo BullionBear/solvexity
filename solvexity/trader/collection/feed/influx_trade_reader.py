@@ -21,6 +21,7 @@ class InfluxTradeReaderConfig(BaseModel):
     influxdb_org: str
     influxdb_bucket: str
     measurement: str
+    node_id: str
 
 class InfluxTradeReader(ConfigNode):
     def __init__(self, 
@@ -34,7 +35,7 @@ class InfluxTradeReader(ConfigNode):
                  router: Callable[[HookletMessage], str],
                  node_id: None|str=None,
                  ):
-        super().__init__(pilot, source, router, node_id)
+        super().__init__(pilot, [source], router, node_id)
         self.influxdb_url = influxdb_url
         self.influxdb_token = influxdb_token
         self.influxdb_org = influxdb_org
@@ -60,7 +61,7 @@ class InfluxTradeReader(ConfigNode):
     
 
     async def handler_func(self, message: HookletMessage) -> AsyncGenerator[HookletMessage, None]:
-        if message.type != "trade_request":
+        if message.type == "trade_request":
             message = HookletMessage(
                 node_id=message.node_id,
                 type="trade_response",

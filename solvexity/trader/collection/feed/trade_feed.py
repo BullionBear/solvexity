@@ -13,8 +13,8 @@ class TradeFeed(Emitter):
                  node_id: str,
                  pubsub: PubSub, 
                  symbol: str, 
-                 router: Callable[[Msg], str | None],
-                 exchange: str 
+                 exchange: str,
+                 router: Callable[[Msg], str | None] = lambda msg: msg.type,
                  ):
         super().__init__(node_id, pubsub, router)
         self.exchange = Exchange(exchange)

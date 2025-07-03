@@ -6,10 +6,10 @@ This module provides a factory for creating trader instances.
 
 
 from typing import Any
-from hooklet.base import BasePilot
+from hooklet.base import Pilot
+from hooklet.base.node import Node
 from solvexity.logger import SolvexityLogger
-from solvexity.trader.collection.feed import TradeFeed, InfluxTradeWriter, InfluxTradeReader
-from solvexity.trader.base import ConfigNode
+from solvexity.trader.collection.feed import TradeFeed
 
 
 logger = SolvexityLogger().get_logger(__name__)
@@ -20,25 +20,23 @@ class TraderFactory:
     Factory for creating trader instances.
     """
 
-    def __init__(self, pilot: BasePilot):
+    def __init__(self, pilot: Pilot):
         self.pilot = pilot
         self._registry = {
             "TradeFeed": TradeFeed,
-            "InfluxTradeWriter": InfluxTradeWriter,
-            "InfluxTradeReader": InfluxTradeReader,
         }
 
     @property
     def available_nodes(self) -> list[str]:
         return list(self._registry.keys())
 
-    def create(self, name: str, config: dict[str, Any]) -> ConfigNode:
+    def create(self, name: str, config: dict[str, Any]) -> Node:
         """
         Create a trader instance from the registry.
         """
         if name in self._registry:
             node_class = self._registry[name]
-            return node_class.from_config(self.pilot, config)
+            return node_class(config["node_id"], self.pilot.pubsub(), config["symbol"], config["exchange"])
         raise ValueError(f"Node type {name} not found in registry")
 
 # For easy imports

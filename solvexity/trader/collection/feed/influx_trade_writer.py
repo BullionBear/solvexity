@@ -1,3 +1,4 @@
+"""
 from typing import Any, AsyncGenerator, Callable
 from pydantic import BaseModel
 from hooklet.base import BasePilot
@@ -99,3 +100,4 @@ class InfluxTradeWriter(ConfigNode):
         self.write_api.close()
         self.influxdb_client.close()
         await super().on_finish()
+"""

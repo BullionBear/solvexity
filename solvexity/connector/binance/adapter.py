@@ -9,7 +9,7 @@ from solvexity.connector.base import ExchangeConnector, ExchangeStreamConnector
 from solvexity.connector.exceptions import (
     InvalidOrderPriceError, MarketOrderWithPriceError,
     OrderIdOrClientOrderIdRequiredError)
-from solvexity.connector.types import (AccountBalance, InstrumentType, MyTrade,
+from solvexity.connector.types import (AccountBalance, Exchange, InstrumentType, MyTrade,
                                        Order, OrderBook, OrderBookUpdate,
                                        OrderSide, OrderStatus, OrderType,
                                        Symbol, TimeInForce, Trade)
@@ -55,6 +55,7 @@ class BinanceRestAdapter(ExchangeConnector):
         return [
             Trade(
                 id=trade["id"],
+                exchange=Exchange.BINANCE,
                 symbol=symbol,
                 price=Decimal(trade["price"]),
                 quantity=Decimal(trade["qty"]),

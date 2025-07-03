@@ -13,6 +13,7 @@ uvicorn
 aiocache
 cachetools
 redis[hiredis]
+influxdb-client
 # Time series databases
 influxdb-client
 # Linters and formatters

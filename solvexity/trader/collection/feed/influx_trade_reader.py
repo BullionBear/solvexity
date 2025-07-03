@@ -1,3 +1,4 @@
+"""
 from typing import Any, AsyncGenerator, Callable
 from pydantic import BaseModel
 from hooklet.base import BasePilot
@@ -89,3 +90,4 @@ class InfluxTradeReader(ConfigNode):
         '''
         result = query_api.query_stream(query_str)
         return [TradePayload.from_record(record) for record in result]
+        """

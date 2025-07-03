@@ -8,6 +8,7 @@ from typing import Union
 
 class TradePayload(BaseModel):
     id: int = Field(..., description="The id of the trade")
+    exchange: str = Field(..., description="The exchange of the trade")
     symbol: str = Field(..., description="The symbol of the trade, e.g. BTC-USDT-SPOT")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
@@ -18,6 +19,7 @@ class TradePayload(BaseModel):
     def from_trade(cls, trade: Trade) -> "TradePayload":
         return cls(
             id=trade.id,
+            exchange=trade.exchange.value,
             symbol=f"{trade.symbol.base_currency}-{trade.symbol.quote_currency}-{trade.symbol.instrument_type.value}",
             price=trade.price,
             quantity=trade.quantity,
@@ -30,6 +32,7 @@ class TradePayload(BaseModel):
         instrument = InstrumentType(instrument_type)
         return Trade(
             id=self.id,
+            exchange=Exchange(self.exchange),
             symbol=Symbol(base_currency=base_currency, quote_currency=quote_currency, instrument_type=instrument),
             price=self.price,
             quantity=self.quantity,
@@ -41,6 +44,7 @@ class TradePayload(BaseModel):
         self.timestamp = self.timestamp * 1_000_000 # from ms to ns
         timestamp_ns = self.timestamp + self.id % 1_000_000 # add 1ns for each trade to avoid duplicates
         return Point("trades") \
+            .tag("exchange", self.exchange) \
             .tag("symbol", self.symbol) \
             .field("id", self.id) \
             .field("side", self.side) \
@@ -54,6 +58,7 @@ class TradePayload(BaseModel):
     def from_record(cls, record: FluxRecord) -> "TradePayload":
         return cls(
             id=int(record.values.get("id")),
+            exchange=record.values.get("exchange"),
             symbol=record.values.get("symbol"),
             price=Decimal(record.values.get("price_str")),
             quantity=Decimal(record.values.get("quantity_str")),

@@ -43,7 +43,7 @@ class InstrumentType(Enum):
     SPOT = "SPOT"
     FUTURES = "FUTURES"
     MARGIN = "MARGIN"
-    PERPETUAL = "PERPETUAL"
+    PERPETUAL = "PERP"
     OPTION = "OPTION"
 
 
@@ -54,6 +54,11 @@ class Symbol(BaseModel):
 
     def to_str(self) -> str:
         return f"{self.base_currency}-{self.quote_currency}-{self.instrument_type.value}"
+    
+    @classmethod
+    def from_str(cls, symbol_str: str) -> "Symbol":
+        base_currency, quote_currency, instrument_type = symbol_str.split("-")
+        return cls(base_currency=base_currency, quote_currency=quote_currency, instrument_type=InstrumentType(instrument_type))
 
 
 class OrderBook(BaseModel):
@@ -108,6 +113,7 @@ class OHLCV(BaseModel):
 
 class Trade(BaseModel):
     id: int = Field(..., description="The id of the trade")
+    exchange: Exchange = Field(..., description="The exchange of the trade")
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")

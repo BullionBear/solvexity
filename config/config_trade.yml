@@ -9,11 +9,7 @@ deployer:
   nodes:
     - type: "TradeFeed"
       config:
-        exchange: "BINANCE"
-        symbol:
-          base_currency: BTC
-          quote_currency: USDT
-          instrument_type: SPOT
-        node_id: "feed.binance.btc.usdt.spot"
-        use_testnet: false
-
+        node_id: "emit.trade.binance.btc.usdt.spot"
+        exchange: BINANCE
+        symbol: BTC-USDT-SPOT
+        

@@ -14,7 +14,7 @@ class TradeFeed(Emitter):
                  pubsub: PubSub, 
                  symbol: str, 
                  exchange: str,
-                 router: Callable[[Msg], str | None] = lambda msg: msg.type,
+                 router: Callable[[Msg], str | None] = lambda msg: msg["type"],
                  ):
         super().__init__(node_id, pubsub, router)
         self.exchange = Exchange(exchange)
@@ -41,9 +41,9 @@ class TradeFeed(Emitter):
                         self.seq_id = historical_trade.id
                         self._n_data += 1
                         yield Msg(
-                            id=uuid.uuid4(),
+                            _id=str(uuid.uuid4()),
                             type="trade",
-                            data=historical_trade_payload,
+                            data=historical_trade_payload.model_dump_json(),
                             error=None,
                         )
                     else:
@@ -53,9 +53,9 @@ class TradeFeed(Emitter):
                 self._n_data += 1
                 trade_payload = TradePayload.from_trade(trade)
                 yield Msg(
-                    id=uuid.uuid4(),
+                    _id=str(uuid.uuid4()),
                     type="trade",
-                    data=trade_payload,
+                    data=trade_payload.model_dump_json(),
                     error=None,
                 )
     

@@ -36,7 +36,7 @@ class TraderFactory:
         """
         if name in self._registry:
             node_class = self._registry[name]
-            return node_class(config["node_id"], self.pilot.pubsub(), config["exchange"], config["symbol"])
+            return node_class(config["node_id"], self.pilot.pubsub(), config["symbol"], config["exchange"])
         raise ValueError(f"Node type {name} not found in registry")
 
 # For easy imports

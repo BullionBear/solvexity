@@ -1,10 +1,12 @@
 import asyncio
-from solvexity.logger import logger
+from solvexity.logger import SolvexityLogger
 from typing import Any, Dict
 from hooklet.base import Pilot
 from hooklet.base.node import Node
 from solvexity.trader.factory import TraderFactory
 from hooklet.pilot import NatsPilot
+
+logger = SolvexityLogger().get_logger(__name__)
 
 class Deployer:
     """
@@ -20,12 +22,13 @@ class Deployer:
         self._trader_factory = TraderFactory(pilot)
         self._deployments: list[tuple[Node, Dict[str, Any]]] = []
         self._shutdown_event = asyncio.Event()
-        self._logger = logger.get_logger(__name__)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> "Deployer":
-        if config.get("type") == "nats":
-            pilot = NatsPilot(config.get("url", "nats://localhost:4222"))
+        logger.info(f"Deployer from config: {config}")
+        pilot_config = config.get("pilot", {})
+        if pilot_config.get("type") == "nats":
+            pilot = NatsPilot(pilot_config.get("url", "nats://localhost:4222"))
         else:
             raise ValueError(f"Unknown pilot type: {config.get('type')}")
         return cls(pilot)

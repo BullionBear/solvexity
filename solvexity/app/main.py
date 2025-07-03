@@ -1,13 +1,13 @@
 import argparse
 import yaml
+from typing import Any
 from fastapi import FastAPI, HTTPException, Depends
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from hooklet.pilot import NatsPilot
-from solvexity.app.deployer import Deployer
+from solvexity.app.dependency.deployer import Deployer
 from solvexity.trader.factory import TraderFactory
 from solvexity.logger import SolvexityLogger
-from solvexity.app.dependency.deployer import DeployerSingleton
 
 logger = SolvexityLogger().get_logger(__name__)
 
@@ -28,9 +28,10 @@ app_config = config.get("app", {
     "port": 8000
 })
 deployer_config = config.get("deployer", {})
+deployer = Deployer.from_config(deployer_config)
 
-# Initialize the deployer with configuration
-DeployerSingleton.from_config(deployer_config)
+def get_deployer() -> Deployer:
+    return deployer
 
 nodes_config = deployer_config.get("nodes", [])
 
@@ -38,7 +39,6 @@ nodes_config = deployer_config.get("nodes", [])
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize connections and resources at startup
-    deployer = DeployerSingleton.get_deployer()
     await deployer.__aenter__()
     logger.info("Connected to NATS server")
 
@@ -66,7 +66,7 @@ class UndeployRequest(BaseModel):
     node_id: str
 
 @app.post("/deploy")
-async def deploy_node(request: DeployRequest, deployer: Deployer = Depends(DeployerSingleton.get_deployer)):
+async def deploy_node(request: DeployRequest, deployer: Deployer = Depends(get_deployer)):
     """
     Deploy an Eventrix instance using registered Eventrix types.
     """
@@ -99,7 +99,7 @@ async def deploy_node(request: DeployRequest, deployer: Deployer = Depends(Deplo
         raise HTTPException(status_code=500, detail=f"Failed to deploy eventrix: {str(e)}")
 
 @app.delete("/deploy")
-async def undeploy_node(request: UndeployRequest, deployer: Deployer = Depends(DeployerSingleton.get_deployer)):
+async def undeploy_node(request: UndeployRequest, deployer: Deployer = Depends(get_deployer)):
     """
     Undeploy a node.
     """
@@ -118,7 +118,7 @@ async def undeploy_node(request: UndeployRequest, deployer: Deployer = Depends(D
         raise HTTPException(status_code=500, detail=f"Failed to undeploy node: {str(e)}")
 
 @app.get("/deploy/{node_id}")
-def get_node_status(node_id: str, deployer: Deployer = Depends(DeployerSingleton.get_deployer)):
+def get_node_status(node_id: str, deployer: Deployer = Depends(get_deployer)):
     """
     Get the status of a deployed node.
     """
@@ -136,7 +136,7 @@ def get_node_status(node_id: str, deployer: Deployer = Depends(DeployerSingleton
         raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
 
 @app.get("/deployments")
-def get_all_deployments(deployer: Deployer = Depends(DeployerSingleton.get_deployer)):
+def get_all_deployments(deployer: Deployer = Depends(get_deployer)):
     """
     Get all deployed nodes.
     """

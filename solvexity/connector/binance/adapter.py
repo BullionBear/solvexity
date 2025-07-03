@@ -301,6 +301,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                 data = await queue.get()
                 yield Trade(
                     id=data["t"],
+                    exchange=Exchange.BINANCE,
                     symbol=symbol,
                     price=Decimal(data["p"]),
                     quantity=Decimal(data["q"]),

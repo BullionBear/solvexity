@@ -5,12 +5,16 @@ pandas
 numpy
 hooklet
 ccxt
+aiocache
 # service
 fastapi[standard]
 pydantic
 uvicorn
 aiocache
 cachetools
+redis[hiredis]
+# Time series databases
+influxdb-client
 # Linters and formatters
 pytest>=7.0.0
 pytest-asyncio>=0.18.3

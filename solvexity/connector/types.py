@@ -52,6 +52,9 @@ class Symbol(BaseModel):
     quote_currency: str = Field(..., description="The quote currency of the symbol")
     instrument_type: InstrumentType = Field(..., description="The type of instrument")
 
+    def to_str(self) -> str:
+        return f"{self.base_currency}-{self.quote_currency}-{self.instrument_type.value}"
+
 
 class OrderBook(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the order book")
@@ -108,7 +111,7 @@ class Trade(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
-    time: int = Field(..., description="The time of the trade")
+    timestamp: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
 
 
@@ -147,7 +150,7 @@ class MyTrade(BaseModel):
     symbol: Symbol = Field(..., description="The symbol of the trade")
     price: Decimal = Field(..., description="The price of the trade")
     quantity: Decimal = Field(..., description="The quantity of the trade")
-    time: int = Field(..., description="The time of the trade")
+    timestamp: int = Field(..., description="The time of the trade")
     side: OrderSide = Field(..., description="The side of the trade")
     is_maker: bool = Field(..., description="Whether the trade is a maker")
     commission: Decimal = Field(..., description="The commission of the trade")

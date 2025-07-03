@@ -58,7 +58,7 @@ class BinanceRestAdapter(ExchangeConnector):
                 symbol=symbol,
                 price=Decimal(trade["price"]),
                 quantity=Decimal(trade["qty"]),
-                time=trade["time"],
+                timestamp=trade["time"],
                 side=self.determine_side(trade),
             )
             for trade in trades
@@ -221,7 +221,7 @@ class BinanceRestAdapter(ExchangeConnector):
                 symbol=symbol,
                 price=Decimal(trade["price"]),
                 quantity=Decimal(trade["qty"]),
-                time=trade["time"],
+                timestamp=trade["time"],
                 side=self.determine_side(trade),
                 is_maker=trade["isMaker"],
                 commission=Decimal(trade["commission"]),
@@ -303,7 +303,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     symbol=symbol,
                     price=Decimal(data["p"]),
                     quantity=Decimal(data["q"]),
-                    time=data["T"],
+                    timestamp=data["T"],
                     side=self.determine_side(data),
                 )
         finally:
@@ -379,7 +379,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     symbol=symbol,
                     price=Decimal(data["p"]),
                     quantity=Decimal(data["q"]),
-                    time=data["T"],
+                    timestamp=data["T"],
                     side=OrderSide(data["S"]),
                     is_maker=data["m"],
                     commission=Decimal(data["c"]),

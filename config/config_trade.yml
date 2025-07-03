@@ -14,15 +14,6 @@ deployer:
           base_currency: BTC
           quote_currency: USDT
           instrument_type: SPOT
-        node_id: "trade_feed_1"
-        use_testnet: false
-    - type: "TradeFeed"
-      config:
-        exchange: "BINANCE"
-        symbol:
-          base_currency: ETH
-          quote_currency: USDT
-          instrument_type: SPOT
-        node_id: "trade_feed_2"
+        node_id: "feed.binance.btc.usdt.spot"
         use_testnet: false
 

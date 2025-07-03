@@ -10,6 +10,7 @@ import uuid
 import random
 import time
 from solvexity.trader.base import ConfigNode
+from solvexity.trader.payload import TradePayload
 
 
 class TradeFeedConfig(BaseModel):
@@ -19,7 +20,7 @@ class TradeFeedConfig(BaseModel):
     use_testnet: bool = False
 
     @classmethod
-    def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeedConfig":
+    def from_config(cls, config: dict[str, Any]) -> "TradeFeedConfig":
         """
         Create a TradeFeedConfig from a configuration dictionary.
         Example:
@@ -53,24 +54,32 @@ class TradeFeed(ConfigNode):
         super().__init__(pilot, [], router, node_id)
         self.rest_connector = rest_connector
         self.stream_connector = stream_connector
+        self.seq_id = 0
         self.symbol = symbol
+
+        self._n_reconnects = 0
+        self._n_data = 0
 
     @classmethod
     def from_config(cls, pilot: BasePilot, config: dict[str, Any]) -> "TradeFeed":
-        config_obj = TradeFeedConfig.from_config(pilot, config)
+        config_obj = TradeFeedConfig.from_config(config)
         def create_router_path(e):
             components = [
                 e.node_id,
-                e.type,
-                config_obj.exchange.value,
-                config_obj.symbol.base_currency,
-                config_obj.symbol.quote_currency,
-                config_obj.symbol.instrument_type.value
+                e.type
             ]
             return ".".join(components)
         rest_connector = ExchangeConnectorFactory.create_rest_connector(config_obj.exchange, {"use_testnet": config_obj.use_testnet})
         stream_connector = ExchangeConnectorFactory.create_websocket_connector(config_obj.exchange, {"use_testnet": config_obj.use_testnet})
         return cls(pilot, config_obj.symbol, create_router_path, config_obj.node_id, rest_connector, stream_connector)
+
+    def status(self) -> dict[str, Any]:
+        status = super().status()
+        status["n_reconnects"] = self._n_reconnects
+        status["n_data"] = self._n_data
+        status["seq_id"] = self.seq_id
+        status["symbol"] = self.symbol.to_str()
+        return status
 
     async def generator_func(self) -> AsyncGenerator[HookletMessage, None]:
         """
@@ -80,13 +89,39 @@ class TradeFeed(ConfigNode):
         async for trade in self.stream_connector.public_trades_iterator(self.symbol):
             timestamp = int(time.time() * 1000)
             self.logger.info(f"Received Trade: {trade}")
-            yield HookletMessage(
-                id=uuid.uuid4(),
-                node_id=self.node_id,
-                correlation_id=random.randint(0, 2**64 - 1),
-                type="trade",
-                payload=trade,
-                start_at=timestamp,
-                finish_at=timestamp,
-            )
+            if self.seq_id == 0:
+                self.seq_id = trade.id - 1 # mock the first trade
+            if trade.id != self.seq_id + 1:
+                self.logger.error(f"Trade ID mismatch: {trade.id} != {self.seq_id + 1}")
+                self._n_reconnects += 1
+                old_trades = await self.rest_connector.get_recent_trades(self.symbol, limit=100)
+                for old_trade in old_trades:
+                    old_trade_payload = TradePayload.from_trade(old_trade)
+                    if old_trade.id == self.seq_id + 1:
+                        self.seq_id = old_trade.id
+                        self._n_data += 1
+                        yield HookletMessage(
+                            id=uuid.uuid4(),
+                            node_id=self.node_id,
+                            correlation_id=random.randint(0, 2**64 - 1),
+                            type="trade",
+                            payload=old_trade_payload,
+                            start_at=timestamp,
+                            finish_at=timestamp,
+                        )
+                    else:
+                        continue
+            else:
+                self.seq_id = trade.id
+                self._n_data += 1
+                trade_payload = TradePayload.from_trade(trade)
+                yield HookletMessage(
+                    id=uuid.uuid4(),
+                    node_id=self.node_id,
+                    correlation_id=random.randint(0, 2**64 - 1),
+                    type="trade",
+                    payload=trade_payload,
+                    start_at=timestamp,
+                    finish_at=timestamp,
+                )
     

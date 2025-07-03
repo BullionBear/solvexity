@@ -6,7 +6,7 @@ import pytest_asyncio
 from hooklet.base import BaseEventrix
 from hooklet.pilot import InProcPilot
 
-from solvexity.service.deployer import EventrixDeployer
+from solvexity.app.deployer import EventrixDeployer
 
 
 # Fixture for the pilot

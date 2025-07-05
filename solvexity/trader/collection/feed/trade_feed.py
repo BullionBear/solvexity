@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from solvexity.connector import ExchangeConnectorFactory
 import uuid
 from solvexity.trader.payload import TradePayload
-from hooklet.node.emmiter import Emitter
+from hooklet.node.emitter import Emitter
 from hooklet.base import Msg
 
 class TradeFeed(Emitter):

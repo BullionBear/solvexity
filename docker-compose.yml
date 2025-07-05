@@ -8,6 +8,7 @@ services:
       - "8222:8222"  # HTTP management port
       # - "6222:6222"  # Cluster port (if clustering is needed)
     # command: "--user myuser --pass mypass"  # Optional authentication
+    command: "-js"  # Enable JetStream
     volumes:
       - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
     networks:

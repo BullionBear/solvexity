@@ -7,23 +7,23 @@ services:
       - "4222:4222"  # Client connections
       - "8222:8222"  # HTTP management port
       # - "6222:6222"  # Cluster port (if clustering is needed)
-    # command: "--user myuser --pass mypass"  # Optional authentication
-    command: "-js"  # Enable JetStream
+    command: "--user myuser --pass mypass -js"  # Optional authentication
     volumes:
       - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
     networks:
       - solvexity-net
 
-  influxdb:
-    image: influxdb:latest
-    container_name: influxdb
-    restart: unless-stopped
+  influxdb3-core:
+    container_name: influxdb3-core
+    image: influxdb:3-core
     ports:
-      - "8086:8086"
-    volumes:
-      - ./influxdb-data:/var/lib/influxdb
-    networks:
-      - solvexity-net
+      - 8181:8181
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3
 
 networks:
   solvexity-net:

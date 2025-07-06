@@ -9,7 +9,7 @@ deployer:
       - "nats://localhost:4222"
     options:
       user: ${NATS_USER}
-      password: ${NATS_PASSWORD}
+      password: ${NATS_PASS}
   nodes:
     - type: "TradeFeed"
       config:

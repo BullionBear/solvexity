@@ -1,20 +1,16 @@
 import argparse
-import yaml
+import sys
 from typing import Any
 from fastapi import FastAPI, HTTPException, Depends
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from hooklet.pilot import NatsPilot
 from solvexity.app.dependency.deployer import Deployer
 from solvexity.trader.factory import TraderFactory
 from solvexity.logger import SolvexityLogger
+from solvexity.utils import load_config
 
 logger = SolvexityLogger().get_logger(__name__)
 
-# Load configuration
-def load_config(config_path: str = "config.yaml") -> dict:
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
@@ -29,7 +25,7 @@ app_config = config.get("app", {
 })
 deployer_config = config.get("deployer", {})
 deployer = Deployer.from_config(deployer_config)
-
+sys.exit(0)
 def get_deployer() -> Deployer:
     return deployer
 

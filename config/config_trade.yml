@@ -5,10 +5,11 @@ app:
 deployer:
   pilot:
     type: "nats"
-    url:
+    urls:
       - "nats://localhost:4222"
-    user: ${NATS_USER}
-    password: ${NATS_PASSWORD}
+    options:
+      user: ${NATS_USER}
+      password: ${NATS_PASSWORD}
   nodes:
     - type: "TradeFeed"
       config:

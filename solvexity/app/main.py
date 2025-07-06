@@ -19,13 +19,15 @@ args = parser.parse_args()
 
 # Load configuration
 config = load_config(args.config)
+print(config)
+
 app_config = config.get("app", {
     "host": "0.0.0.0",
     "port": 8000
 })
 deployer_config = config.get("deployer", {})
 deployer = Deployer.from_config(deployer_config)
-sys.exit(0)
+
 def get_deployer() -> Deployer:
     return deployer
 

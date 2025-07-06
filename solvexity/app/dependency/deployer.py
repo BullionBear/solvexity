@@ -28,14 +28,25 @@ class Deployer:
         logger.info(f"Deployer from config: {config}")
         pilot_config = config.get("pilot", {})
         if pilot_config.get("type") == "nats":
-            pilot = NatsPilot(pilot_config.get("url", "nats://localhost:4222"))
+            urls = pilot_config.get("urls", ["nats://localhost:4222"])
+            options = pilot_config.get("options", {})
+            
+            nats_config = {
+                "allow_reconnect": False,  # Don't retry on initial connection failure
+                "connect_timeout": 5,      # 5 second timeout for connection attempts
+                **options  # Allow config to override these defaults
+            }
+            
+            pilot = NatsPilot(urls, **nats_config)
         else:
             raise ValueError(f"Unknown pilot type: {config.get('type')}")
         return cls(pilot)
 
     async def __aenter__(self):
         if not self._pilot.is_connected():
+            logger.info("Attempting to connect to NATS server...")
             await self._pilot.connect()
+            logger.info("Successfully connected to NATS server")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

@@ -1,0 +1,19 @@
+app:
+  host: "0.0.0.0"
+  port: 8000
+
+deployer:
+  pilot:
+    type: "nats"
+    urls:
+      - "nats://localhost:4222"
+    options:
+      user: ${NATS_USER}
+      password: ${NATS_PASS}
+  nodes:
+    - type: "TradeFeed"
+      config:
+        node_id: "emit.trade.binance.eth.usdt.spot"
+        exchange: BINANCE
+        symbol: ETH-USDT-SPOT
+        

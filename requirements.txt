@@ -13,9 +13,7 @@ uvicorn
 aiocache
 cachetools
 redis[hiredis]
-influxdb-client
-# Time series databases
-influxdb-client
+influxdb3-python
 # Linters and formatters
 pytest>=7.0.0
 pytest-asyncio>=0.18.3

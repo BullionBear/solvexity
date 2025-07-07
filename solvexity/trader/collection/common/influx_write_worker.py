@@ -1,7 +1,6 @@
 from hooklet.base.types import Job
 from hooklet.node.worker import Worker
-from influxdb_client_3 import(InfluxDBClient3, write_client_options,
-                              WritePrecision, WriteOptions, InfluxDBError, SYNCHRONOUS)
+from influxdb_client_3 import InfluxDBClient3, write_client_options, SYNCHRONOUS
 from solvexity.trader.payload import TradePayload
 
 class InfluxWriteWorker(Worker):

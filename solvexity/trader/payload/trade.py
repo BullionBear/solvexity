@@ -1,9 +1,9 @@
 from solvexity.connector.types import Trade, Symbol, InstrumentType, OrderSide, Exchange
 from pydantic import BaseModel, Field
 from decimal import Decimal, ROUND_HALF_UP
-from influxdb_client import Point, WritePrecision
-from influxdb_client.client.flux_table import FluxRecord
 from typing import Union
+
+from influxdb_client_3 import Point, WritePrecision
 
 
 class TradePayload(BaseModel):
@@ -54,17 +54,6 @@ class TradePayload(BaseModel):
             .field("quantity_str", str(self.quantity)) \
             .time(timestamp_ns, write_precision=WritePrecision.NS)
     
-    @classmethod
-    def from_record(cls, record: FluxRecord) -> "TradePayload":
-        return cls(
-            id=int(record.values.get("id")),
-            exchange=record.values.get("exchange"),
-            symbol=record.values.get("symbol"),
-            price=Decimal(record.values.get("price_str")),
-            quantity=Decimal(record.values.get("quantity_str")),
-            timestamp=int(record.get_time().timestamp() * 1000),
-            side=record.values.get("side"),
-        )
     
 class InfluxTradeRequest(BaseModel):
     exchange: str

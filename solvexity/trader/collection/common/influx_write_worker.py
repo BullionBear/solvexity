@@ -22,7 +22,8 @@ class InfluxWriteWorker(Worker):
             payload = TradePayload(**job.data)
             point = payload.to_point()
             self.influxdb_client.write(point)
-        return 0
+            return 0
+        return -1
 
     async def start(self) -> None:
         await super().start()
@@ -34,7 +35,6 @@ class InfluxWriteWorker(Worker):
             database=self.influxdb_database,
             write_client_options=wco,
         )
-        self.write_api = self.influxdb_client.write_api()
 
     async def on_finish(self) -> None:
         await super().on_finish()

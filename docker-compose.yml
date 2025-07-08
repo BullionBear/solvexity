@@ -7,7 +7,7 @@ services:
       - "4222:4222"  # Client connections
       - "8222:8222"  # HTTP management port
       # - "6222:6222"  # Cluster port (if clustering is needed)
-    command: "--user ${NATS_USER} --pass ${NATS_PASSWORD} -js"  # Optional authentication
+    command: "--user ${NATS_USER} --pass ${NATS_PASS} -js"  # Optional authentication
     volumes:
       - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
     networks:

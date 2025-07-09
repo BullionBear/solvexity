@@ -13,7 +13,7 @@ services:
     networks:
       - solvexity-net
 
-  influxdb3-core:
+  influxdb3-core: # docker exec -it influxdb3-core influxdb3 create token --admin
     container_name: influxdb3-core
     image: influxdb:3-core
     ports:
@@ -24,6 +24,21 @@ services:
       - --node-id=node0
       - --object-store=file
       - --data-dir=/var/lib/influxdb3
+    networks:
+      - solvexity-net
+
+  influxdb3-ui:
+    container_name: influxdb3-ui
+    image: influxdata/influxdb3-ui:1.0.0
+    ports:
+      - 8888:80
+      - 8889:8888
+    command:
+      - --mode=admin
+    depends_on:
+      - influxdb3-core
+    networks:
+      - solvexity-net
 
 networks:
   solvexity-net:

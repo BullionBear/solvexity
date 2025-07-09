@@ -7,13 +7,10 @@ deployer:
     type: "nats"
     url: "nats://localhost:4222"
   nodes:
-    - type: "InfluxWriter"
+    - type: "InfluxWriteWorker"
       config:
         source: "feed.binance.btc.usdt.spot.trade"
-        influxdb_url: "http://localhost:8086"
-        influxdb_token: ""
-        influxdb_org: ""
-        influxdb_bucket: ""
-        measurement: "trade"
-        tags: 
-         - "symbol"
+        influxdb_url: "${INFLUXDB_URL}"
+        influxdb_token: "${INFLUXDB_TOKEN}"
+        influxdb_database: "${INFLUXDB_DATABASE}"
+

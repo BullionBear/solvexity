@@ -8,8 +8,8 @@ services:
       - "8222:8222"  # HTTP management port
       # - "6222:6222"  # Cluster port (if clustering is needed)
     command: "--user ${NATS_USER} --pass ${NATS_PASS} -js -m 8222"  # Optional authentication
-    volumes:
-      - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
+    # volumes:
+    #    - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
     networks:
       - solvexity-net
 

@@ -1,6 +1,6 @@
 app:
   host: "0.0.0.0"
-  port: 8000
+  port: 8001
 
 deployer:
   pilot:
@@ -11,9 +11,9 @@ deployer:
       user: ${NATS_USER}
       password: ${NATS_PASS}
   nodes:
-    - type: "TradeFeed"
+    - type: "JobDispatcher"
       config:
-        node_id: "emit.binance.btc.usdt.spot"
-        exchange: BINANCE
-        symbol: BTC-USDT-SPOT
-        
+        node_id: "sink.influx"
+        subscribes:
+          - "emit.binance.btc.usdt.spot.trade"
+        dispatch_to: "worker.influx"

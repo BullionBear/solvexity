@@ -71,11 +71,11 @@ class Deployer:
             # Start the node
             await node.start()
             self._deployments.append((node, config))
-            logger.info(f"Successfully deployed {node_type}: {node.node_id}")
+            logger.info(f"Successfully deployed {node_type}: {node.name}")
             return True
         except Exception as e:
             logger.error(
-                f"Failed to deploy {node_type}: {type(e).__name__} - {str(e)}"
+                f"Failed to deploy {node_type}: {type(e).__name__} - {str(e)}", exc_info=True
             )
             return False
 

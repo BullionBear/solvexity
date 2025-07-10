@@ -25,7 +25,7 @@ class InfluxWriteWorker(Worker):
         wco = write_client_options(write_options=ASYNCHRONOUS)
         self.logger.info(f"InfluxDB URL: {self.influxdb_url}")
         self.logger.info(f"InfluxDB Database: {self.influxdb_database}")
-        self.logger.info(f"InfluxDB Token: {self.influxdb_token[:10]}...")
+        self.logger.info("InfluxDB Token is set.")
 
         self.influxdb_client = InfluxDBClient3(
             host=self.influxdb_url,

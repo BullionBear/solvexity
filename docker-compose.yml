@@ -24,6 +24,8 @@ services:
       - --node-id=node0
       - --object-store=file
       - --data-dir=/var/lib/influxdb3
+    volumes:
+      - influxdb3-data:/var/lib/influxdb3
     networks:
       - solvexity-net
 
@@ -39,7 +41,17 @@ services:
       - influxdb3-core
     networks:
       - solvexity-net
+    volumes:
+      # - ./config:/app-root/config:ro
+      - influxdb3-ui-data:/db:rw
 
 networks:
   solvexity-net:
     driver: bridge
+
+volumes:
+  influxdb3-data:
+    driver: local
+
+  influxdb3-ui-data:
+    driver: local

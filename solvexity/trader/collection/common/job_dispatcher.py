@@ -23,11 +23,12 @@ class JobDispatcher(Sinker):
         await self.dispatcher.subscribe(self.dispatch_to, log_msg)
 
     async def on_message(self, msg: Msg) -> None:
-        if msg["type"] == "trade":
+        self.logger.info(f"Received message: {msg}")
+        if msg.type == "trade":
             job = Job(
-                id=msg["id"],
-                type=msg["type"],
-                data=msg["data"],
+                id=msg.id,
+                type=msg.type,
+                data=msg.data,
                 error=None,
                 recv_ms=0,
                 start_ms=0,
@@ -35,7 +36,7 @@ class JobDispatcher(Sinker):
                 status="pending",
                 retry_count=0,
             )
-            await self.dispatcher.dispatch(job)
+            await self.dispatcher.dispatch(self.dispatch_to, job)
             self.logger.info(f"Dispatched job: {job} to {self.dispatch_to}")
         else:
             self.logger.error(f"Invalid message type: {msg.type}")

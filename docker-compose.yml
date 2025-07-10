@@ -7,13 +7,13 @@ services:
       - "4222:4222"  # Client connections
       - "8222:8222"  # HTTP management port
       # - "6222:6222"  # Cluster port (if clustering is needed)
-    command: "--user ${NATS_USER} --pass ${NATS_PASSWORD} -js"  # Optional authentication
-    volumes:
-      - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
+    command: "--user ${NATS_USER} --pass ${NATS_PASS} -js -m 8222"  # Optional authentication
+    # volumes:
+    #    - ./nats-data:/var/lib/nats  # Persistent storage for messages (if needed)
     networks:
       - solvexity-net
 
-  influxdb3-core:
+  influxdb3-core: # docker exec -it influxdb3-core influxdb3 create token --admin
     container_name: influxdb3-core
     image: influxdb:3-core
     ports:
@@ -24,7 +24,34 @@ services:
       - --node-id=node0
       - --object-store=file
       - --data-dir=/var/lib/influxdb3
+    volumes:
+      - influxdb3-data:/var/lib/influxdb3
+    networks:
+      - solvexity-net
+
+  influxdb3-ui:
+    container_name: influxdb3-ui
+    image: influxdata/influxdb3-ui:1.0.0
+    ports:
+      - 8888:80
+      - 8889:8888
+    command:
+      - --mode=admin
+    depends_on:
+      - influxdb3-core
+    networks:
+      - solvexity-net
+    volumes:
+      # - ./config:/app-root/config:ro
+      - influxdb3-ui-data:/db:rw
 
 networks:
   solvexity-net:
     driver: bridge
+
+volumes:
+  influxdb3-data:
+    driver: local
+
+  influxdb3-ui-data:
+    driver: local

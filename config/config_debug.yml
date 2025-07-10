@@ -1,6 +1,6 @@
 app:
   host: "0.0.0.0"
-  port: 8000
+  port: 9999
 
 deployer:
   pilot:
@@ -11,9 +11,8 @@ deployer:
       user: ${NATS_USER}
       password: ${NATS_PASS}
   nodes:
-    - type: "TradeFeed"
+    - type: "DebugNode"
       config:
-        node_id: "emit.binance.btc.usdt.spot"
-        exchange: BINANCE
-        symbol: BTC-USDT-SPOT
-        
+        node_id: "debug"
+        subscribes:
+          - "emit.binance.btc.usdt.spot.trade"

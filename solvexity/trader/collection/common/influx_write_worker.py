@@ -1,6 +1,7 @@
 import json
-import sys
+import asyncio
 from decimal import Decimal
+import time
 from hooklet.base.types import Job
 from hooklet.node.worker import Worker, PushPull
 from influxdb_client_3 import InfluxDBClient3, write_client_options, ASYNCHRONOUS
@@ -12,6 +13,8 @@ class InfluxWriteWorker(Worker):
                  influxdb_url: str,
                  influxdb_database: str,
                  influxdb_token: str,
+                 batch_size: int,
+                 flush_interval_seconds: int,
                  pushpull: PushPull
                  ):
         super().__init__(node_id, pushpull)
@@ -19,6 +22,11 @@ class InfluxWriteWorker(Worker):
         self.influxdb_database = influxdb_database
         self.influxdb_token = influxdb_token
         self.influxdb_client: InfluxDBClient3|None = None
+        self.batch_size = batch_size
+        self.flush_interval_seconds = flush_interval_seconds
+        self.lock = asyncio.Lock()
+        self.points = []
+        self.last_flush_time = time.time()
 
     async def on_start(self) -> None:
         await super().on_start()
@@ -36,15 +44,20 @@ class InfluxWriteWorker(Worker):
 
     async def on_job(self, job: Job) -> int:
         if job.type == "trade":
-            self.logger.info(f"Writing trade {job.data} to InfluxDB")
             payload = TradePayload(**json.loads(job.data, parse_float=Decimal))
-            point = payload.to_point()
-            self.influxdb_client.write(record=point)
-            self.logger.info(f"Trade {payload.symbol} {payload.price} written to InfluxDB")
+            await self.on_trade(payload)
             return 0
         return -1
 
-    
+    async def on_trade(self, payload: TradePayload) -> None:
+        point = payload.to_point()
+        async with self.lock:
+            self.points.append(point)
+        if len(self.points) >= self.batch_size or time.time() - self.last_flush_time >= self.flush_interval_seconds:
+            self.influxdb_client.write(record=self.points)
+            async with self.lock:
+                self.points = []
+            self.last_flush_time = time.time()
 
     async def on_close(self) -> None:
         await super().on_close()
@@ -52,4 +65,4 @@ class InfluxWriteWorker(Worker):
 
     async def on_error(self, error: Exception) -> None:
         self.logger.error(f"Error writing to InfluxDB: {error}")
-        sys.exit(1)
+        raise error

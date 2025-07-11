@@ -2,6 +2,13 @@ app:
   host: "0.0.0.0"
   port: 8000
 
+logger:
+  level: "INFO"
+  format_type: "detailed"
+  log_file: "logs/emit_binance_btc_usdt_spot.log"
+  rotation: true
+  max_backup: 5
+
 deployer:
   pilot:
     type: "nats"

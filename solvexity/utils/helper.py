@@ -1,6 +1,7 @@
 import re
 from typing import Union
-
+from hooklet.logger.hooklet_logger import LogFormat 
+from solvexity.logger import SolvexityLoggerConfig
 
 def str_to_ms(time_str: str) -> int:
     """
@@ -142,3 +143,39 @@ def bytes_to_str(bytes: int) -> str:
     else:
         return f"{bytes / 1024 / 1024 / 1024}GB"
     
+def str_to_log_format(log_format: str) -> LogFormat:
+    """
+    Convert string to LogFormat.
+    
+    Args:
+        log_format: Log format string
+        
+    Returns:
+        LogFormat
+    """
+    if log_format == "detailed":
+        return LogFormat.DETAILED
+    elif log_format == "simple":
+        return LogFormat.SIMPLE
+    elif log_format == "json":
+        return LogFormat.JSON
+    else:
+        raise ValueError(f"Invalid log format: {log_format}. Expected format like 'detailed', 'simple', 'json'")
+    
+def to_logger_config(config: dict) -> SolvexityLoggerConfig:
+    """
+    Convert config to SolvexityLoggerConfig.
+    
+    Args:
+        config: Config
+        
+    Returns:
+        SolvexityLoggerConfig
+    """
+    return SolvexityLoggerConfig(
+        level=config.get("level", "INFO"),
+        format_type=str_to_log_format(config.get("format_type", "detailed")),
+        log_file=config.get("log_file", "logs/app.log"),
+        rotation=config.get("rotation", True),
+        max_backup=config.get("max_backup", 10)
+    )

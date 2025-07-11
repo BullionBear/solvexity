@@ -4,13 +4,8 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Depends
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from solvexity.app.dependency.deployer import Deployer
-from solvexity.trader.factory import TraderFactory
-from solvexity.logger import SolvexityLogger
-from solvexity.utils import load_config
-
-logger = SolvexityLogger().get_logger(__name__)
-
+from solvexity.logger import SolvexityLogger, SolvexityLoggerConfig
+from solvexity.utils import load_config, to_logger_config
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
@@ -19,12 +14,27 @@ args = parser.parse_args()
 
 # Load configuration
 config = load_config(args.config)
-print(config)
 
 app_config = config.get("app", {
     "host": "0.0.0.0",
     "port": 8000
 })
+
+logger_config = config.get("logger", {
+    "level": "INFO",
+    "log_file": "logs/app.log",
+    "rotation": True,
+    "max_backup": 10
+})
+
+# Configure logger FIRST, before importing/creating any other components
+SolvexityLogger(to_logger_config(logger_config))
+logger = SolvexityLogger().get_logger(__name__)
+
+# Now import and create deployer after logger is configured
+from solvexity.app.dependency.deployer import Deployer
+from solvexity.trader.factory import TraderFactory
+
 deployer_config = config.get("deployer", {})
 deployer = Deployer.from_config(deployer_config)
 

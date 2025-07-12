@@ -1,11 +1,9 @@
 import argparse
-import sys
-from typing import Any
 from fastapi import FastAPI, HTTPException, Depends
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from solvexity.logger import SolvexityLogger, SolvexityLoggerConfig
-from solvexity.utils import load_config, to_logger_config
+from solvexity.logger import SolvexityLogger
+from solvexity.utils import load_config, to_logger_config, to_uvicorn_config
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
@@ -21,14 +19,24 @@ app_config = config.get("app", {
 })
 
 logger_config = config.get("logger", {
-    "level": "INFO",
-    "log_file": "logs/app.log",
-    "rotation": True,
-    "max_backup": 10
+    "solvexity": {
+        "level": "INFO",
+        "format_type": "detailed",
+        "log_file": "logs/app.log",
+        "rotation": True,
+        "max_backup": 5
+    },
+    "uvicorn": {
+        "level": "INFO",
+        "log_file": "logs/uvicorn.log",
+        "rotation": True,
+        "max_backup": 5
+    }
 })
 
 # Configure logger FIRST, before importing/creating any other components
-SolvexityLogger(to_logger_config(logger_config))
+print(logger_config["solvexity"])
+SolvexityLogger(to_logger_config(logger_config["solvexity"]))
 logger = SolvexityLogger().get_logger(__name__)
 
 # Now import and create deployer after logger is configured
@@ -165,4 +173,4 @@ def get_available_nodes():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=app_config["host"], port=app_config["port"])
+    uvicorn.run(app, host=app_config["host"], port=app_config["port"], log_config=to_uvicorn_config(logger_config["uvicorn"]))

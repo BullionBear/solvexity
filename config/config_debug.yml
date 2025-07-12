@@ -3,11 +3,17 @@ app:
   port: 9999
 
 logger:
-  level: "INFO"
-  format_type: "detailed"
-  log_file: "logs/debug.log"
-  rotation: true
-  max_backup: 5
+  solvexity:
+    level: "INFO"
+    format_type: "detailed"
+    log_file: "logs/debug.log"
+    rotation: true
+    max_backup: 5
+  uvicorn:
+    level: "INFO"
+    log_file: "logs/uvicorn.log"
+    rotation: true
+    max_backup: 5
 
 deployer:
   pilot:

@@ -1,5 +1,5 @@
 import re
-from typing import Union
+from typing import Union, Dict, Any
 from hooklet.logger.hooklet_logger import LogFormat 
 from solvexity.logger import SolvexityLoggerConfig
 
@@ -179,3 +179,65 @@ def to_logger_config(config: dict) -> SolvexityLoggerConfig:
         rotation=config.get("rotation", True),
         max_backup=config.get("max_backup", 10)
     )
+
+def to_uvicorn_config(config: dict) -> Dict[str, Any]:
+    """
+    Convert config to uvicorn config.
+    
+    Args:
+        config: Config
+        
+    Returns:
+        uvicorn config
+    """
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            },
+            "access": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            }
+        },
+        "handlers": {
+            "default": {
+                "formatter": "default",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stderr"
+            },
+            "access": {
+                "formatter": "access",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout"
+            },
+            "file": {
+                "formatter": "default",
+                "class": "logging.handlers.TimedRotatingFileHandler",
+                "filename": config.get("log_file", "logs/app.log"),
+                "when": "midnight",
+                "interval": 1,
+                "backupCount": config.get("max_backup", 7),
+                "encoding": "utf-8"
+            }
+        },
+        "loggers": {
+            "uvicorn.error": {
+                "level": config.get("level", "INFO"),
+                "handlers": ["default", "file"],
+                "propagate": False
+            },
+            "uvicorn.access": {
+                "level": config.get("level", "INFO"),
+                "handlers": ["access", "file"],
+                "propagate": False
+            }
+        },
+        "root": {
+            "level": config.get("level", "DEBUG"),
+            "handlers": ["default"],
+            "propagate": False
+        }
+    }
+    

@@ -30,6 +30,6 @@ deployer:
         influxdb_url: "${INFLUXDB_URL}"
         influxdb_token: "${INFLUXDB_TOKEN}"
         influxdb_database: "${INFLUXDB_DATABASE}"
-        max_batch_size: 1000
-        flush_interval_ms: 5000
+        max_batch_size: 200
+        flush_interval_ms: 2000
 

@@ -2,7 +2,7 @@ import asyncio
 from solvexity.logger import SolvexityLogger
 from typing import Any, Dict
 from hooklet.base import Pilot
-from hooklet.base.node import Node
+from hooklet.base.node import Node, EventType
 from solvexity.trader.factory import TraderFactory
 from hooklet.pilot import NatsPilot
 
@@ -69,6 +69,7 @@ class Deployer:
         try:
             node = self._trader_factory.create(node_type, config)
             # Start the node
+            node.register(event_type=EventType.ERROR, coroutine=node.close()) # circuit breaker
             await node.start()
             self._deployments.append((node, config))
             logger.info(f"Successfully deployed {node_type}: {node.name}")

@@ -41,12 +41,30 @@ class TraderFactory:
         Create a trader instance from the registry.
         """
         if name == "JobDispatcher":
-            return JobDispatcher(config["node_id"], config["subscribes"], self.pilot.pubsub(), self.pilot.pushpull(), config["dispatch_to"])
+            return JobDispatcher(
+                config["node_id"], 
+                config["subscribes"], 
+                self.pilot.pubsub(), 
+                self.pilot.pushpull(), 
+                config["dispatch_to"])
         elif name == "InfluxWriteWorker":
-            return InfluxWriteWorker(config["node_id"], config["influxdb_url"], config["influxdb_database"], config["influxdb_token"], self.pilot.pushpull())
+            return InfluxWriteWorker(
+                config["node_id"],
+                config["influxdb_url"],
+                config["influxdb_database"],
+                config["influxdb_token"],
+                config["max_batch_size"],
+                config["flush_interval_ms"],
+                self.pilot.pushpull())
         elif name == "TradeFeed":
             router = lambda msg: f"{config["node_id"]}.{msg.type}"
-            return TradeFeed(config["node_id"], self.pilot.pubsub(), config["symbol"], config["exchange"], router)
+            return TradeFeed(config["node_id"], 
+                             self.pilot.pubsub(), 
+                             config["symbol"], 
+                             config["exchange"], 
+                             router,
+                             config["max_batch_size"],
+                             config["flush_interval_ms"])
         elif name == "DebugNode":
             return DebugNode(config["node_id"], config["subscribes"], self.pilot.pubsub())
         else:

@@ -41,8 +41,8 @@ class TradePayload(BaseModel):
         )
     
     def to_point(self) -> Point:
-        self.timestamp = self.timestamp * 1_000_000 # from ms to ns
-        timestamp_ns = self.timestamp + self.id % 1_000_000 # add 1ns for each trade to avoid duplicates
+        timestamp_ns = self.timestamp * 1_000_000  # Convert to nanoseconds without modifying self.timestamp
+        timestamp_ns = timestamp_ns + self.id % 1_000_000  # add 1ns for each trade to avoid duplicates
         return Point("trades") \
             .tag("exchange", self.exchange) \
             .tag("symbol", self.symbol) \

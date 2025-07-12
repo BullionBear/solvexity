@@ -3,11 +3,18 @@ app:
   port: 8000
 
 logger:
-  level: "INFO"
-  format_type: "detailed"
-  log_file: "logs/emit_binance_btc_usdt_spot.log"
-  rotation: true
-  max_backup: 5
+  solvexity:
+    level: "INFO"
+    format_type: "detailed"
+    log_file: "logs/emit_binance_btc_usdt_spot_node.log"
+    rotation: true
+    max_backup: 5
+  uvicorn:
+    level: "INFO"
+    log_file: "logs/emit_binance_btc_usdt_spot_uvicorn.log"
+    rotation: true
+    max_backup: 5
+
 
 deployer:
   pilot:

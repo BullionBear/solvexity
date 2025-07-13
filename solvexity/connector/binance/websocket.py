@@ -53,6 +53,11 @@ class BinanceWebSocketClient:
         self._running = True
         self._listen_task = asyncio.create_task(self._listen())
 
+    async def reconnect(self) -> None:
+        """Reconnect to WebSocket."""
+        await self.disconnect()
+        await self.connect()
+
     async def disconnect(self) -> None:
         """Close WebSocket connection."""
         self._running = False
@@ -123,7 +128,7 @@ class BinanceWebSocketClient:
                     "WebSocket connection closed. Attempting to reconnect..."
                 )
                 await asyncio.sleep(5)
-                await self.connect()
+                await self.reconnect()
                 # Resubscribe to all streams after reconnection
                 await self._resubscribe_all()
             except Exception as e:

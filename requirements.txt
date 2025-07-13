@@ -6,6 +6,7 @@ numpy
 hooklet
 ccxt
 aiocache
+websockets
 # service
 fastapi[standard]
 pydantic

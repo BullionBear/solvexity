@@ -62,9 +62,7 @@ class TraderFactory:
                              self.pilot.pubsub(), 
                              config["symbol"], 
                              config["exchange"], 
-                             router,
-                             config["max_batch_size"],
-                             config["flush_interval_ms"])
+                             router)
         elif name == "DebugNode":
             return DebugNode(config["node_id"], config["subscribes"], self.pilot.pubsub())
         else:

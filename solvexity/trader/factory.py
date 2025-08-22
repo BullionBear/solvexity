@@ -9,6 +9,7 @@ from typing import Any
 from hooklet.base import Pilot
 from hooklet.base.node import Node
 from solvexity.logger import SolvexityLogger
+from solvexity.trader.collection.common import InfluxWriteWorker
 from solvexity.trader.collection.feed import TradeFeed
 from solvexity.trader.collection.common import JobDispatcher, InfluxWriteWorker, DebugNode
 

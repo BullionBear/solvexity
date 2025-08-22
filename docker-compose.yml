@@ -45,6 +45,8 @@ services:
       # - ./config:/app-root/config:ro
       - influxdb3-ui-data:/db:rw
 
+  
+
 networks:
   solvexity-net:
     driver: bridge

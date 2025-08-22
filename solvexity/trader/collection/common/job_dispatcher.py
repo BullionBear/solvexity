@@ -2,6 +2,8 @@ from hooklet.node.worker import Dispatcher, PushPull
 from hooklet.base.pilot import PubSub
 from hooklet.base.types import Job, Msg
 from hooklet.node.sinker import Sinker
+import uuid
+
 
 class JobDispatcher(Sinker):
     def __init__(self, 
@@ -33,7 +35,7 @@ class JobDispatcher(Sinker):
                 recv_ms=0,
                 start_ms=0,
                 end_ms=0,
-                status="pending",
+                status="new",
                 retry_count=0,
             )
             await self.dispatcher.dispatch(self.dispatch_to, job)
@@ -41,6 +43,6 @@ class JobDispatcher(Sinker):
         else:
             self.logger.error(f"Invalid message type: {msg.type}")
 
-    async def on_finish(self) -> None:
+    async def on_close(self) -> None:
         await self.dispatcher.unsubscribe(self.dispatch_to)
-        await super().on_finish()
+        await super().on_close()

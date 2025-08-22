@@ -1,0 +1,19 @@
+app:
+  host: "0.0.0.0"
+  port: 8002
+
+deployer:
+  pilot:
+    type: "nats"
+    urls:
+      - "nats://localhost:4222"
+    options:
+      user: ${NATS_USER}
+      password: ${NATS_PASS}
+  nodes:
+    - type: "InfluxWriteWorker"
+      config:
+        node_id: "worker.influxwriter"
+        influxdb_url: "http://localhost:8086"
+        influxdb_database: ${INFLUXDB_DATABASE}
+        influxdb_token: ${INFLUXDB_TOKEN}

@@ -13,8 +13,6 @@ class Bouncing:
         self.n_periods = n_periods
         self.drawdown = drawdown
         self.springback = springback
-        self.cooldown = 0
-
         # Strategy State
         self.bars: list[Bar] = []
 

@@ -5,6 +5,7 @@ from .enum import Symbol, Exchange
 class Bar:
     symbol: Symbol
     exchange: Exchange
+    interval: str
     open_time_ms: int
     open: float
     high: float

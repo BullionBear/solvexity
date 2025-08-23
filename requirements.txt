@@ -3,18 +3,9 @@ pyyaml
 python-dotenv
 pandas
 numpy
-hooklet
-ccxt
 aiocache
 websockets
-# service
-fastapi[standard]
-pydantic
-uvicorn
-aiocache
-cachetools
-redis[hiredis]
-influxdb3-python
+
 # Linters and formatters
 pytest>=7.0.0
 pytest-asyncio>=0.18.3

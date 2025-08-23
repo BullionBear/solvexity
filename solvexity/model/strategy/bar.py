@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from .enum import Symbol, Exchange
 
 @dataclass
-class Kline:
+class Bar:
     symbol: Symbol
     exchange: Exchange
     open_time_ms: int

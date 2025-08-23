@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-from tarfile import data_filter
 
 class Side(Enum):
     BUY = "buy"

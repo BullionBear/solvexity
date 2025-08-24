@@ -5,6 +5,9 @@ pandas
 numpy
 aiocache
 websockets
+aiohttp
+pydantic
+cachetools
 
 # Linters and formatters
 pytest>=7.0.0

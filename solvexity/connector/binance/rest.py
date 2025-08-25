@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import logging
 import time
 import urllib.parse
 from typing import Any, Dict, List, Optional, Union
@@ -8,7 +9,7 @@ import aiohttp
 from aiocache import cached
 from aiocache.serializers import JsonSerializer
 
-from solvexity.logger import SolvexityLogger
+logger = logging.getLogger(__name__)
 
 
 class BinanceRestClient:
@@ -26,7 +27,6 @@ class BinanceRestClient:
         self.api_secret = api_secret
         self.base_url = self.TESTNET_URL if use_testnet else self.BASE_URL
         self.session: Optional[aiohttp.ClientSession] = None
-        self.logger = SolvexityLogger().get_logger(__name__)
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -110,10 +110,10 @@ class BinanceRestClient:
 
         headers = self._get_headers()
 
-        self.logger.debug(f"Making {method} request to {url}")  # Debug log
-        self.logger.debug(f"Params: {params}")  # Debug log
-        self.logger.debug(f"Data: {data}")  # Debug log
-        self.logger.debug(f"Headers: {headers}")  # Debug log
+        logger.debug(f"Making {method} request to {url}")  # Debug log
+        logger.debug(f"Params: {params}")  # Debug log
+        logger.debug(f"Data: {data}")  # Debug log
+        logger.debug(f"Headers: {headers}")  # Debug log
 
         async with self.session.request(
             method,

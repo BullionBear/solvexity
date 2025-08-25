@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from decimal import Decimal
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
@@ -13,16 +14,16 @@ from solvexity.connector.types import (AccountBalance, Exchange, InstrumentType,
                                        Order, OrderBook, OrderBookUpdate,
                                        OrderSide, OrderStatus, OrderType,
                                        Symbol, TimeInForce, Trade)
-from solvexity.logger import SolvexityLogger
 
 from .rest import BinanceRestClient
 from .websocket import BinanceWebSocketClient
+
+logger = logging.getLogger(__name__)
 
 
 class BinanceRestAdapter(ExchangeConnector):
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         self.rest_client = BinanceRestClient(api_key, api_secret, use_testnet)
-        self.logger = SolvexityLogger().get_logger(__name__)
 
     async def __aenter__(self):
         await self.rest_client.__aenter__()
@@ -35,7 +36,7 @@ class BinanceRestAdapter(ExchangeConnector):
         orderbook = await self.rest_client.get_depth(
             symbol.base_currency + symbol.quote_currency, depth
         )
-        self.logger.info(
+        logger.info(
             f"Orderbook for {symbol.base_currency + symbol.quote_currency}: {orderbook}"
         )
         return OrderBook(
@@ -49,7 +50,7 @@ class BinanceRestAdapter(ExchangeConnector):
         trades = await self.rest_client.get_recent_trades(
             symbol.base_currency + symbol.quote_currency, limit
         )
-        self.logger.info(
+        logger.info(
             f"Recent trades for {symbol.base_currency + symbol.quote_currency}: {trades}"
         )
         return [
@@ -102,7 +103,7 @@ class BinanceRestAdapter(ExchangeConnector):
         if client_order_id is not None:
             data["client_order_id"] = client_order_id
         order = await self.rest_client.create_order(**data)
-        self.logger.info(
+        logger.info(
             f"Created order for {symbol.base_currency + symbol.quote_currency}: {order}"
         )
         return order
@@ -117,7 +118,7 @@ class BinanceRestAdapter(ExchangeConnector):
             order = await self.rest_client.cancel_order(
                 symbol=symbol.base_currency + symbol.quote_currency, order_id=int(order_id)
             )
-            self.logger.info(
+            logger.info(
                 f"Cancelled order for {symbol.base_currency + symbol.quote_currency}: {order}"
             )
             return order
@@ -126,7 +127,7 @@ class BinanceRestAdapter(ExchangeConnector):
                 symbol=symbol.base_currency + symbol.quote_currency,
                 orig_client_order_id=client_order_id,
             )
-            self.logger.info(
+            logger.info(
                 f"Cancelled order for {symbol.base_currency + symbol.quote_currency}: {order}"
             )
             return order
@@ -137,7 +138,7 @@ class BinanceRestAdapter(ExchangeConnector):
         orders = await self.rest_client.get_open_orders(
             symbol.base_currency + symbol.quote_currency
         )
-        self.logger.info(
+        logger.info(
             f"Open orders for {symbol.base_currency + symbol.quote_currency}: {orders}"
         )
         return [
@@ -176,7 +177,7 @@ class BinanceRestAdapter(ExchangeConnector):
         else:
             raise OrderIdOrClientOrderIdRequiredError()
 
-        self.logger.info(
+        logger.info(
             f"Order status for {symbol.base_currency + symbol.quote_currency}: {order}"
         )
 
@@ -198,7 +199,7 @@ class BinanceRestAdapter(ExchangeConnector):
 
     async def get_account_balance(self) -> List[AccountBalance]:
         account_info = await self.rest_client.get_account_information()
-        self.logger.debug(f"Account balance: {account_info}")
+        logger.debug(f"Account balance: {account_info}")
         return [
             AccountBalance(
                 asset=balance["asset"],
@@ -212,7 +213,7 @@ class BinanceRestAdapter(ExchangeConnector):
         my_trades = await self.rest_client.get_my_trades(
             symbol.base_currency + symbol.quote_currency, limit=limit
         )
-        self.logger.info(
+        logger.info(
             f"My trades for {symbol.base_currency + symbol.quote_currency}: {my_trades}"
         )
         return [
@@ -239,7 +240,6 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
 
     def __init__(self, api_key: str, api_secret: str, use_testnet: bool = False):
         self.websocket_client = BinanceWebSocketClient(api_key, api_secret, use_testnet)
-        self.logger = SolvexityLogger().get_logger(__name__)
         # user data stream fields
         self.is_user_data_stream_subscribed = False
         self.user_data_queue = {
@@ -324,7 +324,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
             if self.is_trade_stream_subscribed and data["x"] == "TRADE":
                 await self.user_data_queue["trade"].put(data)
         else:
-            self.logger.warning(f"Unknown user data event: {data}")
+            logger.warning(f"Unknown user data event: {data}")
 
     @cached(_exchange_info_cache, key=lambda self, symbol: symbol)
     async def _to_symbol(self, symbol: str) -> Symbol:
@@ -362,7 +362,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     update_time=data["T"],
                 )
         except Exception as e:
-            self.logger.error(f"Error in order_updates_iterator: {e}")
+            logger.error(f"Error in order_updates_iterator: {e}")
             raise e
         finally:
             self.is_order_stream_subscribed = False
@@ -388,7 +388,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     commission_asset=data["n"],
                 )
         except Exception as e:
-            self.logger.error(f"Error in execution_updates_iterator: {e}")
+            logger.error(f"Error in execution_updates_iterator: {e}")
             raise e
         finally:
             self.is_trade_stream_subscribed = False
@@ -409,7 +409,7 @@ class BinanceWebSocketAdapter(ExchangeStreamConnector):
                     )
 
         except Exception as e:
-            self.logger.error(f"Error in account_updates_iterator: {e}")
+            logger.error(f"Error in account_updates_iterator: {e}")
             raise e
         finally:
             self.is_account_stream_subscribed = False

@@ -1,13 +1,14 @@
 import asyncio
 import json
+import logging
 import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import websockets
 
-from solvexity.logger import SolvexityLogger
-
 from .rest import BinanceRestClient
+
+logger = logging.getLogger(__name__)
 
 class BinanceWebSocketClient:
     """Binance WebSocket API client for real-time data streaming."""
@@ -34,7 +35,6 @@ class BinanceWebSocketClient:
         self._rest_connector: Optional[BinanceRestClient] = None  # Will be initialized in connect()
         self._listen_key: Optional[str] = None
         self._keep_alive_task: Optional[asyncio.Task] = None
-        self.logger = SolvexityLogger().get_logger(__name__)
 
     async def connect(self) -> None:
         """Establish WebSocket connection."""
@@ -89,7 +89,7 @@ class BinanceWebSocketClient:
                 await self._rest_connector.keep_alive_listen_key(self._listen_key)
                 await asyncio.sleep(30 * 60)  # Keep alive every 30 minutes
             except Exception as e:
-                self.logger.error(f"Error keeping listen key alive: {e}")
+                logger.error(f"Error keeping listen key alive: {e}")
                 await asyncio.sleep(5)
 
     async def _get_listen_key(self) -> str:
@@ -124,7 +124,7 @@ class BinanceWebSocketClient:
                 message = await self.ws.recv()
                 await self._handle_message(json.loads(message))
             except websockets.exceptions.ConnectionClosed:
-                self.logger.warning(
+                logger.warning(
                     "WebSocket connection closed. Attempting to reconnect..."
                 )
                 await asyncio.sleep(5)
@@ -132,12 +132,12 @@ class BinanceWebSocketClient:
                 # Resubscribe to all streams after reconnection
                 await self._resubscribe_all()
             except Exception as e:
-                self.logger.error(f"Error in WebSocket listener: {e}")
+                logger.error(f"Error in WebSocket listener: {e}")
                 await asyncio.sleep(5)
 
     async def _handle_message(self, message: Dict[str, Any]) -> None:
         """Handle incoming WebSocket messages."""
-        self.logger.debug(f"Received message: {message}")  # Debug log
+        logger.debug(f"Received message: {message}")  # Debug log
 
         if "stream" in message:
             # Handle combined stream messages

@@ -3,6 +3,7 @@ pyyaml
 python-dotenv
 pandas
 numpy
+mplfinance
 aiocache
 websockets
 aiohttp

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 class Agent(ABC):
+
     @abstractmethod
     async def enter(self) -> str:
         pass

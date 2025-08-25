@@ -12,3 +12,6 @@ class Agent(ABC):
     @abstractmethod
     async def reverse(self):
         pass
+
+    async def subscribe(self):
+        pass

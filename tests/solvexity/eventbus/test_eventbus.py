@@ -129,16 +129,18 @@ class TestEventBusUnsubscribe:
 class TestEventBusPublish:
     """Test EventBus publish functionality."""
     
-    def test_publish_sync_callback(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_sync_callback(self, eventbus, sample_event):
         """Test publishing to a synchronous callback."""
         callback = Mock()
         eventbus.subscribe("test_topic", callback)
         
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
         
         callback.assert_called_once_with(sample_event)
     
-    def test_publish_async_callback(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_async_callback(self, eventbus, sample_event):
         """Test publishing to an asynchronous callback."""
         async def async_callback(event):
             return "async_result"
@@ -146,12 +148,12 @@ class TestEventBusPublish:
         callback = AsyncMock(side_effect=async_callback)
         eventbus.subscribe("test_topic", callback)
         
-        # Run in event loop to handle async callbacks
-        asyncio.run(eventbus.publish_async("test_topic", sample_event))
+        await eventbus.publish("test_topic", sample_event)
         
         callback.assert_called_once_with(sample_event)
     
-    def test_publish_multiple_callbacks(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_multiple_callbacks(self, eventbus, sample_event):
         """Test publishing to multiple callbacks."""
         callback1 = Mock()
         callback2 = Mock()
@@ -159,27 +161,30 @@ class TestEventBusPublish:
         eventbus.subscribe("test_topic", callback1)
         eventbus.subscribe("test_topic", callback2)
         
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
         
         callback1.assert_called_once_with(sample_event)
         callback2.assert_called_once_with(sample_event)
     
-    def test_publish_no_subscribers(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_no_subscribers(self, eventbus, sample_event):
         """Test publishing when no subscribers exist."""
         # Should not raise any exception
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
     
-    def test_publish_different_topic(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_different_topic(self, eventbus, sample_event):
         """Test publishing to a topic with no subscribers."""
         callback = Mock()
         eventbus.subscribe("different_topic", callback)
         
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
         
         # Callback should not be called for different topic
         callback.assert_not_called()
     
-    def test_publish_mixed_sync_async_callbacks(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_publish_mixed_sync_async_callbacks(self, eventbus, sample_event):
         """Test publishing to a mix of sync and async callbacks."""
         sync_callback = Mock()
         
@@ -191,93 +196,20 @@ class TestEventBusPublish:
         eventbus.subscribe("test_topic", sync_callback)
         eventbus.subscribe("test_topic", async_mock)
         
-        # Run in event loop to handle async callbacks
-        asyncio.run(eventbus.publish_async("test_topic", sample_event))
+        await eventbus.publish("test_topic", sample_event)
         
         sync_callback.assert_called_once_with(sample_event)
         async_mock.assert_called_once_with(sample_event)
 
 
-class TestEventBusPublishAsync:
-    """Test EventBus publish_async functionality."""
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_sync_callback(self, eventbus, sample_event):
-        """Test async publishing to a synchronous callback."""
-        callback = Mock()
-        eventbus.subscribe("test_topic", callback)
-        
-        await eventbus.publish_async("test_topic", sample_event)
-        
-        callback.assert_called_once_with(sample_event)
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_async_callback(self, eventbus, sample_event):
-        """Test async publishing to an asynchronous callback."""
-        async def async_callback(event):
-            return "async_result"
-        
-        callback = AsyncMock(side_effect=async_callback)
-        eventbus.subscribe("test_topic", callback)
-        
-        await eventbus.publish_async("test_topic", sample_event)
-        
-        callback.assert_called_once_with(sample_event)
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_multiple_callbacks(self, eventbus, sample_event):
-        """Test async publishing to multiple callbacks."""
-        callback1 = Mock()
-        callback2 = Mock()
-        
-        eventbus.subscribe("test_topic", callback1)
-        eventbus.subscribe("test_topic", callback2)
-        
-        await eventbus.publish_async("test_topic", sample_event)
-        
-        callback1.assert_called_once_with(sample_event)
-        callback2.assert_called_once_with(sample_event)
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_no_subscribers(self, eventbus, sample_event):
-        """Test async publishing when no subscribers exist."""
-        # Should not raise any exception
-        await eventbus.publish_async("test_topic", sample_event)
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_different_topic(self, eventbus, sample_event):
-        """Test async publishing to a topic with no subscribers."""
-        callback = Mock()
-        eventbus.subscribe("different_topic", callback)
-        
-        await eventbus.publish_async("test_topic", sample_event)
-        
-        # Callback should not be called for different topic
-        callback.assert_not_called()
-    
-    @pytest.mark.asyncio
-    async def test_publish_async_mixed_sync_async_callbacks(self, eventbus, sample_event):
-        """Test async publishing to a mix of sync and async callbacks."""
-        sync_callback = Mock()
-        
-        async def async_callback(event):
-            return "async_result"
-        
-        async_mock = AsyncMock(side_effect=async_callback)
-        
-        eventbus.subscribe("test_topic", sync_callback)
-        eventbus.subscribe("test_topic", async_mock)
-        
-        await eventbus.publish_async("test_topic", sample_event)
-        
-        sync_callback.assert_called_once_with(sample_event)
-        async_mock.assert_called_once_with(sample_event)
+
 
 
 class TestEventBusIntegration:
     """Test EventBus integration scenarios."""
     
-    def test_subscribe_publish_unsubscribe_cycle(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_subscribe_publish_unsubscribe_cycle(self, eventbus, sample_event):
         """Test complete subscribe-publish-unsubscribe cycle."""
         callback = Mock()
         
@@ -285,7 +217,7 @@ class TestEventBusIntegration:
         unsubscribe = eventbus.subscribe("test_topic", callback)
         
         # Publish
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
         callback.assert_called_once_with(sample_event)
         
         # Reset mock
@@ -295,7 +227,7 @@ class TestEventBusIntegration:
         unsubscribe()
         
         # Publish again - should not call callback
-        eventbus.publish("test_topic", sample_event)
+        await eventbus.publish("test_topic", sample_event)
         callback.assert_not_called()
     
     @pytest.mark.asyncio
@@ -318,8 +250,8 @@ class TestEventBusIntegration:
         )
         
         # Publish events
-        eventbus.publish("topic1", event1)
-        eventbus.publish("topic2", event2)
+        await eventbus.publish("topic1", event1)
+        await eventbus.publish("topic2", event2)
         
         # Give the event loop a chance to process any async tasks
         await asyncio.sleep(0.01)
@@ -327,7 +259,8 @@ class TestEventBusIntegration:
         topic1_callback.assert_called_once_with(event1)
         topic2_callback.assert_called_once_with(event2)
     
-    def test_callback_exception_handling(self, eventbus, sample_event):
+    @pytest.mark.asyncio
+    async def test_callback_exception_handling(self, eventbus, sample_event):
         """Test that exceptions in callbacks don't break the event bus."""
         def failing_callback(event):
             raise ValueError("Callback error")
@@ -343,7 +276,7 @@ class TestEventBusIntegration:
         
         # Should raise the exception from the failing callback
         with pytest.raises(ValueError, match="Callback error"):
-            eventbus.publish("test_topic", sample_event)
+            await eventbus.publish("test_topic", sample_event)
         
         # Working callback should be called before the exception
         working_mock.assert_called_once_with(sample_event)
@@ -366,7 +299,7 @@ class TestEventBusIntegration:
         
         # Should raise the exception from the failing async callback
         with pytest.raises(ValueError, match="Async callback error"):
-            await eventbus.publish_async("test_topic", sample_event)
+            await eventbus.publish("test_topic", sample_event)
         
         # Working callback should be called before the exception
         working_mock.assert_called_once_with(sample_event)
@@ -376,7 +309,8 @@ class TestEventBusIntegration:
 class TestEventBusEdgeCases:
     """Test EventBus edge cases and error conditions."""
     
-    def test_subscribe_none_callback(self, eventbus):
+    @pytest.mark.asyncio
+    async def test_subscribe_none_callback(self, eventbus):
         """Test subscribing with None callback."""
         # EventBus doesn't validate callback type, so this should work
         # but will fail when trying to call the callback
@@ -390,9 +324,10 @@ class TestEventBusEdgeCases:
         
         # This should raise a TypeError when trying to call None
         with pytest.raises(TypeError):
-            eventbus.publish("test_topic", event)
+            await eventbus.publish("test_topic", event)
     
-    def test_publish_none_event(self, eventbus):
+    @pytest.mark.asyncio
+    async def test_publish_none_event(self, eventbus):
         """Test publishing None event."""
         # EventBus doesn't validate the event parameter
         # It just passes it to callbacks, which would fail if they try to access attributes
@@ -400,26 +335,15 @@ class TestEventBusEdgeCases:
         eventbus.subscribe("test_topic", callback)
         
         # This should not raise an exception in EventBus
-        eventbus.publish("test_topic", None)
+        await eventbus.publish("test_topic", None)
         
         # But the callback should be called with None
         callback.assert_called_once_with(None)
+    
+
     
     @pytest.mark.asyncio
-    async def test_publish_async_none_event(self, eventbus):
-        """Test async publishing None event."""
-        # EventBus doesn't validate the event parameter
-        # It just passes it to callbacks, which would fail if they try to access attributes
-        callback = Mock()
-        eventbus.subscribe("test_topic", callback)
-        
-        # This should not raise an exception in EventBus
-        await eventbus.publish_async("test_topic", None)
-        
-        # But the callback should be called with None
-        callback.assert_called_once_with(None)
-    
-    def test_subscribe_empty_topic(self, eventbus):
+    async def test_subscribe_empty_topic(self, eventbus):
         """Test subscribing with empty topic string."""
         callback = Mock()
         unsubscribe = eventbus.subscribe("", callback)
@@ -433,7 +357,7 @@ class TestEventBusEdgeCases:
             data={"value": "test_value"}
         )
         
-        eventbus.publish("", event)
+        await eventbus.publish("", event)
         callback.assert_called_once_with(event)
     
     def test_multiple_unsubscribes(self, eventbus):

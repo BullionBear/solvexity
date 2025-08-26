@@ -14,14 +14,7 @@ class EventBus:
         self.subscribers[topic].append(callback)
         return lambda: self.subscribers[topic].remove(callback)
 
-    def publish(self, topic: str, event: Event) -> None:
-        for callback in self.subscribers.get(topic, []):
-            if asyncio.iscoroutinefunction(callback):
-                asyncio.create_task(callback(event))
-            else:
-                callback(event)
-
-    async def publish_async(self, topic: str, event: Event) -> None:
+    async def publish(self, topic: str, event: Event) -> None:
         for callback in self.subscribers.get(topic, []):
             if asyncio.iscoroutinefunction(callback):
                 await callback(event)

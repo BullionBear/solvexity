@@ -6,26 +6,23 @@ from solvexity.eventbus.event import Event
 
 class EventBus:
     def __init__(self):
-        self.subscribers: dict[str, list[Callable[[Event], None] | Awaitable[[Event], None]]] = {}
+        self.subscribers: dict[str, list[Callable[[Event], None]]] = {}
 
-    def subscribe(self, source: str, callback: Callable[[Event], None] | Awaitable[[Event], None]) -> Callable[[], None]:
-        if not callable(callback):
-            raise ValueError("Callback must be a callable function")
+    def subscribe(self, topic: str, callback: Callable[[Event], None]) -> Callable[[], None]:
+        if topic not in self.subscribers:
+            self.subscribers[topic] = []
+        self.subscribers[topic].append(callback)
+        return lambda: self.subscribers[topic].remove(callback)
 
-        if source not in self.subscribers:
-            self.subscribers[source] = []
-        self.subscribers[source].append(callback)
-        return lambda: self.subscribers[source].remove(callback)
-
-    def publish(self, event: Event) -> None:
-        for callback in self.subscribers.get(event.source, []):
+    def publish(self, topic: str, event: Event) -> None:
+        for callback in self.subscribers.get(topic, []):
             if asyncio.iscoroutinefunction(callback):
                 asyncio.create_task(callback(event))
             else:
                 callback(event)
 
-    async def publish_async(self, event: Event) -> None:
-        for callback in self.subscribers.get(event.source, []):
+    async def publish_async(self, topic: str, event: Event) -> None:
+        for callback in self.subscribers.get(topic, []):
             if asyncio.iscoroutinefunction(callback):
                 await callback(event)
             else:

@@ -12,32 +12,26 @@ class TestEventInitialization:
         data = {"value": "test_value", "number": 42}
         event = Event(
             time_ms=1234567890,
-            source="test_source",
-            target="test_target",
             data=data
         )
         
         assert event.time_ms == 1234567890
-        assert event.source == "test_source"
-        assert event.target == "test_target"
         assert event.data == data
         assert event.data["value"] == "test_value"
         assert event.data["number"] == 42
+        assert event.uid is not None  # uid should be auto-generated
     
     def test_event_with_minimal_data(self):
         """Test creating an event with minimal data."""
         data = {"value": "minimal"}
         event = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data
         )
         
         assert event.time_ms == 1234567890
-        assert event.source == "source"
-        assert event.target == "target"
         assert event.data["value"] == "minimal"
+        assert event.uid is not None  # uid should be auto-generated
     
     def test_event_validation(self):
         """Test that Event validates required fields."""
@@ -45,8 +39,7 @@ class TestEventInitialization:
         with pytest.raises(ValueError):
             Event(
                 time_ms=1234567890,
-                source="test_source",
-                # Missing target and data
+                # Missing data
             )
     
     def test_event_data_validation(self):
@@ -55,8 +48,6 @@ class TestEventInitialization:
         # This should work with dict data
         event = Event(
             time_ms=1234567890,
-            source="test_source",
-            target="test_target",
             data={"value": "test_value"}  # Dict data
         )
         
@@ -75,19 +66,16 @@ class TestEventProperties:
         
         event1 = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data1
         )
         
         event2 = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data2
         )
         
-        assert event1 == event2
+        # Events with same data but different uids should not be equal
+        assert event1 != event2
     
     def test_event_inequality(self):
         """Test event inequality."""
@@ -96,15 +84,11 @@ class TestEventProperties:
         
         event1 = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data1
         )
         
         event2 = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data2
         )
         
@@ -115,16 +99,13 @@ class TestEventProperties:
         data = {"value": "test_value", "number": 42}
         event = Event(
             time_ms=1234567890,
-            source="test_source",
-            target="test_target",
             data=data
         )
         
         repr_str = repr(event)
         assert "Event" in repr_str
         assert "time_ms=1234567890" in repr_str
-        assert "source='test_source'" in repr_str
-        assert "target='test_target'" in repr_str
+        assert "uid=" in repr_str
 
 
 class TestEventEdgeCases:
@@ -135,8 +116,6 @@ class TestEventEdgeCases:
         data = {"value": "test"}
         event = Event(
             time_ms=0,
-            source="source",
-            target="target",
             data=data
         )
         
@@ -147,38 +126,29 @@ class TestEventEdgeCases:
         data = {"value": "test"}
         event = Event(
             time_ms=-1234567890,
-            source="source",
-            target="target",
             data=data
         )
         
         assert event.time_ms == -1234567890
     
-    def test_event_with_empty_strings(self):
-        """Test event with empty source and target strings."""
+    def test_event_with_default_values(self):
+        """Test event with default values."""
         data = {"value": "test"}
-        event = Event(
-            time_ms=1234567890,
-            source="",
-            target="",
-            data=data
-        )
+        event = Event(data=data)
         
-        assert event.source == ""
-        assert event.target == ""
+        assert event.time_ms is not None
+        assert event.uid is not None
     
-    def test_event_with_unicode_strings(self):
-        """Test event with unicode strings."""
-        data = {"value": "test"}
+    def test_event_with_unicode_data(self):
+        """Test event with unicode data."""
+        data = {"value": "测试数据", "unicode": "🎉"}
         event = Event(
             time_ms=1234567890,
-            source="测试源",
-            target="测试目标",
             data=data
         )
         
-        assert event.source == "测试源"
-        assert event.target == "测试目标"
+        assert event.data["value"] == "测试数据"
+        assert event.data["unicode"] == "🎉"
 
 
 class TestEventDataTypes:
@@ -194,8 +164,6 @@ class TestEventDataTypes:
         
         event = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data
         )
         
@@ -213,8 +181,6 @@ class TestEventDataTypes:
         
         event = Event(
             time_ms=1234567890,
-            source="source",
-            target="target",
             data=data
         )
         

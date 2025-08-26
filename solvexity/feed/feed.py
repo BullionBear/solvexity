@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import Any, Callable
+
+
 
 class Feed(ABC):
     @abstractmethod
-    def get_data(self):
+    def subscribe(self, callback: Callable[[Any], None]) -> Callable[[], None]:
         pass
 
-    @abstractmethod
-    def get_data(self):
-        pass

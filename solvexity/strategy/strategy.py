@@ -2,5 +2,9 @@ from abc import ABC, abstractmethod
 
 class Strategy(ABC):
     @abstractmethod
-    def on_bar(self, bar: Bar):
+    async def start(self):
+        pass
+
+    @abstractmethod
+    async def stop(self):
         pass

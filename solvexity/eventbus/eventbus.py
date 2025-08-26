@@ -1,14 +1,17 @@
 import asyncio
-from typing import Callable
+from typing import Awaitable, Callable
 
 from solvexity.eventbus.event import Event
 
 
 class EventBus:
     def __init__(self):
-        self.subscribers: dict[str, list[Callable[[Event], None]]] = {}
+        self.subscribers: dict[str, list[Callable[[Event], None] | Awaitable[[Event], None]]] = {}
 
-    def subscribe(self, source: str, callback: Callable[[Event], None]) -> Callable[[], None]:
+    def subscribe(self, source: str, callback: Callable[[Event], None] | Awaitable[[Event], None]) -> Callable[[], None]:
+        if not callable(callback):
+            raise ValueError("Callback must be a callable function")
+
         if source not in self.subscribers:
             self.subscribers[source] = []
         self.subscribers[source].append(callback)

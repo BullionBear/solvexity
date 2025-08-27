@@ -1,5 +1,5 @@
 import asyncio
-from typing import Awaitable, Callable
+from typing import Callable
 
 from solvexity.eventbus.event import Event
 
@@ -8,7 +8,9 @@ class EventBus:
     def __init__(self):
         self.subscribers: dict[str, list[Callable[[Event], None]]] = {}
 
-    def subscribe(self, topic: str, callback: Callable[[Event], None]) -> Callable[[], None]:
+    def subscribe(
+        self, topic: str, callback: Callable[[Event], None]
+    ) -> Callable[[], None]:
         if topic not in self.subscribers:
             self.subscribers[topic] = []
         self.subscribers[topic].append(callback)

@@ -1,5 +1,7 @@
 from pydantic import BaseModel
-from .enum import Symbol, Side, Exchange, Instrument
+
+from .enum import Exchange, Instrument, Side, Symbol
+
 
 class Trade(BaseModel):
     exchange: Exchange

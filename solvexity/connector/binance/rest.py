@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class BinanceRestClient:
     """Binance REST API client for making direct API calls."""
+
     BASE_URL = "https://api.binance.com"
     TESTNET_URL = "https://testnet.binance.vision"  # Fixed the URL
 

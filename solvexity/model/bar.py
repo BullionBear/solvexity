@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class Bar(BaseModel):
     symbol: str
     interval: str

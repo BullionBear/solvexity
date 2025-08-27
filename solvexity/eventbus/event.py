@@ -1,7 +1,9 @@
-from typing import Any
-from pydantic import BaseModel, Field
-import uuid
 import time
+import uuid
+from typing import Any
+
+from pydantic import BaseModel, Field
+
 
 class Event(BaseModel):
     time_ms: int = Field(default_factory=lambda: int(time.time() * 1000))

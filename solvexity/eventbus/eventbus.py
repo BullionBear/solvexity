@@ -20,3 +20,6 @@ class EventBus:
                 await callback(event)
             else:
                 callback(event)
+
+    def list_events(self):
+        return list(self.subscribers.keys())

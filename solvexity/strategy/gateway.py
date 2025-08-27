@@ -20,6 +20,9 @@ class Gateway:
     def __exit__(self, exc_type, exc_value, traceback):
         for unsubscribe_function in self._unsubscribe_functions:
             unsubscribe_function()
+
+    def list_events(self):
+        return self.eventbus.list_events()
     
     async def publish(self, topic: str, event: Event):
         await self.eventbus.publish(topic, event.data)

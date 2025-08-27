@@ -142,4 +142,9 @@ class BinanceWebSocketSubscriber:
         channel = f"{symbol.lower()}@kline_{interval}"
         return await self.subscribe(f"{self.ws_url}{channel}", callback)
 
+    async def subscribe_trade(self, symbol: str, callback: Callable[[Dict], None]) -> Callable[[], None]:
+        """Subscribe to a trade stream non-blocking"""
+        channel = f"{symbol.lower()}@trade"
+        return await self.subscribe(f"{self.ws_url}{channel}", callback)
+
    

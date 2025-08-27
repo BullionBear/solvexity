@@ -11,4 +11,3 @@ class Bar(BaseModel):
     close: float
     is_closed: bool
     volume: float
-    timestamp: int

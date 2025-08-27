@@ -16,7 +16,7 @@ class Bouncing(Strategy):
         pass
 
     async def on_bar(self, bar: Bar):
-        logger.info(f"Received bar: {bar}")
+        logger.info(f" On bar: {bar}")
         self.bars.append(bar)
 
 StrategyFactory.register("bouncing", Bouncing)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Callable, Dict
 from solvexity.feed import Feed
@@ -14,14 +15,12 @@ class BinanceOHLCV(Feed):
         self.ws = BinanceWebSocketSubscriber(api_key="", api_secret="", use_testnet=False)
 
     async def subscribe(self, callback: Callable[[Event], None]) -> Callable[[], None]:
-        def event_handler(message: Dict):
+        async def event_handler(message: Dict):
             logger.info(f"Received message: {message}")
             bar = self.translate(message)
             if bar:
-                callback(Event(data=bar))
+                await callback(Event(data=bar))
         return await self.ws.subscribe_kline(self.symbol, self.interval, event_handler)
-
-
 
     def translate(self, message: Dict) -> Bar | None:
         if message.get("e", None) != "kline":

@@ -4,6 +4,7 @@ import asyncio
 import time
 from solvexity.connector.binance.rest import BinanceRestClient
 import websockets
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +73,24 @@ class BinanceWebSocketSubscriber:
                             
                             # Handle regular messages
                             logger.debug(f"Received message from {ws_url}: {message}")
-                            if asyncio.iscoroutinefunction(callback):
-                                asyncio.create_task(callback(message))
-                            else:
-                                callback(message)
+                            
+                            # Parse string message to dict
+                            try:
+                                if isinstance(message, str):
+                                    message_dict = json.loads(message)
+                                else:
+                                    message_dict = message
+                                
+                                if asyncio.iscoroutinefunction(callback):
+                                    asyncio.create_task(callback(message_dict))
+                                else:
+                                    callback(message_dict)
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Failed to parse JSON message from {ws_url}: {e}")
+                                logger.error(f"Raw message: {message}")
+                            except Exception as e:
+                                logger.error(f"Error processing message from {ws_url}: {e}")
+                                logger.error(f"Message: {message}")
                     finally:
                         # Cancel periodic pong task
                         pong_task.cancel()
@@ -98,26 +113,26 @@ class BinanceWebSocketSubscriber:
                     logger.info(f"Retrying connection in {delay} seconds...")
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"Max retries ({self.max_retries}) reached for {ws_url}. Stopping reconnection attempts.")
+                    logger.error(f"Max retries ({self.max_retries}) reached for {ws_url}. Stopping reconnection attempts.", exc_info=True)
                     break
                     
             except websockets.exceptions.InvalidURI as e:
-                logger.error(f"Invalid WebSocket URI {ws_url}: {e}")
+                logger.error(f"Invalid WebSocket URI {ws_url}: {e}", exc_info=True)
                 break
                 
             except Exception as e:
-                logger.error(f"Unexpected WebSocket error for {ws_url}: {e}")
+                logger.error(f"Unexpected WebSocket error for {ws_url}: {e}", exc_info=True)
                 if retry_count < self.max_retries:
                     retry_count += 1
                     delay = base_delay * (2 ** (retry_count - 1))
                     logger.info(f"Retrying connection in {delay} seconds...")
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"Max retries ({self.max_retries}) reached for {ws_url}. Stopping reconnection attempts.")
+                    logger.error(f"Max retries ({self.max_retries}) reached for {ws_url}. Stopping reconnection attempts.", exc_info=True)
                     break
         
         if retry_count > self.max_retries:
-            logger.error(f"Failed to establish WebSocket connection after {self.max_retries} retries for {ws_url}")
+            logger.error(f"Failed to establish WebSocket connection after {self.max_retries} retries for {ws_url}", exc_info=True)
 
 
     async def subscribe(self, ws_url: str, callback: Callable[[Dict], None]) -> Callable[[], None]:

@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Callable, Dict
+from typing import AsyncGenerator, Dict
 
 import websockets
 
@@ -23,13 +23,10 @@ class BinanceWebSocketSubscriber:
         self.ws_url = "wss://stream.binance.com/ws/"
         if use_testnet:
             self.ws_url = "wss://testnet.binance.vision/ws/"
-        self.callbacks: Dict[str, Callable[[Dict], None]] = {}  # url -> callback
-        self.tasks: Dict[str, asyncio.Task] = {}  # url -> task
         self.max_retries = max_retries
-        self.connection_start_times: Dict[str, float] = {}  # channel -> start_time
 
-    async def _handle_websocket(self, ws_url: str, callback: Callable[[Dict], None]):
-        """Background task to handle websocket connection and messages with retry logic"""
+    async def _websocket_stream(self, ws_url: str) -> AsyncGenerator[Dict, None]:
+        """Async generator that yields messages from a websocket connection with retry logic"""
         retry_count = 0
         base_delay = 1  # Start with 1 second delay
         max_connection_time = 23 * 3600 + 55 * 60  # 23 hours 55 minutes in seconds
@@ -45,7 +42,6 @@ class BinanceWebSocketSubscriber:
 
                     # Record connection start time
                     connection_start = time.time()
-                    self.connection_start_times[ws_url] = connection_start
                     logger.info(
                         f"Connection started at {connection_start} for {ws_url}"
                     )
@@ -85,9 +81,6 @@ class BinanceWebSocketSubscriber:
                                 )
                                 break
 
-                            # Handle ping frames (websockets library handles ping/pong automatically)
-                            # We don't need to manually handle ping frames
-
                             # Handle regular messages
                             logger.debug(f"Received message from {ws_url}: {message}")
 
@@ -98,10 +91,7 @@ class BinanceWebSocketSubscriber:
                                 else:
                                     message_dict = message
 
-                                if asyncio.iscoroutinefunction(callback):
-                                    asyncio.create_task(callback(message_dict))
-                                else:
-                                    callback(message_dict)
+                                yield message_dict
                             except json.JSONDecodeError as e:
                                 logger.error(
                                     f"Failed to parse JSON message from {ws_url}: {e}"
@@ -121,10 +111,6 @@ class BinanceWebSocketSubscriber:
                             await timeout_task
                         except asyncio.CancelledError:
                             pass
-
-                        # Clean up connection start time
-                        if ws_url in self.connection_start_times:
-                            del self.connection_start_times[ws_url]
 
             except websockets.exceptions.ConnectionClosed as e:
                 logger.warning(f"WebSocket connection closed for {ws_url}: {e}")
@@ -166,35 +152,31 @@ class BinanceWebSocketSubscriber:
                 exc_info=True,
             )
 
-    async def subscribe(
-        self, ws_url: str, callback: Callable[[Dict], None]
-    ) -> Callable[[], None]:
-        """Subscribe to a websocket stream non-blocking"""
-        self.callbacks[ws_url] = callback
-
-        task = asyncio.create_task(self._handle_websocket(ws_url, callback))
-        self.tasks[ws_url] = task
-
-        # Return unsubscribe function
-        def unsubscribe():
-            if ws_url in self.tasks:
-                self.tasks[ws_url].cancel()
-                del self.tasks[ws_url]
-            if ws_url in self.callbacks:
-                del self.callbacks[ws_url]
-
-        return unsubscribe
-
-    async def subscribe_kline(
-        self, symbol: str, interval: str, callback: Callable[[Dict], None]
-    ) -> Callable[[], None]:
-        """Subscribe to a kline stream non-blocking"""
+    async def recv_kline(
+        self, symbol: str, interval: str
+    ) -> AsyncGenerator[Dict, None]:
+        """Async generator that yields kline messages from a websocket stream"""
         channel = f"{symbol.lower()}@kline_{interval}"
-        return await self.subscribe(f"{self.ws_url}{channel}", callback)
+        ws_url = f"{self.ws_url}{channel}"
+        
+        async for message in self._websocket_stream(ws_url):
+            yield message
 
-    async def subscribe_trade(
-        self, symbol: str, callback: Callable[[Dict], None]
-    ) -> Callable[[], None]:
-        """Subscribe to a trade stream non-blocking"""
+    async def recv_trade(
+        self, symbol: str
+    ) -> AsyncGenerator[Dict, None]:
+        """Async generator that yields trade messages from a websocket stream"""
         channel = f"{symbol.lower()}@trade"
-        return await self.subscribe(f"{self.ws_url}{channel}", callback)
+        ws_url = f"{self.ws_url}{channel}"
+        
+        async for message in self._websocket_stream(ws_url):
+            yield message
+
+    async def recv_stream(
+        self, channel: str
+    ) -> AsyncGenerator[Dict, None]:
+        """Async generator that yields messages from a custom websocket stream"""
+        ws_url = f"{self.ws_url}{channel}"
+        
+        async for message in self._websocket_stream(ws_url):
+            yield message

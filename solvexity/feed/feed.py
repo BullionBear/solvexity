@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from typing import Any, AsyncGenerator
 
 
 class Feed(ABC):
     @abstractmethod
-    def subscribe(self, callback: Callable[[Any], None]) -> Callable[[], None]:
+    async def recv(self) -> AsyncGenerator[Any, None]:
         pass

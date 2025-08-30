@@ -1,9 +1,8 @@
 import asyncio
 import logging
-from typing import AsyncGenerator, Callable, Dict
+from typing import AsyncGenerator, Dict
 
 from solvexity.connector.binance import BinanceMarketDataStream
-from solvexity.eventbus.event import Event
 from solvexity.feed import Feed
 from solvexity.model.bar import Bar
 from solvexity.model.enum import Symbol, Exchange
@@ -11,7 +10,7 @@ from solvexity.model.enum import Symbol, Exchange
 logger = logging.getLogger(__name__)
 
 
-class OHLCV(Feed):
+class OHLCVFeed(Feed):
     def __init__(self, symbol: Symbol, exchange: Exchange, interval: str):
         self.symbol = symbol
         self.exchange = exchange
@@ -24,10 +23,13 @@ class OHLCV(Feed):
         if self.exchange == Exchange.BINANCE:
             symbol = self.symbol.base + self.symbol.quote
         async for message in self.ws.recv_kline(symbol, self.interval):
-            yield self.translate(message)
+            bar = self.translate(message)
+            if bar:
+                yield bar
 
     def translate(self, message: Dict) -> Bar | None:
         if message.get("e", None) != "kline":
+            logger.warning(f"Received message is not a kline: {message}")
             return None
         data = message["k"]
         return Bar(

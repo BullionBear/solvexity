@@ -1,31 +1,30 @@
 import asyncio
 import logging
-from typing import Callable, Dict
+from typing import AsyncGenerator, Callable, Dict
 
-from solvexity.connector.binance.websocket import BinanceWebSocketSubscriber
+from solvexity.connector.binance import BinanceMarketDataStream
 from solvexity.eventbus.event import Event
 from solvexity.feed import Feed
 from solvexity.model.bar import Bar
+from solvexity.model.enum import Symbol, Exchange
 
 logger = logging.getLogger(__name__)
 
 
-class BinanceOHLCV(Feed):
-    def __init__(self, symbol: str, interval: str):
+class OHLCV(Feed):
+    def __init__(self, symbol: Symbol, exchange: Exchange, interval: str):
         self.symbol = symbol
+        self.exchange = exchange
         self.interval = interval
-        self.ws = BinanceWebSocketSubscriber(
-            api_key="", api_secret="", use_testnet=False
+        self.ws = BinanceMarketDataStream(
+            use_testnet=False
         )
 
-    async def subscribe(self, callback: Callable[[Event], None]) -> Callable[[], None]:
-        async def event_handler(message: Dict):
-            logger.info(f"Received message: {message}")
-            bar = self.translate(message)
-            if bar:
-                await callback(Event(data=bar))
-
-        return await self.ws.subscribe_kline(self.symbol, self.interval, event_handler)
+    async def recv(self) -> AsyncGenerator[Bar, None]:
+        if self.exchange == Exchange.BINANCE:
+            symbol = self.symbol.base + self.symbol.quote
+        async for message in self.ws.recv_kline(symbol, self.interval):
+            yield self.translate(message)
 
     def translate(self, message: Dict) -> Bar | None:
         if message.get("e", None) != "kline":

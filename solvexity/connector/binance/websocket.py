@@ -22,12 +22,29 @@ class BinanceUserDataStream:
         if use_testnet:
             self.ws_url = "wss://testnet.binance.vision/ws/"
         self.max_retries = max_retries
-        self.rest_client = BinanceRestClient(api_key, api_secret, use_testnet)
+        self._api_key = api_key
+        self._api_secret = api_secret
+        self._use_testnet = use_testnet
+        self.rest_client: Optional[BinanceRestClient] = None
         self.listen_key: Optional[str] = None
         self.keep_alive_task: Optional[asyncio.Task] = None
 
+    
+
+    async def _initialize_rest_client(self):
+        if self.rest_client:
+            return
+        self.rest_client = BinanceRestClient(self._api_key, self._api_secret, self._use_testnet)
+        await self.rest_client.__aenter__()
+
+    async def _cleanup_rest_client(self):
+        if self.rest_client:
+            await self.rest_client.__aexit__(None, None, None)
+            self.rest_client = None
+    
     async def _get_listen_key(self) -> str:
         """Get a new listen key from the REST API."""
+        await self._initialize_rest_client()
         try:
             response = await self.rest_client.generate_listen_key()
             listen_key = response.get("listenKey")
@@ -223,6 +240,10 @@ class BinanceUserDataStream:
         if self.listen_key:
             await self._cleanup_listen_key(self.listen_key)
             self.listen_key = None
+        
+        if self.rest_client:
+            await self._cleanup_rest_client()
+            self.rest_client = None
 
 
 

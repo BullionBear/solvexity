@@ -11,6 +11,7 @@ class Side(enum.Enum):
 class Exchange(enum.Enum):
     BINANCE = "BINANCE"
     BINANCE_PERP = "BINANCE_PERP"
+    BYBIT = "BYBIT"
 
 
 class Instrument(enum.Enum):
@@ -35,3 +36,8 @@ class OrderStatus(enum.Enum):
     CANCELLED = "CANCELLED"
     REJECTED = "REJECTED"
     UNKNOWN = "UNKNOWN"
+
+class TimeInForce(enum.Enum):
+    GTC = "GTC"
+    IOC = "IOC"
+    FOK = "FOK"

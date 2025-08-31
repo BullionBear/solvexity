@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 
 
-class Strategy(ABC):
+class Agent(ABC):
     @abstractmethod
-    async def start(self):
+    async def enter(self):
         pass
 
     @abstractmethod
-    async def stop(self):
+    async def exit(self):
         pass

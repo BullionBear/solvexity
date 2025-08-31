@@ -1,13 +1,13 @@
 import logging
 from solvexity.model.bar import Bar
-from solvexity.collections.factory import StrategyFactory
-from solvexity.strategy.strategy import Strategy
-from solvexity.eventbus.event import Event
 
 logger = logging.getLogger(__name__)
 
-class Bouncing(Strategy):
-    def __init__(self):
+class Bouncing:
+    def __init__(self, n_periods: int, drawdown: float, springback: float):
+        self.n_periods = n_periods
+        self.drawdown = drawdown
+        self.springback = springback
         self.bars: list[Bar] = []
 
     async def start(self):
@@ -18,6 +18,3 @@ class Bouncing(Strategy):
 
     async def on_bar(self, bar: Bar):
         logger.info(f" On bar: {bar}")
-        self.bars.append(bar)
-
-StrategyFactory.register("bouncing", Bouncing)

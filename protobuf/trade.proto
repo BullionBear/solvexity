@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package app;
+
+import "protobuf/shared.proto";
+
+message Trade {
+  int64 id = 1;
+  app.Exchange exchange = 2;
+  app.Instrument instrument = 3;
+  app.Symbol symbol = 4;
+  app.Side side = 5;
+  double price = 7;
+  double quantity = 8;
+  int64 timestamp = 9;
+}

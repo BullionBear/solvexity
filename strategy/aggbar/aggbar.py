@@ -51,7 +51,7 @@ class AggBar:
         if next_reference_index == self._reference_index:
             self.bars[self._reference_index % self.buf_size] += trade
         elif next_reference_index > self._reference_index:
-            self.bars[next_reference_index % self.buf_size] = Bar(trade)
+            self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade)
             if self.bars[self._reference_index % self.buf_size] is not None:
                 self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
                 logger.info(f"Finished time bar: {self.bars[self._reference_index % self.buf_size]}")
@@ -66,7 +66,7 @@ class AggBar:
         if next_reference_index == self._reference_index:
             self.bars[self._reference_index % self.buf_size] += trade
         elif next_reference_index > self._reference_index:
-            self.bars[next_reference_index % self.buf_size] = Bar(trade)
+            self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade)
             self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
             logger.info(f"Finished tick bar: {self.bars[self._reference_index % self.buf_size]}")
             self._reference_index = next_reference_index
@@ -91,7 +91,7 @@ class AggBar:
             self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
             logger.info(f"Finished base volume bar: {self.bars[self._reference_index % self.buf_size]}")
             self._finished_bars += 1
-            self.bars[next_reference_index % self.buf_size] = Bar(trade_right)
+            self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade_right)
             self._reference_index = next_reference_index
             self._finished_bars += 1
         else:
@@ -113,7 +113,7 @@ class AggBar:
             self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
             logger.info(f"Finished quote volume bar: {self.bars[self._reference_index % self.buf_size]}")
             self._finished_bars += 1
-            self.bars[next_reference_index % self.buf_size] = Bar(trade_right)
+            self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade_right)
             self._reference_index = next_reference_index
         else:
             logger.warning(f"Invalid reference index: {self._reference_index} and next reference index: {next_reference_index}")

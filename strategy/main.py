@@ -75,7 +75,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    strategy = strategy.AggBar(buf_size=1000, reference_cutoff=60000, bar_type=strategy.BarType.TIME_BAR)
+    bot = strategy.AggBar(buf_size=1000, reference_cutoff=60000, bar_type=strategy.BarType.TIME_BAR)
     
     try:
         # Connect to NATS
@@ -92,7 +92,7 @@ async def main():
 
         async def trade_handler(msg: Msg):
             trade = Trade.from_protobuf_bytes(msg.data)
-            await strategy.on_trade(trade)
+            await bot.on_trade(trade)
         
         # Subscribe to the fanout subject (push-based consumer)
         await nc.subscribe("fanout.binance.spot.btcusdt", cb=trade_handler)

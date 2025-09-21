@@ -1,3 +1,3 @@
-from .aggbar import AggBar
+from .aggbar import AggBar, BarType
 
-__all__ = ["AggBar"]
+__all__ = ["AggBar", "BarType"]

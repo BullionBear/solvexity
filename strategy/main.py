@@ -8,7 +8,7 @@ from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
 
 from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
-import solvexity.model.protobuf.trade_pb2 as pb2_trade
+import strategy
 
 setup_logging()
 
@@ -39,12 +39,8 @@ def process_trade(trade: Trade):
 async def trade_handler(msg: Msg):
     """Handler for trade data messages"""
     try:
-        # Deserialize protobuf data
-        pb_trade = pb2_trade.Trade()
-        pb_trade.ParseFromString(msg.data)
-        
-        # Convert to Pydantic Trade model
-        trade = Trade.from_protobuf(pb_trade)
+        # Deserialize protobuf data directly to Trade model
+        trade = Trade.from_protobuf_bytes(msg.data)
         
         # Log the structured trade data
         logger.info(f"Trade received: {trade.symbol.base}{trade.symbol.quote} "
@@ -112,6 +108,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
+    strategy = strategy.AggBar(symbol="BTCUSDT", interval="1m")
     
     try:
         # Connect to NATS

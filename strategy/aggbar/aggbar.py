@@ -34,8 +34,16 @@ class AggBar:
         self.bars: list[Bar|None] = [None for _ in range(buf_size)]
 
     async def on_trade(self, trade: Trade):
-        logger.info(f"On trade: {trade}")
-        self.on_trade_aggregation(trade)
+        # logger.info(f"On trade: {trade}")
+        try:
+            self.on_trade_aggregation(trade)
+        except AttributeError as e:
+            logger.error(f"AttributeError on trade: {e}", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Exception on trade: {e}", exc_info=True)
+            raise
+
 
     def on_time_bar(self, trade: Trade):
         self._accumulator = trade.timestamp
@@ -44,11 +52,11 @@ class AggBar:
             self.bars[self._reference_index % self.buf_size] += trade
         elif next_reference_index > self._reference_index:
             self.bars[next_reference_index % self.buf_size] = Bar(trade)
-            self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
-            logger.info(f"Finished time bar: {self.bars[self._reference_index % self.buf_size]}")
+            if self.bars[self._reference_index % self.buf_size] is not None:
+                self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
+                logger.info(f"Finished time bar: {self.bars[self._reference_index % self.buf_size]}")
             self._reference_index = next_reference_index
-            self._finished_bars += 1
-            
+            self._finished_bars += 1            
         else:
             logger.warning(f"Invalid reference index: {self._reference_index} and next reference index: {next_reference_index}")
 

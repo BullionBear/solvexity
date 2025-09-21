@@ -22,39 +22,6 @@ def signal_handler(sig, frame):
     logger.info(f"Received signal {sig}, initiating graceful shutdown...")
     shutdown_event.set()
 
-def process_trade(trade: Trade):
-    """Process the deserialized trade data"""
-    # Example processing logic
-    logger.debug(f"Processing trade ID: {trade.id}")
-    logger.debug(f"Trade details: {trade.model_dump()}")
-    
-    # Add your trade processing logic here
-    # For example:
-    # - Update price feeds
-    # - Calculate indicators
-    # - Trigger trading signals
-    # - Store in database
-    # - Send alerts
-
-async def trade_handler(msg: Msg):
-    """Handler for trade data messages"""
-    try:
-        # Deserialize protobuf data directly to Trade model
-        trade = Trade.from_protobuf_bytes(msg.data)
-        
-        # Log the structured trade data
-        logger.info(f"Trade received: {trade.symbol.base}{trade.symbol.quote} "
-                   f"{trade.side.name} {trade.quantity} @ {trade.price} "
-                   f"({trade.exchange.name}, {trade.instrument.name})")
-        
-        # Process the trade data
-        process_trade(trade)
-        
-    except Exception as e:
-        logger.error(f"Failed to deserialize trade data: {e}")
-        logger.error(f"Raw data length: {len(msg.data)} bytes")
-    
-    # Since ack_policy is "none", we don't need to ack the message
 
 async def setup_jetstream_consumer(js):
     """Set up JetStream consumer for trade data"""
@@ -108,7 +75,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    strategy = strategy.AggBar()
+    strategy = strategy.AggBar(buf_size=1000, reference_cutoff=60000, bar_type=strategy.BarType.TIME_BAR)
     
     try:
         # Connect to NATS
@@ -122,6 +89,10 @@ async def main():
         # Set up JetStream consumer
         await setup_jetstream_consumer(js)
         consumer_created = True
+
+        async def trade_handler(msg: Msg):
+            trade = Trade.from_protobuf_bytes(msg.data)
+            await strategy.on_trade(trade)
         
         # Subscribe to the fanout subject (push-based consumer)
         await nc.subscribe("fanout.binance.spot.btcusdt", cb=trade_handler)

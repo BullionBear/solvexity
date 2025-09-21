@@ -108,7 +108,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    strategy = strategy.AggBar(symbol="BTCUSDT", interval="1m")
+    strategy = strategy.AggBar()
     
     try:
         # Connect to NATS

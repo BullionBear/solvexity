@@ -11,6 +11,6 @@ class AggBar:
         self.interval = interval
         self.bars: list[Bar] = []
 
-    def on_trade(self, trade: Trade):
+    async def on_trade(self, trade: Trade):
         logger.info(f"On trade: {trade}")
         pass

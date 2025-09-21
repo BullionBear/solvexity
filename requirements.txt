@@ -10,6 +10,7 @@ aiohttp
 pydantic
 cachetools
 protobuf
+nats-py
 
 # Linters and formatters
 pytest>=7.0.0

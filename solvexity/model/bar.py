@@ -4,6 +4,7 @@ from .shared import Side, Symbol
 
 class Bar(BaseModel):
     symbol: Symbol
+    start_id: int
     current_id: int
     next_id: int
     open_time: int
@@ -23,6 +24,7 @@ class Bar(BaseModel):
     def from_trade(cls, trade: Trade) -> 'Bar':
         return cls(
             symbol=trade.symbol,
+            start_id=trade.id,
             current_id=trade.id,
             next_id=trade.id + 1,
             open_time=trade.timestamp,

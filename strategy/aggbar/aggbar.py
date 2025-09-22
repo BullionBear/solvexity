@@ -29,7 +29,7 @@ class AggBar:
         self.on_trade_aggregation = self.method_dict[bar_type]
 
         self._accumulator = 0
-        self._reference_index = 0
+        self._reference_index = -1
         self._finished_bars = 0
         self.bars: list[Bar|None] = [None for _ in range(buf_size)]
 
@@ -55,7 +55,7 @@ class AggBar:
             self.bars[next_reference_index % self.buf_size].open_time = next_reference_index * self.bar_ref_cutoff
             if bar := self.bars[self._reference_index % self.buf_size]:
                 bar.enclose(next_reference_index * self.bar_ref_cutoff - 1)
-                logger.info(f"Finished time bar: {bar}")
+                logger.info(f"Finished {self._finished_bars}'th time bar: {bar}")
                 self._finished_bars += 1
             self._reference_index = next_reference_index
                     
@@ -71,7 +71,7 @@ class AggBar:
             self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade)
             if bar := self.bars[self._reference_index % self.buf_size]:
                 bar.enclose(trade.timestamp)
-                logger.info(f"Finished tick bar: {bar}")
+                logger.info(f"Finished {self._finished_bars}'th tick bar: {bar}")
                 self._finished_bars += 1
             self._reference_index = next_reference_index
             
@@ -94,7 +94,7 @@ class AggBar:
                 bar += trade_left
                 bar.next_id = trade_right.id
                 bar.enclose(trade.timestamp)
-                logger.info(f"Finished base volume bar: {bar}")
+                logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
                 self._finished_bars += 1
             self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade_right)
             self._reference_index = next_reference_index
@@ -112,11 +112,12 @@ class AggBar:
             trade_right = trade.model_copy(deep=False)
             trade_left.quantity = remainder / trade.price
             trade_right.quantity = trade.quantity - trade_left.quantity
-            self.bars[self._reference_index % self.buf_size] += trade_left
-            self.bars[self._reference_index % self.buf_size].next_id = trade_right.id
-            self.bars[self._reference_index % self.buf_size].enclose(trade.timestamp)
-            logger.info(f"Finished quote volume bar: {self.bars[self._reference_index % self.buf_size]}")
-            self._finished_bars += 1
+            if bar := self.bars[self._reference_index % self.buf_size]:
+                bar += trade_left
+                bar.next_id = trade_right.id
+                bar.enclose(trade.timestamp)
+                logger.info(f"Finished {self._finished_bars}'th quote volume bar: {bar}")
+                self._finished_bars += 1
             self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade_right)
             self._reference_index = next_reference_index
         else:

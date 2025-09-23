@@ -82,10 +82,14 @@ class AggBar:
         def split_trade_by_base_volume(accumulator: float, cutoff: float, trade: Trade) -> list[Trade]:
             fragments = []
             # Use more precise calculation to avoid floating point errors
-            remainder = accumulator - (int(accumulator // cutoff) * cutoff)
-            gap = cutoff - remainder if remainder > 1e-10 else cutoff  # Use epsilon for comparison
+            remaining_volume = trade.quantity
+            while abs(remaining_volume) > 1e-10:
+            remainder = accumulator % cutoff
+            if abs(remainder) > 1e-10:
+                volume -= min(remainder, volume)
+
             
-            remaining = trade.quantity
+            
             
             # First fragment fills the gap to complete current bar
             if remaining <= gap + 1e-10:  # Add small epsilon for floating point comparison

@@ -38,7 +38,7 @@ async def setup_jetstream_consumer(js):
             filter_subject="trade.binance.spot.btcusdt",
             replay_policy=ReplayPolicy.INSTANT,
             sample_freq="",
-            rate_limit_bps=20_000_000, # 20 Mbps
+            rate_limit_bps=10_000_000, # 10 Mbps
             max_ack_pending=0,
             idle_heartbeat=0,
             flow_control=False,
@@ -75,7 +75,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    bot = strategy.AggBar(buf_size=1000, reference_cutoff=1, bar_type=strategy.BarType.BASE_VOLUME_BAR)
+    bot = strategy.AggBar(buf_size=30, reference_cutoff=1, bar_type=strategy.BarType.BASE_VOLUME_BAR)
     
     try:
         # Connect to NATS

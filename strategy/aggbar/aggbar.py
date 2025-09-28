@@ -93,6 +93,7 @@ class AggBar:
                     bar += trade
                 else:
                     bar = Bar.from_trade(trade)
+                    self.bars[self._reference_index % self.buf_size] = bar
                 bar.enclose(trade.timestamp)
                 self._finished_bars += 1
                 logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
@@ -104,6 +105,7 @@ class AggBar:
                     bar += trade
                 else:
                     bar = Bar.from_trade(trade)
+                    self.bars[self._reference_index % self.buf_size] = bar
                 self._accumulator += trade.quantity
                 trade.quantity = 0
                 
@@ -114,6 +116,7 @@ class AggBar:
                     bar += trade_fraction
                 else:
                     bar = Bar.from_trade(trade_fraction)
+                    self.bars[self._reference_index % self.buf_size] = bar
                 bar.enclose(trade.timestamp)
                 bar.next_id = trade.id
                 self._finished_bars += 1

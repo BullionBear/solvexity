@@ -122,7 +122,7 @@ class AggBar:
                 self._finished_bars += 1
                 logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
                 trade.quantity -= need
-                self._accumulator += need - 1e-13
+                self._accumulator += need + 1e-13
             else:
                 logger.error(f"Undefined behavior: {self._accumulator=} and {trade.quantity=} and {need=}")
             

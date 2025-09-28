@@ -58,7 +58,6 @@ class AggBar:
                 logger.info(f"Finished {self._finished_bars}'th time bar: {bar}")
                 self._finished_bars += 1
             self._reference_index = next_reference_index
-                    
         else:
             logger.warning(f"Invalid reference index: {self._reference_index} and next reference index: {next_reference_index}")
 
@@ -74,84 +73,56 @@ class AggBar:
                 logger.info(f"Finished {self._finished_bars}'th tick bar: {bar}")
                 self._finished_bars += 1
             self._reference_index = next_reference_index
-            
         else:
             logger.warning(f"Invalid reference index: {self._reference_index} and next reference index: {next_reference_index}")
 
     def on_base_volume_bar(self, trade: Trade):
-        def split_trade_by_base_volume(accumulator: float, cutoff: float, trade: Trade) -> list[Trade]:
-            fragments = []
-            # Use more precise calculation to avoid floating point errors
-            remaining_volume = trade.quantity
-            while abs(remaining_volume) > 1e-10:
-            remainder = accumulator % cutoff
-            if abs(remainder) > 1e-10:
-                volume -= min(remainder, volume)
+        if self._reference_index == -1:
+            self._reference_index = 0
 
-            
-            
-            
-            # First fragment fills the gap to complete current bar
-            if remaining <= gap + 1e-10:  # Add small epsilon for floating point comparison
-                # Trade fits completely in current bar
-                fragments.append(trade)
-                return fragments
-            
-            # Create fragment to fill the gap
-            fragment = trade.model_copy(deep=False)
-            fragment.quantity = gap
-            fragments.append(fragment)
-            remaining -= gap
-            
-            # Create full cutoff fragments for complete bars
-            while remaining >= cutoff - 1e-10:  # Use epsilon for comparison
-                fragment = trade.model_copy(deep=False)
-                fragment.quantity = cutoff
-                fragments.append(fragment)
-                remaining -= cutoff
-            
-            # Create final fragment for remainder
-            if remaining > 1e-10:  # Only create fragment if remainder is significant
-                fragment = trade.model_copy(deep=False)
-                fragment.quantity = remaining
-                fragments.append(fragment)
-                
-            return fragments
-
-        trade_fragments = split_trade_by_base_volume(self._accumulator, self.bar_ref_cutoff, trade)
-
-        for fragment in trade_fragments:
-            # Add fragment to current bar
-            if not self.bars[self._reference_index % self.buf_size]:
-                self.bars[self._reference_index % self.buf_size] = Bar.from_trade(fragment)
-            else:
-                self.bars[self._reference_index % self.buf_size] += fragment
-            
-            self._accumulator += fragment.quantity
+        while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
+            need = self.bar_ref_cutoff - self._accumulator % self.bar_ref_cutoff
             next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
-            
+            empty_trade = trade.model_copy(deep=False)
+            empty_trade.quantity = 0
             if next_reference_index > self._reference_index:
-                # Current bar is now complete
-                bar = self.bars[self._reference_index % self.buf_size]
-                if bar:
-                    # Ensure exact volume for completed bars and proportionally adjust taker volumes
-                    if abs(bar.volume - self.bar_ref_cutoff) > 1e-10:
-                        # Calculate the correction ratio
-                        correction_ratio = self.bar_ref_cutoff / bar.volume if bar.volume > 0 else 1.0
-                        
-                        # Proportionally adjust all volumes to maintain consistency
-                        bar.taker_buy_base_asset_volume *= correction_ratio
-                        bar.taker_buy_quote_asset_volume *= correction_ratio
-                        bar.quote_volume *= correction_ratio
-                        bar.volume = self.bar_ref_cutoff
-                    
-                    bar.enclose(fragment.timestamp)
-                    logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
-                    self._finished_bars += 1
-                
-                # Move to next bar
+                self.bars[next_reference_index % self.buf_size] = Bar.from_trade(empty_trade)
                 self._reference_index = next_reference_index
-
+            if abs(trade.quantity - need) < 2 * 1e-13: # trade.quantity = need                
+                if bar := self.bars[self._reference_index % self.buf_size]:
+                    bar += trade
+                else:
+                    bar = Bar.from_trade(trade)
+                bar.enclose(trade.timestamp)
+                self._finished_bars += 1
+                logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
+                self._accumulator += need + 1e-13
+                self._reference_index += 1
+                trade.quantity = 0
+            elif trade.quantity < need:
+                if bar := self.bars[self._reference_index % self.buf_size]:
+                    bar += trade
+                else:
+                    bar = Bar.from_trade(trade)
+                self._accumulator += trade.quantity
+                trade.quantity = 0
+                
+            elif trade.quantity > need:
+                trade_fraction = trade.model_copy(deep=False)
+                trade_fraction.quantity = need
+                if bar := self.bars[self._reference_index % self.buf_size]:
+                    bar += trade_fraction
+                else:
+                    bar = Bar.from_trade(trade_fraction)
+                bar.enclose(trade.timestamp)
+                bar.next_id = trade.id
+                self._finished_bars += 1
+                logger.info(f"Finished {self._finished_bars}'th base volume bar: {bar}")
+                trade.quantity -= need
+                self._accumulator += need - 1e-13
+            else:
+                logger.error(f"Undefined behavior: {self._accumulator=} and {trade.quantity=} and {need=}")
+            
 
     def on_quote_volume_bar(self, trade: Trade):
         self._accumulator += trade.price * trade.quantity

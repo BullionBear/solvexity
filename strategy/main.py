@@ -75,7 +75,7 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    bot = strategy.AggBar(buf_size=30, reference_cutoff=1, bar_type=strategy.BarType.BASE_VOLUME_BAR)
+    bot = strategy.AggBar(buf_size=30, reference_cutoff=100000, bar_type=strategy.BarType.QUOTE_VOLUME_BAR)
     
     try:
         # Connect to NATS

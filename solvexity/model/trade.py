@@ -1,6 +1,5 @@
 import solvexity.model.protobuf.trade_pb2 as pb2_trade
 from pydantic import BaseModel
-from typing import Optional
 from .shared import Symbol, Exchange, Instrument, Side
 
 

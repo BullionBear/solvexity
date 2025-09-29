@@ -9,6 +9,8 @@ from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
 from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
 import solvexity.strategy as strategy
+from solvexity.toolbox.aggregator import BarType
+
 
 
 setup_logging()
@@ -77,9 +79,9 @@ async def main():
     js = None
     consumer_created = False
     bot = strategy.Pipeline(
-        bar_type=strategy.BarType.QUOTE_VOLUME, 
-        buf_size=30, 
-        reference_cutoff=100000
+        bar_type=BarType.QUOTE_VOLUME, 
+        buf_size=30,
+        reference_cutoff=10000  # 10000 USDT
     )
     
     try:
@@ -110,8 +112,7 @@ async def main():
         await shutdown_event.wait()
         logger.info("Shutdown signal received, cleaning up...")
         
-    except Exception as e:
-        logger.error(f"Error in main loop: {e}")
+    except Exception:
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
     finally:

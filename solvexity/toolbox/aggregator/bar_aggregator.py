@@ -3,6 +3,7 @@ from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
 from enum import Enum
 import logging
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +31,12 @@ class TimeBarAggregator:
             self.bars.append(Bar.from_trade(trade))
             self.bars[-1].open_time = self.accumulator // self.reference_cutoff * self.reference_cutoff
             return
-        prev_reference_index = self.bars[-1].close_time // self.reference_cutoff
+        prev_reference_index = self.bars[-1].open_time // self.reference_cutoff
         next_reference_index = int(self.accumulator // self.reference_cutoff)
+        # logger.info(f"prev_reference_index: {prev_reference_index}, next_reference_index: {next_reference_index}")
         if prev_reference_index == next_reference_index:
             self.bars[-1] += trade
+            # logger.info(f"Add time bar: {self.bars[-1]}")
         elif next_reference_index > prev_reference_index:
             self.bars[-1].enclose(next_reference_index * self.reference_cutoff - 1)
             logger.info(f"Enclose time bar: {self.bars[-1]}")
@@ -42,6 +45,9 @@ class TimeBarAggregator:
         else:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
 class TickBarAggregator:
     def __init__(self, buf_size: int, reference_cutoff: int):
@@ -71,6 +77,9 @@ class TickBarAggregator:
         else:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
+
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
 
 class BaseVolumeBarAggregator:
@@ -116,6 +125,8 @@ class BaseVolumeBarAggregator:
                 self.reset()
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need=}")
                 break
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
 
 class QuoteVolumeBarAggregator:
@@ -159,3 +170,6 @@ class QuoteVolumeBarAggregator:
                 self.reset()
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need=}")
                 break
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([bar.model_dump() for bar in self.bars])

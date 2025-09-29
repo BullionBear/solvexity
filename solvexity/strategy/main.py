@@ -10,6 +10,7 @@ from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
 import solvexity.strategy as strategy
 
+
 setup_logging()
 
 logger = logging.getLogger(__name__)
@@ -75,9 +76,10 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    bot = strategy.AggBar(buf_size=30, reference_cutoff=100000, bar_type=strategy.BarType.QUOTE_VOLUME_BAR)
+    bot = strategy.Pipeline(bar_type=strategy.BarType.QUOTE_VOLUME, buf_size=30, reference_cutoff=100000)
     
     try:
+        logger.info("Attempting to connect to NATS...")
         # Connect to NATS
         nc = await nats.connect(servers=["nats://localhost:4222"])
         logger.info("Connected to NATS")
@@ -106,7 +108,10 @@ async def main():
         
     except Exception as e:
         logger.error(f"Error in main loop: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
     finally:
+        logger.info("Entering finally block...")
         # Clean up the consumer before closing connection
         if js and consumer_created:
             await cleanup_consumer(js, "TRADE", "TRADE_FANOUT_BTCUSDT")

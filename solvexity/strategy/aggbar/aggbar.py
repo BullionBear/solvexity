@@ -1,6 +1,6 @@
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
-from solvexity.model.shared import Side
+from solvexity.strategy.toolbox.aggregator.bar_aggregator import TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
 from enum import Enum
 
 

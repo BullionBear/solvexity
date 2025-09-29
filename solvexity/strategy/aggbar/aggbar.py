@@ -28,14 +28,10 @@ class AggBar:
         self.bar_type = bar_type
         self.bar_ref_cutoff = reference_cutoff # Different type represents different reference cutoff
         self.aggregator = class_dict[bar_type](buf_size, reference_cutoff)
-        
-        self.on_trade_aggregation = self.method_dict[bar_type]
+        self.on_trade_aggregation = self.aggregator.on_trade
 
-        self._accumulator = 0
         self._trade_id = -1
-        self._reference_index = -1
-        self._finished_bars = 0
-        self.bars: list[Bar|None] = [None for _ in range(buf_size)]
+
 
     async def on_trade(self, trade: Trade):
         # logger.info(f"On trade: {trade}")

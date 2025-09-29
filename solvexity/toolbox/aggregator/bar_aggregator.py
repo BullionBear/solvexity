@@ -135,18 +135,20 @@ class QuoteVolumeBarAggregator:
                 self.bars[-1] += trade
                 self.bars[-1].enclose(trade.timestamp)
                 logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} ~ {need=}")
-                self.accumulator += need * trade.price + 1e-13
+                self.accumulator += need_quote + 1e-13
                 trade.quantity = 0
             elif trade.quantity < need:
                 self.bars[-1] += trade
-                self.accumulator += trade.quantity * trade.price
+                self.accumulator += need_quote
                 trade.quantity = 0
             elif trade.quantity > need:
                 self.bars[-1] += trade
-                self.accumulator += need * trade.price
+                self.bars[-1].enclose(trade.timestamp)
+                self.bars[-1].next_id = trade.id
+                logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} > {need=}")
+                self.accumulator += need_quote + 1e-13
                 trade.quantity -= need
-                self.accumulator += need * trade.price + 1e-13
             else:
                 self.reset()
-                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=} and {need=}")
+                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need=}")
                 break

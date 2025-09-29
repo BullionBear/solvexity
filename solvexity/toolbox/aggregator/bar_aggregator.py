@@ -1,4 +1,5 @@
-from solvexity.model.trade import Trade, Side
+from collections import deque
+from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
 
 import logging
@@ -8,32 +9,31 @@ class TimeBarAggregator:
     def __init__(self, buf_size: int, reference_cutoff: int):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
-        self.bars = [None] * buf_size
-        self.reference_index = -1
-        self.finished_bars = 0
+
+        self.bars: deque[Bar] = deque(maxlen=buf_size)
         self.accumulator = 0
 
     def reset(self):
-        self.reference_index = -1
-        self.finished_bars = 0
-        self.bars = [None] * self.buf_size
+        self.bars.clear()
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
         self.accumulator = trade.timestamp
+        if len(self.bars) == 0:
+            self.bars.append(Bar.from_trade(trade))
+            self.bars[-1].open_time = self.accumulator // self.reference_cutoff * self.reference_cutoff
+            return
+        prev_reference_index = self.bars[-1].close_time // self.reference_cutoff
         next_reference_index = int(self.accumulator // self.reference_cutoff)
-        if next_reference_index == self.reference_index:
-            self.bars[self.reference_index % self.buf_size] += trade
-        elif next_reference_index > self.reference_index:
-            self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade)
-            self.bars[next_reference_index % self.buf_size].open_time = next_reference_index * self.reference_cutoff
-            if bar := self.bars[self.reference_index % self.buf_size]:
-                bar.enclose(next_reference_index * self.reference_cutoff - 1)
-                logger.info(f"Finished {self.finished_bars}'th time bar: {bar}")
-                self.finished_bars += 1
-            self.reference_index = next_reference_index
+        if prev_reference_index == next_reference_index:
+            self.bars[-1] += trade
+        elif next_reference_index > prev_reference_index:
+            self.bars[-1].enclose(next_reference_index * self.reference_cutoff - 1)
+            logger.info(f"Finished time bar: {self.bars[-1]}")
+            self.bars.append(Bar.from_trade(trade))
+            self.bars[-1].open_time = next_reference_index * self.reference_cutoff
         else:
-            logger.warning(f"Invalid reference index: {self.reference_index} and next reference index: {next_reference_index}")
+            logger.warning(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
 
 class TickBarAggregator:
     def __init__(self, buf_size: int, reference_cutoff: int):

@@ -12,6 +12,11 @@ class TimeBarAggregator:
         self.reference_index = -1
         self.finished_bars = 0
 
+    def reset(self):
+        self.reference_index = -1
+        self.finished_bars = 0
+        self.bars = [None] * self.buf_size
+
     def on_trade(self, trade: Trade):
         self._accumulator = trade.timestamp
         next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
@@ -36,6 +41,11 @@ class TickBarAggregator:
         self.reference_index = -1
         self.finished_bars = 0
 
+    def reset(self):
+        self.reference_index = -1
+        self.finished_bars = 0
+        self.bars = [None] * self.buf_size
+
     def on_trade(self, trade: Trade):
         self._accumulator = trade.id
         next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
@@ -59,6 +69,11 @@ class BaseVolumeBarAggregator:
         self.bars = [None] * buf_size
         self.reference_index = 0
         self.finished_bars = 0
+
+    def reset(self):
+        self.reference_index = 0
+        self.finished_bars = 0
+        self.bars = [None] * self.buf_size
 
     def on_trade(self, trade: Trade):
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
@@ -115,6 +130,11 @@ class QuoteVolumeBarAggregator:
         self.bars = [None] * buf_size
         self.reference_index = 0
         self.finished_bars = 0
+
+    def reset(self):
+        self.reference_index = 0
+        self.finished_bars = 0
+        self.bars = [None] * self.buf_size
 
     def on_trade(self, trade: Trade):
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits

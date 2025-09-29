@@ -1,9 +1,16 @@
 from collections import deque
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
-
+from enum import Enum
 import logging
+
 logger = logging.getLogger(__name__)
+
+class BarType(Enum):
+    TIME = "time"
+    TICK = "tick"
+    BASE_VOLUME = "base_volume"
+    QUOTE_VOLUME = "quote_volume"
 
 class TimeBarAggregator:
     def __init__(self, buf_size: int, reference_cutoff: int):

@@ -19,14 +19,14 @@ class TimeBarAggregator:
 
     def on_trade(self, trade: Trade):
         self._accumulator = trade.timestamp
-        next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
+        next_reference_index = int(self._accumulator // self.reference_cutoff)
         if next_reference_index == self._reference_index:
             self.bars[self._reference_index % self.buf_size] += trade
         elif next_reference_index > self._reference_index:
             self.bars[next_reference_index % self.buf_size] = Bar.from_trade(trade)
-            self.bars[next_reference_index % self.buf_size].open_time = next_reference_index * self.bar_ref_cutoff
+            self.bars[next_reference_index % self.buf_size].open_time = next_reference_index * self.reference_cutoff
             if bar := self.bars[self._reference_index % self.buf_size]:
-                bar.enclose(next_reference_index * self.bar_ref_cutoff - 1)
+                bar.enclose(next_reference_index * self.reference_cutoff - 1)
                 logger.info(f"Finished {self._finished_bars}'th time bar: {bar}")
                 self._finished_bars += 1
             self._reference_index = next_reference_index
@@ -48,7 +48,7 @@ class TickBarAggregator:
 
     def on_trade(self, trade: Trade):
         self._accumulator = trade.id
-        next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
+        next_reference_index = int(self._accumulator // self.reference_cutoff)
         if next_reference_index == self._reference_index:
             self.bars[self._reference_index % self.buf_size] += trade
         elif next_reference_index > self._reference_index:
@@ -63,7 +63,7 @@ class TickBarAggregator:
 
 
 class BaseVolumeBarAggregator:
-    def __init__(self, buf_size: int, reference_cutoff: int):
+    def __init__(self, buf_size: int, reference_cutoff: float):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
         self.bars = [None] * buf_size
@@ -77,8 +77,8 @@ class BaseVolumeBarAggregator:
 
     def on_trade(self, trade: Trade):
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
-            need = self.bar_ref_cutoff - self._accumulator % self.bar_ref_cutoff
-            next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
+            need = self.reference_cutoff - self._accumulator % self.reference_cutoff
+            next_reference_index = int(self._accumulator // self.reference_cutoff)
             empty_trade = trade.model_copy(deep=False)
             empty_trade.quantity = 0
             if next_reference_index > self._reference_index:
@@ -124,7 +124,7 @@ class BaseVolumeBarAggregator:
 
 
 class QuoteVolumeBarAggregator:
-    def __init__(self, buf_size: int, reference_cutoff: int):
+    def __init__(self, buf_size: int, reference_cutoff: float):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
         self.bars = [None] * buf_size
@@ -138,9 +138,9 @@ class QuoteVolumeBarAggregator:
 
     def on_trade(self, trade: Trade):
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
-            need_quote = self.bar_ref_cutoff - self._accumulator % self.bar_ref_cutoff
+            need_quote = self.reference_cutoff - self._accumulator % self.reference_cutoff
             need = need_quote / trade.price
-            next_reference_index = int(self._accumulator // self.bar_ref_cutoff)
+            next_reference_index = int(self._accumulator // self.reference_cutoff)
             empty_trade = trade.model_copy(deep=False)
             empty_trade.quantity = 0
             if next_reference_index > self._reference_index:

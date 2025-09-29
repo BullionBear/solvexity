@@ -1,6 +1,8 @@
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
-from solvexity.strategy.toolbox.aggregator.bar_aggregator import TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
+from solvexity.toolbox.aggregator.bar_aggregator import (
+    TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
+)
 from enum import Enum
 
 
@@ -13,19 +15,20 @@ class BarType(Enum):
     BASE_VOLUME_BAR = "BaseVolumeBar"
     QUOTE_VOLUME_BAR = "QuoteVolumeBar"
 
-    
+class_dict = {
+    BarType.TIME_BAR: TimeBarAggregator,
+    BarType.TICK_BAR: TickBarAggregator,
+    BarType.BASE_VOLUME_BAR: BaseVolumeBarAggregator,
+    BarType.QUOTE_VOLUME_BAR: QuoteVolumeBarAggregator,
+}   
 
 class AggBar:
     def __init__(self, buf_size: int, reference_cutoff: int, bar_type: BarType):
         self.buf_size = buf_size
         self.bar_type = bar_type
         self.bar_ref_cutoff = reference_cutoff # Different type represents different reference cutoff
-        self.method_dict = {
-            BarType.TIME_BAR: self.on_time_bar,
-            BarType.TICK_BAR: self.on_tick_bar,
-            BarType.BASE_VOLUME_BAR: self.on_base_volume_bar,
-            BarType.QUOTE_VOLUME_BAR: self.on_quote_volume_bar,
-        }
+        self.aggregator = class_dict[bar_type](buf_size, reference_cutoff)
+        
         self.on_trade_aggregation = self.method_dict[bar_type]
 
         self._accumulator = 0

@@ -33,6 +33,7 @@ class TimeBarAggregator:
             self.bars.append(Bar.from_trade(trade))
             self.bars[-1].open_time = next_reference_index * self.reference_cutoff
         else:
+            self.reset()
             logger.warning(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
 
 class TickBarAggregator:

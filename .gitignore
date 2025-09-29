@@ -14,3 +14,5 @@ test.*
 nats-data
 redis-data
 script/integration.sh
+.pytest_cache/
+.coverage

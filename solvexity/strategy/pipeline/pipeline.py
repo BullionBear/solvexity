@@ -4,8 +4,8 @@ from solvexity.eventbus.eventbus import EventBus
 
 
 class Pipeline:
-    def __init__(self, trigger: DataframeTrigger):
-        self.eventbus = EventBus()
+    def __init__(self, eventbus: EventBus, trigger: DataframeTrigger):
+        self.eventbus = eventbus
         self.trigger = trigger
 
     async def on_trade(self, trade: Trade):

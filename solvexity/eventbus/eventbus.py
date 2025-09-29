@@ -25,3 +25,4 @@ class EventBus:
 
     def list_events(self):
         return list(self.subscribers.keys())
+    

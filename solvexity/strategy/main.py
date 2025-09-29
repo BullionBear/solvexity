@@ -76,7 +76,11 @@ async def main():
     nc = None
     js = None
     consumer_created = False
-    bot = strategy.Pipeline(bar_type=strategy.BarType.QUOTE_VOLUME, buf_size=30, reference_cutoff=100000)
+    bot = strategy.Pipeline(
+        bar_type=strategy.BarType.QUOTE_VOLUME, 
+        buf_size=30, 
+        reference_cutoff=100000
+    )
     
     try:
         logger.info("Attempting to connect to NATS...")

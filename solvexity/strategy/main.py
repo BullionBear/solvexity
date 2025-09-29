@@ -12,6 +12,8 @@ import solvexity.strategy as strategy
 from solvexity.toolbox.aggregator import BarType
 from solvexity.eventbus import EventBus
 from solvexity.strategy.pipeline.trigger import DataframeTrigger
+from solvexity.eventbus.event import Event
+from solvexity.strategy.pipeline.analytics import DataframeAnalytics
 
 
 
@@ -87,12 +89,14 @@ async def main():
         reference_cutoff=10000,
         eventbus=eb
     )
-    analytics = Analytics(
+    analytics = DataframeAnalytics(
+        composers=[],
         eventbus=eb
     )
     bot = strategy.Pipeline(
         eventbus=eb,
-        trigger=trigger
+        trigger=trigger,
+        analytics=analytics
     )
     
     try:
@@ -111,7 +115,7 @@ async def main():
 
         async def trade_handler(msg: Msg):
             trade = Trade.from_protobuf_bytes(msg.data)
-            await trigger.on_trade(trade)
+            await eb.publish("on_trade", Event(data=trade))
         
         # Subscribe to the fanout subject (push-based consumer)
         await nc.subscribe("fanout.binance.spot.btcusdt", cb=trade_handler)

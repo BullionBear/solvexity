@@ -8,7 +8,7 @@ from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
 
 from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
-import strategy
+import solvexity.strategy as strategy
 
 setup_logging()
 

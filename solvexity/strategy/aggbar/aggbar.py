@@ -29,20 +29,34 @@ class AggBar:
         self.on_trade_aggregation = self.method_dict[bar_type]
 
         self._accumulator = 0
+        self._trade_id = -1
         self._reference_index = -1
         self._finished_bars = 0
         self.bars: list[Bar|None] = [None for _ in range(buf_size)]
 
     async def on_trade(self, trade: Trade):
         # logger.info(f"On trade: {trade}")
-        try:
-            self.on_trade_aggregation(trade)
-        except AttributeError as e:
-            logger.error(f"AttributeError on trade: {e}", exc_info=True)
-            raise
-        except Exception as e:
-            logger.error(f"Exception on trade: {e}", exc_info=True)
-            raise
+        if self._trade_id == -1:
+            self._trade_id = trade.id
+        elif self._trade_id + 1 != trade.id:
+            logger.error(f"Invalid {self._trade_id=} and {trade.id=}")
+            self.reset()
+        else:
+            self._trade_id = trade.id
+            try:
+                self.on_trade_aggregation(trade)
+            except AttributeError as e:
+                logger.error(f"AttributeError on trade: {e}", exc_info=True)
+                raise
+            except Exception as e:
+                logger.error(f"Exception on trade: {e}", exc_info=True)
+                raise
+    
+    def reset(self):
+        self._trade_id = -1
+        self._reference_index = -1
+        self._finished_bars = 0
+        self.bars = [None for _ in range(self.buf_size)]
 
 
     def on_time_bar(self, trade: Trade):

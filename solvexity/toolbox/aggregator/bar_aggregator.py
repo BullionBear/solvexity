@@ -46,6 +46,17 @@ class TimeBarAggregator:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
     
+    def size(self) -> int:
+        return len(self.bars)
+    
+    def last(self, closed: bool = False) -> Bar | None:
+        if len(self.bars) <= 2:
+            return None
+        if closed:
+            return self.bars[-2]
+        else:
+            return self.bars[-1]
+
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
@@ -77,6 +88,17 @@ class TickBarAggregator:
         else:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
+    
+    def size(self) -> int:
+        return len(self.bars)
+    
+    def last(self, closed: bool = False) -> Bar | None:
+        if len(self.bars) <= 2:
+            return None
+        if closed:
+            return self.bars[-2]
+        else:
+            return self.bars[-1]
 
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([bar.model_dump() for bar in self.bars])
@@ -125,6 +147,18 @@ class BaseVolumeBarAggregator:
                 self.reset()
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need=}")
                 break
+
+    def size(self) -> int:
+        return len(self.bars)
+    
+    def last(self, closed: bool = False) -> Bar | None:
+        if len(self.bars) <= 2:
+            return None
+        if closed:
+            return self.bars[-2]
+        else:
+            return self.bars[-1]
+
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
@@ -170,6 +204,17 @@ class QuoteVolumeBarAggregator:
                 self.reset()
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need=}")
                 break
+    
+    def size(self) -> int:
+        return len(self.bars)
+    
+    def last(self, closed: bool = False) -> Bar | None:
+        if len(self.bars) <= 2:
+            return None
+        if closed:
+            return self.bars[-2]
+        else:
+            return self.bars[-1]
     
     def to_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame([bar.model_dump() for bar in self.bars])

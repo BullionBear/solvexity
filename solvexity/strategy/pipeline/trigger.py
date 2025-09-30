@@ -15,10 +15,9 @@ def get_aggregator(bar_type: BarType, buf_size: int, reference_cutoff: int|float
         return QuoteVolumeBarAggregator(buf_size, reference_cutoff)
 
 class DataframeTrigger:
-    def __init__(self, bar_type: BarType, buf_size: int, reference_cutoff: int|float, eventbus: EventBus):
+    def __init__(self, bar_type: BarType, buf_size: int, reference_cutoff: int|float):
         self.trade_id = 0
         self.aggregator = get_aggregator(bar_type, buf_size, reference_cutoff)
-        self.eventbus = eventbus
 
     async def on_trade(self, trade: Trade):
         # Initialize trade_id on first trade

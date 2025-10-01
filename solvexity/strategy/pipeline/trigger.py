@@ -2,7 +2,7 @@ from solvexity.model.trade import Trade
 from solvexity.toolbox.aggregator import (
     BarType, TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
 )
-from solvexity.eventbus.eventbus import EventBus
+from solvexity.model.bar import Bar
 
 def get_aggregator(bar_type: BarType, buf_size: int, reference_cutoff: int|float):
     if bar_type == BarType.TIME:
@@ -32,3 +32,11 @@ class DataframeTrigger:
             self.trade_id = trade.id
         
         self.aggregator.on_trade(trade)
+
+    def size(self) -> int:
+        return self.aggregator.size()
+    
+    def last(self, closed: bool = False) -> Bar | None:
+        return self.aggregator.last(closed)
+    
+

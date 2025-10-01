@@ -13,6 +13,8 @@ class Pipeline:
         self.eventbus.subscribe("on_trade", self.publish_to_trigger)
         self.eventbus.subscribe("on_dataframe", lambda e: analytics.on_dataframe(e.data))
     
-    def publish_to(self, event: Event):
-        if (self.trigger.on_trade(event.data)):
+    async def publish_to(self, event: Event):
+        await self.trigger.on_trade(event.data)
+        if self.trigger.size() > self.trigger.buf_size:
+            await self.analytics.on_dataframe(self.trigger.last(closed=True))
         

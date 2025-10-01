@@ -1,4 +1,5 @@
 from collections import deque
+from abc import ABC, abstractmethod
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
 from enum import Enum
@@ -13,17 +14,46 @@ class BarType(Enum):
     BASE_VOLUME = "base_volume"
     QUOTE_VOLUME = "quote_volume"
 
-class TimeBarAggregator:
+class BarAggregator(ABC):
     def __init__(self, buf_size: int, reference_cutoff: int):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
-
         self.bars: deque[Bar] = deque(maxlen=buf_size)
-        self.accumulator = 0
+        
 
     def reset(self):
         self.bars.clear()
+
+    @abstractmethod
+    def on_trade(self, trade: Trade):
+        pass
+
+    def size(self) -> int:
+        return len(self.bars)
+    
+    def last(self, is_closed: bool = True) -> Bar | None:
+        if len(self.bars) <= 2:
+            return None
+        if is_closed:
+            for bar in reversed(self.bars):
+                if bar.is_closed:
+                    return bar
+            return None
+        else:
+            return self.bars[-1]
+    
+    def to_dataframe(self, is_closed: bool = True) -> pd.DataFrame:
+        return pd.DataFrame([bar.model_dump() for bar in self.bars if bar.is_closed == is_closed])
+
+class TimeBarAggregator(BarAggregator):
+    def __init__(self, buf_size: int, reference_cutoff: int):
+        super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
+
+    def reset(self):
+        super().reset()
+        self.accumulator = 0
+
 
     def on_trade(self, trade: Trade):
         self.accumulator = trade.timestamp
@@ -46,30 +76,15 @@ class TimeBarAggregator:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
     
-    def size(self) -> int:
-        return len(self.bars)
     
-    def last(self, closed: bool = False) -> Bar | None:
-        if len(self.bars) <= 2:
-            return None
-        if closed:
-            return self.bars[-2]
-        else:
-            return self.bars[-1]
 
-    def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame([bar.model_dump() for bar in self.bars])
-
-class TickBarAggregator:
+class TickBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: int):
-        self.buf_size = buf_size
-        self.reference_cutoff = reference_cutoff
-        
-        self.bars: deque[Bar] = deque(maxlen=buf_size)
+        super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
 
     def reset(self):
-        self.bars.clear()
+        super().reset()
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
@@ -89,30 +104,15 @@ class TickBarAggregator:
             self.reset()
             logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
     
-    def size(self) -> int:
-        return len(self.bars)
-    
-    def last(self, closed: bool = False) -> Bar | None:
-        if len(self.bars) <= 2:
-            return None
-        if closed:
-            return self.bars[-2]
-        else:
-            return self.bars[-1]
-
-    def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
 
-class BaseVolumeBarAggregator:
+class BaseVolumeBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: float):
-        self.buf_size = buf_size
-        self.reference_cutoff = reference_cutoff
-        self.bars: deque[Bar] = deque(maxlen=buf_size)
+        super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
 
     def reset(self):
-        self.bars.clear()
+        super().reset()
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
@@ -148,30 +148,14 @@ class BaseVolumeBarAggregator:
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need=}")
                 break
 
-    def size(self) -> int:
-        return len(self.bars)
-    
-    def last(self, closed: bool = False) -> Bar | None:
-        if len(self.bars) <= 2:
-            return None
-        if closed:
-            return self.bars[-2]
-        else:
-            return self.bars[-1]
 
-    def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame([bar.model_dump() for bar in self.bars])
-
-
-class QuoteVolumeBarAggregator:
+class QuoteVolumeBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: float):
-        self.buf_size = buf_size
-        self.reference_cutoff = reference_cutoff
-        self.bars: deque[Bar] = deque(maxlen=buf_size)
+        super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
 
     def reset(self):
-        self.bars.clear()
+        super().reset()
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
@@ -204,17 +188,3 @@ class QuoteVolumeBarAggregator:
                 self.reset()
                 logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need=}")
                 break
-    
-    def size(self) -> int:
-        return len(self.bars)
-    
-    def last(self, closed: bool = False) -> Bar | None:
-        if len(self.bars) <= 2:
-            return None
-        if closed:
-            return self.bars[-2]
-        else:
-            return self.bars[-1]
-    
-    def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame([bar.model_dump() for bar in self.bars])

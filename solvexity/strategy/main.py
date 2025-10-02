@@ -2,6 +2,7 @@ import asyncio
 import logging
 import signal
 import sys
+import time
 import nats
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
@@ -9,11 +10,11 @@ from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
 from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
 import solvexity.strategy as strategy
-from solvexity.toolbox.aggregator import BarType
+from solvexity.toolbox.aggregator import (
+    TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
+)
 from solvexity.eventbus import EventBus
-from solvexity.strategy.pipeline.trigger import DataframeTrigger
 from solvexity.eventbus.event import Event
-from solvexity.strategy.pipeline.analytics import DataframeAnalytics
 
 
 
@@ -83,21 +84,27 @@ async def main():
     js = None
     consumer_created = False
     eb = EventBus()
-    trigger = DataframeTrigger(
-        bar_type=BarType.QUOTE_VOLUME, 
+    recv_window = 5000
+    aggregator = QuoteVolumeBarAggregator(
         buf_size=30,
-        reference_cutoff=10000,
-        eventbus=eb
+        reference_cutoff=10000
     )
-    analytics = DataframeAnalytics(
-        composers=[],
-        eventbus=eb
-    )
-    bot = strategy.Pipeline(
-        eventbus=eb,
-        trigger=trigger,
-        analytics=analytics
-    )
+    def on_trade(e: Event):
+        aggregator.on_trade(e.data)
+        if aggregator.size() != aggregator.buf_size:
+            return
+        if bar := aggregator.last(is_closed=True):
+            if bar.close_time < time.time() * 1000 - recv_window:
+                return
+            df = aggregator.to_dataframe(is_closed=True)
+            eb.publish("on_dataframe", Event(data=df))
+
+    eb.subscribe("on_trade", on_trade)
+
+    def on_dataframe(e: Event):
+        logger.info(f"Dataframe: {e.data.shape}")
+
+    eb.subscribe("on_dataframe", on_dataframe)
     
     try:
         logger.info("Attempting to connect to NATS...")

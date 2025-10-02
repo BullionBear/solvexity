@@ -43,7 +43,10 @@ class BarAggregator(ABC):
             return self.bars[-1]
     
     def to_dataframe(self, is_closed: bool = True) -> pd.DataFrame:
-        return pd.DataFrame([bar.model_dump() for bar in self.bars if bar.is_closed == is_closed])
+        if is_closed:
+            return pd.DataFrame([bar.model_dump() for bar in self.bars if bar.is_closed])
+        else:
+            return pd.DataFrame([bar.model_dump() for bar in self.bars])
 
 class TimeBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: int):

@@ -1,10 +1,11 @@
 from solvexity.model.trade import Trade
 from solvexity.toolbox.aggregator import (
+    BarAggregator,
     BarType, TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
 )
 from solvexity.model.bar import Bar
 
-def get_aggregator(bar_type: BarType, buf_size: int, reference_cutoff: int|float):
+def get_aggregator(bar_type: BarType, buf_size: int, reference_cutoff: int|float) -> BarAggregator:
     if bar_type == BarType.TIME:
         return TimeBarAggregator(buf_size, reference_cutoff)
     elif bar_type == BarType.TICK:

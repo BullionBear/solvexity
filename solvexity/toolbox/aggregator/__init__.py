@@ -1,9 +1,11 @@
 from .bar_aggregator import (
-    BarType, TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
+    BarType, BarAggregator, 
+    TimeBarAggregator, TickBarAggregator, BaseVolumeBarAggregator, QuoteVolumeBarAggregator
 )
 
 __all__ = [
     "BarType",
+    "BarAggregator",
     "TimeBarAggregator",
     "TickBarAggregator",
     "BaseVolumeBarAggregator",

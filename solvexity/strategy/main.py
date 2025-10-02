@@ -87,21 +87,32 @@ async def main():
     recv_window = 5000
     aggregator = QuoteVolumeBarAggregator(
         buf_size=30,
-        reference_cutoff=10000
+        reference_cutoff=100000
     )
-    def on_trade(e: Event):
+    bar_id = 0
+    async def on_trade(e: Event):
         aggregator.on_trade(e.data)
+        nonlocal bar_id
         if aggregator.size() != aggregator.buf_size:
             return
         if bar := aggregator.last(is_closed=True):
-            if bar.close_time < time.time() * 1000 - recv_window:
+            if bar_id == 0:
+                logger.info(f"First bar: {bar}")
+                bar_id = id(bar)
+            elif bar_id != id(bar):
+                logger.info(f"New bar: {bar}")
+                bar_id = id(bar)
+            else: # same bar
+                return
+            if bar.close_time < int(time.time() * 1000) - recv_window:
+                logger.info(f"Close time {bar.close_time} is less than {time.time() * 1000 - recv_window}")
                 return
             df = aggregator.to_dataframe(is_closed=True)
-            eb.publish("on_dataframe", Event(data=df))
+            await eb.publish("on_dataframe", Event(data=df))
 
     eb.subscribe("on_trade", on_trade)
 
-    def on_dataframe(e: Event):
+    async def on_dataframe(e: Event):
         logger.info(f"Dataframe: {e.data.shape}")
 
     eb.subscribe("on_dataframe", on_dataframe)

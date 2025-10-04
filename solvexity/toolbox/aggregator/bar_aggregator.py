@@ -169,25 +169,27 @@ class QuoteVolumeBarAggregator(BarAggregator):
                 self.bars.append(Bar.from_trade(empty_trade))
 
             need_quote = self.reference_cutoff - self.accumulator % self.reference_cutoff
-            need = need_quote / trade.price
-            if abs(trade.quantity - need) < 2 * 1e-13: # trade.quantity = need                
+            need_base = need_quote / trade.price
+            if abs(trade.quantity - need_base) < 2 * 1e-13: # trade.quantity = need_base               
                 self.bars[-1] += trade
                 self.bars[-1].enclose(trade.timestamp)
-                logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} ~ {need=}")
+                logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} ~ {need_base=}")
                 self.accumulator += need_quote + 1e-13
                 trade.quantity = 0
-            elif trade.quantity < need:
+            elif trade.quantity < need_base:
                 self.bars[-1] += trade
-                self.accumulator += need_quote
+                self.accumulator += trade.quantity * trade.price
                 trade.quantity = 0
-            elif trade.quantity > need:
-                self.bars[-1] += trade
-                self.bars[-1].enclose(trade.timestamp)
-                self.bars[-1].next_id = trade.id
-                logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} > {need=}")
+            elif trade.quantity > need_base:
+                trade_fraction = trade.model_copy(deep=False)
+                trade_fraction.quantity = need_base
+                self.bars[-1] += trade_fraction
+                self.bars[-1].enclose(trade_fraction.timestamp)
+                self.bars[-1].next_id = trade_fraction.id
+                logger.info(f"Enclose quote volume bar: {self.bars[-1]} with {trade.quantity=} > {need_base=}")
                 self.accumulator += need_quote + 1e-13
-                trade.quantity -= need
+                trade.quantity -= trade_fraction.quantity
             else:
                 self.reset()
-                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need=}")
+                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need_base=}")
                 break

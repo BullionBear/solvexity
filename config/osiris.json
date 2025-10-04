@@ -1,0 +1,29 @@
+{
+    "stream": "TRADE",
+    "consumer": {
+        "name": "TRADE_FANOUT_BTCUSDT",
+        "description": "Pub-sub consumer for trade data broadcasting",
+        "durable_name": "TRADE_FANOUT_BTCUSDT",
+        "deliver_policy": "all",
+        "ack_policy": "none",
+        "ack_wait": 0,
+        "max_deliver": 1,
+        "filter_subject": "trade.binance.spot.btcusdt",
+        "replay_policy": "instant",
+        "sample_freq": "",
+        "rate_limit_bps": 10000000,
+        "max_ack_pending": 0,
+        "idle_heartbeat": 0,
+        "flow_control": false,
+        "deliver_subject": "fanout.binance.spot.btcusdt",
+        "deliver_group": ""
+    },
+    "aggregator": {
+        "type": "quote_volume",
+        "buf_size": 300,
+        "reference_cutoff": 200000
+    },
+    "nats_servers": ["nats://localhost:4222"],
+    "recv_window": 5000,
+    "output_dir": "."
+}

@@ -1,8 +1,11 @@
 import asyncio
+import json
 import logging
 import signal
 import sys
 import time
+from pathlib import Path
+from typing import Dict, Any, Optional
 import nats
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
@@ -25,38 +28,174 @@ logger = logging.getLogger(__name__)
 # Global shutdown event
 shutdown_event = asyncio.Event()
 
+
+class ConfigError(Exception):
+    """Custom exception for configuration parsing errors."""
+    pass
+
+
+class JetStreamConsumerConfig:
+    """Configuration for JetStream consumer."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.name = config.get("name")
+        self.description = config.get("description")
+        self.durable_name = config.get("durable_name")
+        self.deliver_policy = config.get("deliver_policy", "all")
+        self.ack_policy = config.get("ack_policy", "none")
+        self.ack_wait = config.get("ack_wait", 0)
+        self.max_deliver = config.get("max_deliver", 1)
+        self.filter_subject = config.get("filter_subject")
+        self.replay_policy = config.get("replay_policy", "instant")
+        self.sample_freq = config.get("sample_freq", "")
+        self.rate_limit_bps = config.get("rate_limit_bps", 10000000)
+        self.max_ack_pending = config.get("max_ack_pending", 0)
+        self.idle_heartbeat = config.get("idle_heartbeat", 0)
+        self.flow_control = config.get("flow_control", False)
+        self.deliver_subject = config.get("deliver_subject")
+        self.deliver_group = config.get("deliver_group", "")
+        
+        # Validate required fields
+        if not self.name:
+            raise ConfigError("Consumer name is required")
+        if not self.filter_subject:
+            raise ConfigError("Consumer filter_subject is required")
+        if not self.deliver_subject:
+            raise ConfigError("Consumer deliver_subject is required")
+
+
+class AggregatorConfig:
+    """Configuration for bar aggregator."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.type = config.get("type", "quote_volume")
+        self.buf_size = config.get("buf_size", 300)
+        self.reference_cutoff = config.get("reference_cutoff", 200000)
+        
+        # Validate required fields
+        if self.buf_size <= 0:
+            raise ConfigError("Aggregator buf_size must be positive")
+        if self.reference_cutoff <= 0:
+            raise ConfigError("Aggregator reference_cutoff must be positive")
+
+
+class OsirisConfig:
+    """Main configuration class for Osiris strategy."""
+    
+    def __init__(self, config_path: str):
+        self.config_path = Path(config_path)
+        self._load_config()
+    
+    def _load_config(self):
+        """Load and validate configuration from JSON file."""
+        if not self.config_path.exists():
+            raise ConfigError(f"Configuration file not found: {self.config_path}")
+        
+        try:
+            with open(self.config_path, 'r') as f:
+                raw_config = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ConfigError(f"Failed to parse JSON file {self.config_path}: {e}")
+        except Exception as e:
+            raise ConfigError(f"Failed to read configuration file {self.config_path}: {e}")
+        
+        # Extract configuration sections
+        self.stream = raw_config.get("stream", "TRADE")
+        self.consumer = JetStreamConsumerConfig(raw_config.get("consumer", {}))
+        self.aggregator = AggregatorConfig(raw_config.get("aggregator", {}))
+        
+        # Additional configuration
+        self.nats_servers = raw_config.get("nats_servers", ["nats://localhost:4222"])
+        self.recv_window = raw_config.get("recv_window", 5000)
+        self.output_dir = raw_config.get("output_dir", ".")
+        
+        # Validate stream name
+        if not self.stream:
+            raise ConfigError("Stream name is required")
+
+
+def load_config(config_path: str) -> OsirisConfig:
+    """Load and validate Osiris configuration."""
+    return OsirisConfig(config_path)
+
+
+def get_aggregator(config: AggregatorConfig):
+    """Create and return the appropriate aggregator based on configuration."""
+    if config.type == "quote_volume":
+        return QuoteVolumeBarAggregator(
+            buf_size=config.buf_size,
+            reference_cutoff=config.reference_cutoff
+        )
+    elif config.type == "base_volume":
+        return BaseVolumeBarAggregator(
+            buf_size=config.buf_size,
+            reference_cutoff=config.reference_cutoff
+        )
+    elif config.type == "tick":
+        return TickBarAggregator(
+            buf_size=config.buf_size,
+            reference_cutoff=config.reference_cutoff
+        )
+    elif config.type == "time":
+        return TimeBarAggregator(
+            buf_size=config.buf_size,
+            reference_cutoff=config.reference_cutoff
+        )
+    else:
+        raise ConfigError(f"Unknown aggregator type: {config.type}")
+
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully"""
     logger.info(f"Received signal {sig}, initiating graceful shutdown...")
     shutdown_event.set()
 
 
-async def setup_jetstream_consumer(js):
+async def setup_jetstream_consumer(js, config: OsirisConfig):
     """Set up JetStream consumer for trade data"""
     try:
+        # Map string values to NATS enums
+        deliver_policy_map = {
+            "all": DeliverPolicy.ALL,
+            "last": DeliverPolicy.LAST,
+            "new": DeliverPolicy.NEW,
+            "by_start_sequence": DeliverPolicy.BY_START_SEQUENCE,
+            "by_start_time": DeliverPolicy.BY_START_TIME
+        }
+        
+        ack_policy_map = {
+            "none": AckPolicy.NONE,
+            "all": AckPolicy.ALL,
+            "explicit": AckPolicy.EXPLICIT
+        }
+        
+        replay_policy_map = {
+            "instant": ReplayPolicy.INSTANT,
+            "original": ReplayPolicy.ORIGINAL
+        }
+        
         # Create consumer configuration
         consumer_config = ConsumerConfig(
-            name="TRADE_FANOUT_BTCUSDT",
-            description="Pub-sub consumer for trade data broadcasting",
-            durable_name="TRADE_FANOUT_BTCUSDT",
-            deliver_policy=DeliverPolicy.ALL,
-            ack_policy=AckPolicy.NONE,
-            ack_wait=0,
-            max_deliver=1,
-            filter_subject="trade.binance.spot.btcusdt",
-            replay_policy=ReplayPolicy.INSTANT,
-            sample_freq="",
-            rate_limit_bps=10_000_000, # 10 Mbps
-            max_ack_pending=0,
-            idle_heartbeat=0,
-            flow_control=False,
-            deliver_subject="fanout.binance.spot.btcusdt",
-            deliver_group=""
+            name=config.consumer.name,
+            description=config.consumer.description,
+            durable_name=config.consumer.durable_name,
+            deliver_policy=deliver_policy_map.get(config.consumer.deliver_policy, DeliverPolicy.ALL),
+            ack_policy=ack_policy_map.get(config.consumer.ack_policy, AckPolicy.NONE),
+            ack_wait=config.consumer.ack_wait,
+            max_deliver=config.consumer.max_deliver,
+            filter_subject=config.consumer.filter_subject,
+            replay_policy=replay_policy_map.get(config.consumer.replay_policy, ReplayPolicy.INSTANT),
+            sample_freq=config.consumer.sample_freq,
+            rate_limit_bps=config.consumer.rate_limit_bps,
+            max_ack_pending=config.consumer.max_ack_pending,
+            idle_heartbeat=config.consumer.idle_heartbeat,
+            flow_control=config.consumer.flow_control,
+            deliver_subject=config.consumer.deliver_subject,
+            deliver_group=config.consumer.deliver_group
         )
         
         # Create or update the consumer
         consumer_info = await js.add_consumer(
-            stream="TRADE",
+            stream=config.stream,
             config=consumer_config
         )
         
@@ -75,7 +214,15 @@ async def cleanup_consumer(js, stream_name: str, consumer_name: str):
     except Exception as e:
         logger.error(f"Failed to remove JetStream consumer {consumer_name}: {e}")
 
-async def main():
+async def main(config_path: str = "config/osiris.json"):
+    # Load configuration
+    try:
+        config = load_config(config_path)
+        logger.info(f"Loaded configuration from: {config_path}")
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    
     # Set up signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
@@ -84,11 +231,7 @@ async def main():
     js = None
     consumer_created = False
     eb = EventBus()
-    recv_window = 5000
-    aggregator = QuoteVolumeBarAggregator(
-        buf_size=300,
-        reference_cutoff=200_000
-    )
+    aggregator = get_aggregator(config.aggregator)
     bar_id = 0
     async def on_trade(e: Event):
         aggregator.on_trade(e.data)
@@ -104,8 +247,8 @@ async def main():
                 bar_id = id(bar)
             else: # same bar
                 return
-            if bar.close_time < int(time.time() * 1000) - recv_window:
-                logger.info(f"Close time {bar.close_time} is less than {int(time.time() * 1000) - recv_window}")
+            if bar.close_time < int(time.time() * 1000) - config.recv_window:
+                logger.info(f"Close time {bar.close_time} is less than {int(time.time() * 1000) - config.recv_window}")
                 return
             df = aggregator.to_dataframe(is_closed=True)
             await eb.publish("on_dataframe", Event(data=df))
@@ -116,14 +259,16 @@ async def main():
         df = e.data
         logger.info(f"Dataframe: {df.shape}")
         ref = df.iloc[-1]["close_time"]
-        df.to_csv(f"dataframe_{ref}.csv", index=False)
+        output_path = Path(config.output_dir) / f"dataframe_{ref}.csv"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(output_path, index=False)
 
     eb.subscribe("on_dataframe", on_dataframe)
     
     try:
-        logger.info("Attempting to connect to NATS...")
+        logger.info(f"Attempting to connect to NATS servers: {config.nats_servers}")
         # Connect to NATS
-        nc = await nats.connect(servers=["nats://localhost:4222"])
+        nc = await nats.connect(servers=config.nats_servers)
         logger.info("Connected to NATS")
         
         # Get JetStream context
@@ -131,7 +276,7 @@ async def main():
         logger.info("JetStream context created")
         
         # Set up JetStream consumer
-        await setup_jetstream_consumer(js)
+        await setup_jetstream_consumer(js, config)
         consumer_created = True
 
         async def trade_handler(msg: Msg):
@@ -139,8 +284,8 @@ async def main():
             await eb.publish("on_trade", Event(data=trade))
         
         # Subscribe to the fanout subject (push-based consumer)
-        await nc.subscribe("fanout.binance.spot.btcusdt", cb=trade_handler)
-        logger.info("Subscribed to fanout.binance.spot.btcusdt")
+        await nc.subscribe(config.consumer.deliver_subject, cb=trade_handler)
+        logger.info(f"Subscribed to {config.consumer.deliver_subject}")
         
         logger.info("Waiting for trade messages... Press Ctrl+C to stop")
         
@@ -155,7 +300,7 @@ async def main():
         logger.info("Entering finally block...")
         # Clean up the consumer before closing connection
         if js and consumer_created:
-            await cleanup_consumer(js, "TRADE", "TRADE_FANOUT_BTCUSDT")
+            await cleanup_consumer(js, config.stream, config.consumer.name)
         
         if nc:
             await nc.close()
@@ -165,16 +310,28 @@ async def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="NATS JetStream Trade Consumer")
+    parser.add_argument(
+        "--config", 
+        default="config/osiris.json",
+        help="Path to configuration file (default: config/osiris.json)"
+    )
+    args = parser.parse_args()
+    
     logger.info("NATS JetStream Trade Consumer")
-    logger.info("Make sure NATS server with JetStream is running on localhost:4222")
-    logger.info("This consumer subscribes to fanout.binance.spot.btcusdt")
+    logger.info(f"Using configuration file: {args.config}")
     logger.info("Press Ctrl+C to stop\n")
     
     try:
-        asyncio.run(main())
+        asyncio.run(main(args.config))
     except KeyboardInterrupt:
         # This should not happen with our signal handling, but just in case
         logger.info("Program interrupted")
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
     finally:
         logger.info("Exiting...")
         sys.exit(0)

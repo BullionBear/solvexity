@@ -86,7 +86,7 @@ async def main():
     eb = EventBus()
     recv_window = 5000
     aggregator = BaseVolumeBarAggregator(
-        buf_size=30,
+        buf_size=300,
         reference_cutoff=2.0
     )
     bar_id = 0

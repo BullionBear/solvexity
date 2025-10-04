@@ -85,9 +85,9 @@ async def main():
     consumer_created = False
     eb = EventBus()
     recv_window = 5000
-    aggregator = BaseVolumeBarAggregator(
+    aggregator = QuoteVolumeBarAggregator(
         buf_size=300,
-        reference_cutoff=2.0
+        reference_cutoff=200_000
     )
     bar_id = 0
     async def on_trade(e: Event):

@@ -105,7 +105,7 @@ async def main():
             else: # same bar
                 return
             if bar.close_time < int(time.time() * 1000) - recv_window:
-                logger.info(f"Close time {bar.close_time} is less than {time.time() * 1000 - recv_window}")
+                logger.info(f"Close time {bar.close_time} is less than {int(time.time() * 1000) - recv_window}")
                 return
             df = aggregator.to_dataframe(is_closed=True)
             await eb.publish("on_dataframe", Event(data=df))
@@ -113,7 +113,10 @@ async def main():
     eb.subscribe("on_trade", on_trade)
 
     async def on_dataframe(e: Event):
-        logger.info(f"Dataframe: {e.data.shape}")
+        df = e.data
+        logger.info(f"Dataframe: {df.shape}")
+        ref = df.iloc[-1]["close_time"]
+        df.to_csv(f"dataframe_{ref}.csv", index=False)
 
     eb.subscribe("on_dataframe", on_dataframe)
     

@@ -2,6 +2,16 @@ from pydantic import BaseModel
 from .trade import Trade
 from .shared import Side, Symbol
 
+def flatten(d, parent_key='', sep='.'):
+    out = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            out.update(flatten(v, new_key, sep))
+        else:
+            out[new_key] = v
+    return out
+
 class Bar(BaseModel):
     symbol: Symbol
     start_id: int
@@ -61,3 +71,8 @@ class Bar(BaseModel):
         self.close_time = timestamp
         self.is_closed = True
         return self
+
+    def model_dump_flatten(self) -> dict:
+        return flatten(self.model_dump())
+
+    

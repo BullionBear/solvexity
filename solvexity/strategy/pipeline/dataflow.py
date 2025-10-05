@@ -2,22 +2,23 @@ import logging
 from typing import Callable
 import pandas as pd
 from solvexity.model.trade import Trade
+from solvexity.toolbox.analytics import Analytics
 from solvexity.eventbus.eventbus import EventBus
 from solvexity.eventbus.event import Event
 
 logger = logging.getLogger(__name__)
     
-class Analytics:
-    def __init__(self, name: str, func: Callable[[pd.DataFrame], pd.DataFrame], result_to: str):
+class Flow:
+    def __init__(self, name: str, analytics: Analytics, result_to: str):
         self.name = name
-        self.func = func
+        self.analytics = analytics
         self.result_to = result_to
     
     def on_dataframe(self, dataframe: pd.DataFrame) -> pd.DataFrame:
-        dataframe = self.func(dataframe)
+        dataframe = self.analytics.on_dataframe(dataframe)
         return dataframe
 
-class DataframeAnalytics:
+class DataframeFlow:
     def __init__(self, composers: list[Analytics]):
         self.composers = composers
         self.eventbus = EventBus()

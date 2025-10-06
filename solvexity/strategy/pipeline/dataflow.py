@@ -18,7 +18,7 @@ class Flow:
         dataframe = self.analytics.on_dataframe(dataframe)
         return dataframe
 
-class DataframeFlow:
+class Alpha:
     def __init__(self, composers: list[Analytics]):
         self.composers = composers
         self.eventbus = EventBus()

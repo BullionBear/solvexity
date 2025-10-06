@@ -1,3 +1,3 @@
-from .pipeline import Pipeline
+from .pipeline import DataframeFlow, Flow
 
-__all__ = ["Pipeline"]
+__all__ = ["DataframeFlow", "Flow"]

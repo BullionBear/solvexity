@@ -1,6 +1,5 @@
 from .analytics import Analytics
 import pandas as pd
-from typing import Callable
 
 class MaxDrawdown(Analytics):
     def __init__(self, src_col: str):

@@ -1,6 +1,7 @@
 from collections import deque
 from abc import ABC, abstractmethod
-from typing import TextIO
+from typing import Literal
+from pydantic import BaseModel
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
 from enum import Enum
@@ -16,28 +17,85 @@ class BarType(Enum):
     BASE_VOLUME = "base_volume"
     QUOTE_VOLUME = "quote_volume"
 
+class TradeStatus(Enum):
+    ACCEPTED = "accepted"
+    BYPASS = "bypass"
+    MISSING = "missing"
+
+class Interval(BaseModel):
+    start_id: int
+    end_id: int
+
+    @property
+    def n_trades(self) -> int:
+        return self.end_id - self.start_id
+        
+
 class BarAggregator(ABC):
-    def __init__(self, buf_size: int, reference_cutoff: int):
+    def __init__(self, buf_size: int, reference_cutoff: int, completeness_threshold: float = 1.0):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
         self.bars: deque[Bar] = deque(maxlen=buf_size)
+        
+        self.completeness_threshold = completeness_threshold
+        self.missing_trades = 0
+        self.missing_intervals: deque[Interval] = deque(maxlen=buf_size)
 
     def to_dict(self) -> dict:
         return {
             "buf_size": self.buf_size,
             "reference_cutoff": self.reference_cutoff,
-            "bars": [bar.model_dump() for bar in self.bars]
+            "bars": [bar.model_dump() for bar in self.bars],
+
+            "completeness_threshold": self.completeness_threshold,
+            "missing_trades": self.missing_trades,
+            "missing_intervals": [interval.model_dump() for interval in self.missing_intervals],
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'BarAggregator':
-        aggregator = cls(data["buf_size"], data["reference_cutoff"])
+        aggregator = cls(data["buf_size"], data["reference_cutoff"], data["completeness_threshold"])
         for bar in data["bars"]:
             aggregator.bars.append(Bar.model_validate(bar))
+        aggregator.missing_trades = data["missing_trades"]
+        for interval in data["missing_intervals"]:
+            aggregator.missing_intervals.append(Interval.model_validate(interval))
         return aggregator
 
     def reset(self):
         self.bars.clear()
+        self.missing_intervals.clear()
+        self.missing_trades = 0
+
+    def validate(self, trade: Trade) -> TradeStatus:
+        if len(self.bars) == 0:
+            return TradeStatus.ACCEPTED
+        if self.bars[-1].next_id == trade.id:
+            return TradeStatus.ACCEPTED
+        if self.bars[-1].next_id < trade.id:
+            return TradeStatus.BYPASS
+        logger.warning(f"Missing trade from {trade.next_id} to {trade.id}")
+        interval = Interval(start_id=trade.next_id, end_id=trade.id)
+        self.missing_intervals.append(interval)
+        self.missing_trades += interval.n_trades
+        self._correct_missing_intervals()
+        return TradeStatus.MISSING
+
+    def _correct_missing_intervals(self):
+        if len(self.bars) == 0 or len(self.missing_intervals) == 0:
+            return
+        while len(self.missing_intervals) > 0 and self.bars[0].start_id > self.missing_intervals[0].start_id:
+            self.missing_trades -= self.missing_intervals[0].n_trades
+            self.missing_intervals.popleft()
+    
+    def is_valid(self) -> bool:
+        if len(self.bars) == 0:
+            return True
+        n_total_trades = self.bars[-1].next_id - self.bars[0].start_id
+        if abs(self.missing_trades - n_total_trades * self.completeness_threshold) <= 1e-13:
+            return True
+        logger.warning(f"Invalid completeness: {self.missing_trades=} and {n_total_trades=} and {self.completeness_threshold=}")
+        return False
 
     @abstractmethod
     def on_trade(self, trade: Trade):
@@ -66,8 +124,8 @@ class BarAggregator(ABC):
         return df
 
 class TimeBarAggregator(BarAggregator):
-    def __init__(self, buf_size: int, reference_cutoff: int):
-        super().__init__(buf_size, reference_cutoff)
+    def __init__(self, buf_size: int, reference_cutoff: int, completeness_threshold: float = 1.0):
+        super().__init__(buf_size, reference_cutoff, completeness_threshold)
         self.accumulator = 0
 
     def to_dict(self) -> dict:
@@ -87,6 +145,14 @@ class TimeBarAggregator(BarAggregator):
 
 
     def on_trade(self, trade: Trade):
+        status = self.validate(trade)
+        if status == TradeStatus.MISSING:
+            if not self.is_valid():
+                self.reset()
+        if status == TradeStatus.BYPASS:
+            return
+        # else status == TradeStatus.ACCEPTED
+        
         self.accumulator = trade.timestamp
         if len(self.bars) == 0:
             self.bars.append(Bar.from_trade(trade))
@@ -104,8 +170,7 @@ class TimeBarAggregator(BarAggregator):
             self.bars.append(Bar.from_trade(trade))
             self.bars[-1].open_time = next_reference_index * self.reference_cutoff
         else:
-            self.reset()
-            logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
+            logger.warning(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
     
     
 
@@ -130,6 +195,14 @@ class TickBarAggregator(BarAggregator):
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
+        status = self.validate(trade)
+        if status == TradeStatus.MISSING:
+            if not self.is_valid():
+                self.reset()
+        if status == TradeStatus.BYPASS:
+            return
+        # else status == TradeStatus.ACCEPTED
+
         self.accumulator = trade.id
         if len(self.bars) == 0:
             self.bars.append(Bar.from_trade(trade))
@@ -143,8 +216,7 @@ class TickBarAggregator(BarAggregator):
             logger.info(f"Enclose tick bar: {self.bars[-1]}")
             self.bars.append(Bar.from_trade(trade))
         else:
-            self.reset()
-            logger.error(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
+            logger.warning(f"Invalid reference index: {prev_reference_index} and next reference index: {next_reference_index}")
     
 
 
@@ -169,6 +241,13 @@ class BaseVolumeBarAggregator(BarAggregator):
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
+        status = self.validate(trade)
+        if status == TradeStatus.MISSING:
+            if not self.is_valid():
+                self.reset()
+        if status == TradeStatus.BYPASS:
+            return
+        # else status == TradeStatus.ACCEPTED
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
             if len(self.bars) == 0 or self.bars[-1].is_closed:
                 empty_trade = trade.model_copy(deep=False)
@@ -197,8 +276,7 @@ class BaseVolumeBarAggregator(BarAggregator):
                 trade.quantity -= need
                 self.accumulator += need + 1e-13
             else:
-                self.reset()
-                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need=}")
+                logger.warning(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need=}")
                 break
 
 
@@ -223,6 +301,13 @@ class QuoteVolumeBarAggregator(BarAggregator):
         self.accumulator = 0
 
     def on_trade(self, trade: Trade):
+        status = self.validate(trade)
+        if status == TradeStatus.MISSING:
+            if not self.is_valid():
+                self.reset()
+        if status == TradeStatus.BYPASS:
+            return
+        # else status == TradeStatus.ACCEPTED
         while abs(trade.quantity) > 2 * 1e-13: # python's float precision is estimated to 15-17 digits
             if len(self.bars) == 0 or self.bars[-1].is_closed:
                 empty_trade = trade.model_copy(deep=False)
@@ -251,6 +336,5 @@ class QuoteVolumeBarAggregator(BarAggregator):
                 self.accumulator += need_quote + 1e-13
                 trade.quantity -= trade_fraction.quantity
             else:
-                self.reset()
-                logger.error(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need_base=}")
+                logger.warning(f"Undefined behavior: {self.accumulator=} and {trade.quantity=} and {need_quote=}, {need_base=}")
                 break

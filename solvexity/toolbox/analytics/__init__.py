@@ -1,4 +1,4 @@
 from .analytics import Analytics
-from .max_drawdown import MaxDrawdown
+from .drawdown import Drawdown
 
-__all__ = ["Analytics", "MaxDrawdown"]
+__all__ = ["Analytics", "Drawdown"]

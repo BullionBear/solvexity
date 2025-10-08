@@ -1,10 +1,12 @@
 from collections import deque
 from abc import ABC, abstractmethod
+from typing import TextIO
 from solvexity.model.trade import Trade
 from solvexity.model.bar import Bar
 from enum import Enum
 import logging
 import pandas as pd
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,20 @@ class BarAggregator(ABC):
         self.buf_size = buf_size
         self.reference_cutoff = reference_cutoff
         self.bars: deque[Bar] = deque(maxlen=buf_size)
-        
+
+    def to_dict(self) -> dict:
+        return {
+            "buf_size": self.buf_size,
+            "reference_cutoff": self.reference_cutoff,
+            "bars": [bar.model_dump() for bar in self.bars]
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'BarAggregator':
+        aggregator = cls(data["buf_size"], data["reference_cutoff"])
+        for bar in data["bars"]:
+            aggregator.bars.append(Bar.model_validate(bar))
+        return aggregator
 
     def reset(self):
         self.bars.clear()
@@ -55,6 +70,17 @@ class TimeBarAggregator(BarAggregator):
         super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
 
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["accumulator"] = self.accumulator
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'TimeBarAggregator':
+        obj = super(TimeBarAggregator, cls).from_dict(data)
+        obj.accumulator = data["accumulator"]
+        return obj
+
     def reset(self):
         super().reset()
         self.accumulator = 0
@@ -88,6 +114,17 @@ class TickBarAggregator(BarAggregator):
         super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
 
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["accumulator"] = self.accumulator
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'TickBarAggregator':
+        obj = super(TickBarAggregator, cls).from_dict(data)
+        obj.accumulator = data["accumulator"]
+        return obj
+
     def reset(self):
         super().reset()
         self.accumulator = 0
@@ -115,6 +152,17 @@ class BaseVolumeBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: float):
         super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
+
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["accumulator"] = self.accumulator
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'BaseVolumeBarAggregator':
+        obj = super(BaseVolumeBarAggregator, cls).from_dict(data)
+        obj.accumulator = data["accumulator"]
+        return obj
 
     def reset(self):
         super().reset()
@@ -158,6 +206,17 @@ class QuoteVolumeBarAggregator(BarAggregator):
     def __init__(self, buf_size: int, reference_cutoff: float):
         super().__init__(buf_size, reference_cutoff)
         self.accumulator = 0
+
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data["accumulator"] = self.accumulator
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'QuoteVolumeBarAggregator':
+        obj = super(QuoteVolumeBarAggregator, cls).from_dict(data)
+        obj.accumulator = data["accumulator"]
+        return obj
 
     def reset(self):
         super().reset()

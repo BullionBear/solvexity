@@ -71,6 +71,11 @@ class AggregatorConfig:
         self.type = config.get("type", "quote_volume")
         self.buf_size = config.get("buf_size", 300)
         self.reference_cutoff = config.get("reference_cutoff", 200000)
+        self.completeness_threshold = config.get("completeness_threshold", 1.0)
+        
+        # Deserialize
+        self.deserialize_from = config.get("deserialize_from", "")
+        self.serialize_to = config.get("serialize_to", "")
         
         # Validate required fields
         if self.buf_size <= 0:
@@ -107,7 +112,9 @@ class OsirisConfig:
         # Additional configuration
         self.nats_servers = raw_config.get("nats_servers", ["nats://localhost:4222"])
         self.recv_window = raw_config.get("recv_window", 5000)
-        self.output_dir = raw_config.get("output_dir", ".")
+        # Deserialize
+        self.deserialize_from = raw_config.get("deserialize_from", "")
+        self.serialize_to = raw_config.get("serialize_to", "")
         
         # Validate stream name
         if not self.stream:
@@ -122,25 +129,46 @@ def load_config(config_path: str) -> OsirisConfig:
 def get_aggregator(config: AggregatorConfig):
     """Create and return the appropriate aggregator based on configuration."""
     if config.type == "quote_volume":
-        return QuoteVolumeBarAggregator(
-            buf_size=config.buf_size,
-            reference_cutoff=config.reference_cutoff
-        )
+        if config.deserialize_from:
+            with open(config.deserialize_from, "r") as f:
+                data = json.load(f)
+            return QuoteVolumeBarAggregator.from_dict(data)
+        else:
+            return QuoteVolumeBarAggregator(
+                buf_size=config.buf_size,
+                reference_cutoff=config.reference_cutoff,
+                completeness_threshold=config.completeness_threshold
+            )
     elif config.type == "base_volume":
-        return BaseVolumeBarAggregator(
-            buf_size=config.buf_size,
-            reference_cutoff=config.reference_cutoff
-        )
+        if config.deserialize_from:
+            with open(config.deserialize_from, "r") as f:
+                data = json.load(f)
+            return BaseVolumeBarAggregator.from_dict(data)
+        else:
+            return BaseVolumeBarAggregator(
+                buf_size=config.buf_size,
+                reference_cutoff=config.reference_cutoff
+            )
     elif config.type == "tick":
-        return TickBarAggregator(
-            buf_size=config.buf_size,
-            reference_cutoff=config.reference_cutoff
-        )
+        if config.deserialize_from:
+            with open(config.deserialize_from, "r") as f:
+                data = json.load(f)
+            return TickBarAggregator.from_dict(data)
+        else:
+            return TickBarAggregator(
+                buf_size=config.buf_size,
+                reference_cutoff=config.reference_cutoff
+            )
     elif config.type == "time":
-        return TimeBarAggregator(
-            buf_size=config.buf_size,
-            reference_cutoff=config.reference_cutoff
-        )
+        if config.deserialize_from:
+            with open(config.deserialize_from, "r") as f:
+                data = json.load(f)
+            return TimeBarAggregator.from_dict(data)
+        else:
+            return TimeBarAggregator(
+                buf_size=config.buf_size,
+                reference_cutoff=config.reference_cutoff
+            )
     else:
         raise ConfigError(f"Unknown aggregator type: {config.type}")
 
@@ -305,6 +333,11 @@ async def main(config_path: str = "config/osiris.json"):
         if nc:
             await nc.close()
             logger.info("Disconnected from NATS")
+        
+        if config.aggregator.serialize_to:
+            with open(config.aggregator.serialize_to, "w") as f:
+                json.dump(aggregator.to_dict(), f)
+                logger.info(f"Serialized aggregator to {config.aggregator.serialize_to}")
         
         logger.info("Shutdown complete")
 

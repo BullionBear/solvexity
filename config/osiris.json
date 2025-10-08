@@ -21,9 +21,11 @@
     "aggregator": {
         "type": "quote_volume",
         "buf_size": 300,
-        "reference_cutoff": 200000
+        "reference_cutoff": 200000,
+        "completeness_threshold": 1.0,
+        "deserialize_from": "",
+        "serialize_to": "./artifacts/aggregator.json"
     },
     "nats_servers": ["nats://localhost:4222"],
-    "recv_window": 5000,
-    "output_dir": "."
+    "recv_window": 5000
 }

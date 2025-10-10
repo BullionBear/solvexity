@@ -72,10 +72,10 @@ class BarAggregator(ABC):
             return TradeStatus.ACCEPTED
         if self.bars[-1].next_id == trade.id:
             return TradeStatus.ACCEPTED
-        if self.bars[-1].next_id < trade.id:
+        if self.bars[-1].next_id > trade.id:
             return TradeStatus.BYPASS
-        logger.warning(f"Missing trade from {trade.next_id} to {trade.id}")
-        interval = Interval(start_id=trade.next_id, end_id=trade.id)
+        logger.warning(f"Missing trade from {self.bars[-1].next_id} to {trade.id}")
+        interval = Interval(start_id=self.bars[-1].next_id, end_id=trade.id)
         self.missing_intervals.append(interval)
         self.missing_trades += interval.n_trades
         self._correct_missing_intervals()
@@ -175,8 +175,8 @@ class TimeBarAggregator(BarAggregator):
     
 
 class TickBarAggregator(BarAggregator):
-    def __init__(self, buf_size: int, reference_cutoff: int):
-        super().__init__(buf_size, reference_cutoff)
+    def __init__(self, buf_size: int, reference_cutoff: int, completeness_threshold: float = 1.0):
+        super().__init__(buf_size, reference_cutoff, completeness_threshold)
         self.accumulator = 0
 
     def to_dict(self) -> dict:
@@ -221,8 +221,8 @@ class TickBarAggregator(BarAggregator):
 
 
 class BaseVolumeBarAggregator(BarAggregator):
-    def __init__(self, buf_size: int, reference_cutoff: float):
-        super().__init__(buf_size, reference_cutoff)
+    def __init__(self, buf_size: int, reference_cutoff: float, completeness_threshold: float = 1.0):
+        super().__init__(buf_size, reference_cutoff, completeness_threshold)
         self.accumulator = 0
 
     def to_dict(self) -> dict:
@@ -281,8 +281,8 @@ class BaseVolumeBarAggregator(BarAggregator):
 
 
 class QuoteVolumeBarAggregator(BarAggregator):
-    def __init__(self, buf_size: int, reference_cutoff: float):
-        super().__init__(buf_size, reference_cutoff)
+    def __init__(self, buf_size: int, reference_cutoff: float, completeness_threshold: float = 1.0):
+        super().__init__(buf_size, reference_cutoff, completeness_threshold)
         self.accumulator = 0
 
     def to_dict(self) -> dict:

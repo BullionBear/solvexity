@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import nats
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
-
+from datetime import datetime
 from solvexity.logging import setup_logging
 from solvexity.model.trade import Trade
 import solvexity.strategy as strategy
@@ -25,8 +25,7 @@ setup_logging()
 
 logger = logging.getLogger(__name__)
 
-# Global shutdown event
-shutdown_event = asyncio.Event()
+
 
 
 class ConfigError(Exception):
@@ -44,6 +43,7 @@ class JetStreamConsumerConfig:
         self.deliver_policy = config.get("deliver_policy", "all")
         self.ack_policy = config.get("ack_policy", "none")
         self.ack_wait = config.get("ack_wait", 0)
+        self.opt_start_time = config.get("opt_start_time", 0)
         self.max_deliver = config.get("max_deliver", 1)
         self.filter_subject = config.get("filter_subject")
         self.replay_policy = config.get("replay_policy", "instant")
@@ -172,22 +172,24 @@ def get_aggregator(config: AggregatorConfig):
     else:
         raise ConfigError(f"Unknown aggregator type: {config.type}")
 
-def signal_handler(sig, frame):
-    """Handle shutdown signals gracefully"""
-    logger.info(f"Received signal {sig}, initiating graceful shutdown...")
-    shutdown_event.set()
 
-
+def signal_handler(shutdown_event: asyncio.Event):
+    """Return a signal handler function that sets the shutdown event"""
+    def handler(sig, frame):
+        logger.info(f"Received signal {sig}, initiating graceful shutdown...")
+        shutdown_event.set()
+    return handler
+    
 async def setup_jetstream_consumer(js, config: OsirisConfig):
-    """Set up JetStream consumer for trade data"""
+    """Setup JetStream consumer with proper configuration"""
     try:
-        # Map string values to NATS enums
         deliver_policy_map = {
             "all": DeliverPolicy.ALL,
             "last": DeliverPolicy.LAST,
             "new": DeliverPolicy.NEW,
             "by_start_sequence": DeliverPolicy.BY_START_SEQUENCE,
-            "by_start_time": DeliverPolicy.BY_START_TIME
+            "by_start_time": DeliverPolicy.BY_START_TIME,
+            "last_per_subject": DeliverPolicy.LAST_PER_SUBJECT
         }
         
         ack_policy_map = {
@@ -201,12 +203,20 @@ async def setup_jetstream_consumer(js, config: OsirisConfig):
             "original": ReplayPolicy.ORIGINAL
         }
         
+        # Keep opt_start_time as-is (should be RFC3339 string or None)
+        # The NATS server expects RFC3339 format, not datetime or int
+        opt_start_time = config.consumer.opt_start_time
+        # If it's 0 or empty string, set to None to omit from the request
+        if not opt_start_time or opt_start_time == 0:
+            opt_start_time = None
+        
         # Create consumer configuration
         consumer_config = ConsumerConfig(
             name=config.consumer.name,
             description=config.consumer.description,
             durable_name=config.consumer.durable_name,
             deliver_policy=deliver_policy_map.get(config.consumer.deliver_policy, DeliverPolicy.ALL),
+            opt_start_time=opt_start_time,  # Pass the RFC3339 string directly
             ack_policy=ack_policy_map.get(config.consumer.ack_policy, AckPolicy.NONE),
             ack_wait=config.consumer.ack_wait,
             max_deliver=config.consumer.max_deliver,
@@ -233,6 +243,76 @@ async def setup_jetstream_consumer(js, config: OsirisConfig):
     except Exception as e:
         logger.error(f"Failed to create JetStream consumer: {e}")
         raise
+"""
+async def setup_jetstream_consumer(js, config: OsirisConfig):
+    
+    try:
+        # Map string values to NATS enums
+        deliver_policy_map = {
+            "all": DeliverPolicy.ALL,
+            "last": DeliverPolicy.LAST,
+            "new": DeliverPolicy.NEW,
+            "by_start_sequence": DeliverPolicy.BY_START_SEQUENCE,
+            "by_start_time": DeliverPolicy.BY_START_TIME
+        }
+        
+        ack_policy_map = {
+            "none": AckPolicy.NONE,
+            "all": AckPolicy.ALL,
+            "explicit": AckPolicy.EXPLICIT
+        }
+        
+        replay_policy_map = {
+            "instant": ReplayPolicy.INSTANT,
+            "original": ReplayPolicy.ORIGINAL
+        }
+
+         # Parse opt_start_time if it's a string (RFC3339 format)
+        opt_start_time = config.consumer.opt_start_time
+        if isinstance(opt_start_time, str) and opt_start_time:
+            try:
+                # Parse RFC3339/ISO8601 format
+                opt_start_time = datetime.fromisoformat(opt_start_time.replace('Z', '+00:00'))
+            except ValueError as e:
+                logger.error(f"Invalid opt_start_time format: {opt_start_time}. Error: {e}")
+                raise ConfigError(f"opt_start_time must be in RFC3339 format (e.g., '2025-10-10T09:00:00Z')")
+        elif opt_start_time == 0 or not opt_start_time:
+            opt_start_time = None
+        
+        # Create consumer configuration
+        consumer_config = ConsumerConfig(
+            name=config.consumer.name,
+            description=config.consumer.description,
+            durable_name=config.consumer.durable_name,
+            deliver_policy=deliver_policy_map.get(config.consumer.deliver_policy, DeliverPolicy.ALL),
+            opt_start_time=opt_start_time,
+            ack_policy=ack_policy_map.get(config.consumer.ack_policy, AckPolicy.NONE),
+            ack_wait=config.consumer.ack_wait,
+            max_deliver=config.consumer.max_deliver,
+            filter_subject=config.consumer.filter_subject,
+            replay_policy=replay_policy_map.get(config.consumer.replay_policy, ReplayPolicy.INSTANT),
+            sample_freq=config.consumer.sample_freq,
+            rate_limit_bps=config.consumer.rate_limit_bps,
+            max_ack_pending=config.consumer.max_ack_pending,
+            idle_heartbeat=config.consumer.idle_heartbeat,
+            flow_control=config.consumer.flow_control,
+            deliver_subject=config.consumer.deliver_subject,
+            deliver_group=config.consumer.deliver_group
+        )
+        
+        # Create or update the consumer
+        consumer_info = await js.add_consumer(
+            stream=config.stream,
+            config=consumer_config
+        )
+        
+        logger.info(f"Created JetStream consumer: {consumer_info.name}")
+        return consumer_info
+        
+    except Exception as e:
+        logger.error(f"Failed to create JetStream consumer: {e}")
+        raise
+"""
 
 async def cleanup_consumer(js, stream_name: str, consumer_name: str):
     """Remove the JetStream consumer on exit"""
@@ -244,6 +324,9 @@ async def cleanup_consumer(js, stream_name: str, consumer_name: str):
 
 async def main(config_path: str = "config/osiris.json"):
     # Load configuration
+
+    shutdown_event = asyncio.Event()
+    
     try:
         config = load_config(config_path)
         logger.info(f"Loaded configuration from: {config_path}")
@@ -252,8 +335,8 @@ async def main(config_path: str = "config/osiris.json"):
         sys.exit(1)
     
     # Set up signal handlers
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler(shutdown_event))
+    signal.signal(signal.SIGTERM, signal_handler(shutdown_event))
     
     nc = None
     js = None
@@ -287,7 +370,7 @@ async def main(config_path: str = "config/osiris.json"):
         df = e.data
         logger.info(f"Dataframe: {df.shape}")
         ref = df.iloc[-1]["close_time"]
-        output_path = Path(config.output_dir) / f"dataframe_{ref}.csv"
+        output_path = Path("./artifacts") / f"dataframe_{ref}.csv"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(output_path, index=False)
 
@@ -336,7 +419,7 @@ async def main(config_path: str = "config/osiris.json"):
         
         if config.aggregator.serialize_to:
             with open(config.aggregator.serialize_to, "w") as f:
-                json.dump(aggregator.to_dict(), f)
+                json.dump(aggregator.to_dict(), f, indent=4)
                 logger.info(f"Serialized aggregator to {config.aggregator.serialize_to}")
         
         logger.info("Shutdown complete")

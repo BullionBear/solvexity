@@ -6,6 +6,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import numpy as np
 import nats
 from nats.aio.msg import Msg
 from nats.js.api import ConsumerConfig, DeliverPolicy, AckPolicy, ReplayPolicy
@@ -136,12 +137,9 @@ async def main(config_path: str = "config/osiris.json"):
         if aggregator.size() != aggregator.buf_size:
             return
         if bar := aggregator.last(is_closed=True):
-            if bar_id == 0:
-                logger.info(f"First bar: {bar}")
-                bar_id = id(bar)
-            elif bar_id != id(bar):
+            if bar_id != bar.next_id:
                 logger.info(f"New bar: {bar}")
-                bar_id = id(bar)
+                bar_id = bar.next_id
             else: # same bar
                 return
             if bar.close_time < int(time.time() * 1000) - config.alpha.recv_window:
@@ -155,10 +153,22 @@ async def main(config_path: str = "config/osiris.json"):
     async def on_dataframe(e: Event):
         df = e.data
         logger.info(f"Dataframe: {df.shape}")
+        df["cummax.close"] = df["close"].cummax()
+        df["drawdown.close"] = (df["cummax.close"] - df["close"]) / df["cummax.close"]
+        drawdown_momentum = np.sum(df["drawdown.close"] ** 2)
+        logger.info(f"Drawdown momentum: {drawdown_momentum}")
+        df["cummin.close"] = df["close"].cummin()
+        df["runup.close"] = (df["close"] - df["cummin.close"]) / df["cummin.close"]
+        runup_momentum = np.sum(df["runup.close"] ** 2)
+        logger.info(f"Runup momentum: {runup_momentum}")
+        ratio = drawdown_momentum / runup_momentum
+        logger.info(f"Ratio: {ratio}")
+        """
         ref = df.iloc[-1]["close_time"]
         output_path = Path("./artifacts") / f"dataframe_{ref}.csv"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(output_path, index=False)
+        """
 
     eb.subscribe("on_dataframe", on_dataframe)
     

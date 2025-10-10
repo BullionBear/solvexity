@@ -1,0 +1,14 @@
+# Osiris Strategy Configuration with Environment Variable Support
+# This configuration supports docker-compose style environment variable substitution
+aggregator:
+  deserialize_from: ./artifacts/aggregator.json
+  serialize_to: ./artifacts/aggregator.json
+
+consumer:
+  nats_url: nats://localhost:4222
+  stream: TRADE
+  rate_limit_bps: 10000000 # 10 Mbps
+  filter_subject: trade.binance.spot.btcusdt
+
+alpha:
+  recv_window: 5000 # 5 seconds

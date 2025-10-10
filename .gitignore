@@ -16,3 +16,8 @@ redis-data
 script/integration.sh
 .pytest_cache/
 .coverage
+
+# artifacts
+artifacts/
+charts/
+notebooks/

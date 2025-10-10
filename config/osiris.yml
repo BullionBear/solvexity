@@ -1,6 +1,7 @@
 # Osiris Strategy Configuration with Environment Variable Support
 # This configuration supports docker-compose style environment variable substitution
 aggregator:
+  type: quote_volume
   deserialize_from: ./artifacts/aggregator.json
   serialize_to: ./artifacts/aggregator.json
 

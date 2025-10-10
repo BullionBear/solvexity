@@ -17,6 +17,19 @@ class BarType(Enum):
     BASE_VOLUME = "base_volume"
     QUOTE_VOLUME = "quote_volume"
 
+    @classmethod
+    def from_str(cls, bar_type: str) -> 'BarType':
+        if bar_type == "time":
+            return cls.TIME
+        elif bar_type == "tick":
+            return cls.TICK
+        elif bar_type == "base_volume":
+            return cls.BASE_VOLUME
+        elif bar_type == "quote_volume":
+            return cls.QUOTE_VOLUME
+        else:
+            raise ValueError(f"Unknown bar type: {bar_type}")
+
 class TradeStatus(Enum):
     ACCEPTED = "accepted"
     BYPASS = "bypass"
@@ -29,7 +42,21 @@ class Interval(BaseModel):
     @property
     def n_trades(self) -> int:
         return self.end_id - self.start_id
-        
+
+class AggregatorFactory:
+    @classmethod
+    def from_dict(cls, bar_type: BarType, data: dict) -> 'BarAggregator':
+        logger.info(f"Creating aggregator from dict: {bar_type}")
+        if bar_type == BarType.TIME:
+            return TimeBarAggregator.from_dict(data)
+        elif bar_type == BarType.TICK:
+            return TickBarAggregator.from_dict(data)
+        elif bar_type == BarType.BASE_VOLUME:
+            return BaseVolumeBarAggregator.from_dict(data)
+        elif bar_type == BarType.QUOTE_VOLUME:
+            return QuoteVolumeBarAggregator.from_dict(data)
+        else:
+            raise ValueError(f"Unknown aggregator type: {bar_type}")
 
 class BarAggregator(ABC):
     def __init__(self, buf_size: int, reference_cutoff: int, completeness_threshold: float = 1.0):
@@ -105,7 +132,7 @@ class BarAggregator(ABC):
         return len(self.bars)
     
     def last(self, is_closed: bool = True) -> Bar | None:
-        if len(self.bars) <= 2:
+        if len(self.bars) <= 1:
             return None
         if is_closed:
             for bar in reversed(self.bars):

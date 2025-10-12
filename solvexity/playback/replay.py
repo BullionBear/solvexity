@@ -13,21 +13,21 @@ import logging
 from datetime import datetime
 from typing import Tuple, Optional
 from solvexity.logging import setup_logging
-
+from collections import defaultdict
 from solvexity.model import Trade, Exchange, Instrument, Side, Symbol
 
 setup_logging()
 
 logger = logging.getLogger(__name__)
 
-class MarketSummary:
+class MarketSegment:
     def __init__(self, exchange: Exchange, instrument: Instrument, symbol: Symbol):
         self.exchange = exchange
         self.instrument = instrument
         self.symbol = symbol
 
         self.current_id = 0
-        self.next_id = 0
+        self.start_id = 0
         self.open_time = 0
         self.close_time = 0
         self.total_volume = 0.0
@@ -35,27 +35,41 @@ class MarketSummary:
         self.total_trades = 0
     
     @classmethod
-    def from_trade(cls, trade: Trade) -> 'MarketSummary':
-        return cls(
+    def from_trade(cls, trade: Trade) -> 'MarketSegment':
+        segment = cls(
             exchange=trade.exchange,
             instrument=trade.instrument,
             symbol=trade.symbol
         )
+        segment.current_id = trade.id
+        segment.start_id = trade.id
+        segment.open_time = trade.timestamp
+        segment.close_time = trade.timestamp
+        segment.total_volume = trade.quantity
+        segment.total_quote_volume = trade.price * trade.quantity
+        segment.total_trades = 1
+        return segment
 
+    def __radd__(self, other: Trade) -> 'MarketSegment':
+        return self.__iadd__(other)
+    
+    def __iadd__(self, other: Trade) -> 'MarketSegment':
+        self.current_id = other.id
+        self.total_volume += other.quantity
+        self.total_quote_volume += other.price * other.quantity
+        self.total_trades += 1
+        self.close_time = other.timestamp
+        return self
 
-class TradeReplayer:
+class TradePlayer:
     """Replays protobuf Trade messages from binary data."""
 
-    def __init__(self, show_limit: int = 100):
+    def __init__(self):
         """
-        Initialize the replay parser.
-        
-        Args:
-            show_limit: Number of messages to display (0 for all)
+        Initialize the trade player.
         """
-        self.show_limit = show_limit
-        self.success_count = 0
-        self.total_processed = 0
+        self.segments: defaultdict = defaultdict(list)
+        self.n_total = 0
 
     def on_trade(self, trade: Trade) -> None:
         """
@@ -64,15 +78,16 @@ class TradeReplayer:
         Args:
             trade: The Trade message
         """
-        if self.show_limit == 0 or self.success_count <= self.show_limit:
-            logger.info(trade)
-        elif self.success_count == self.show_limit + 1:
-            logger.info(f"... (limiting output to first {self.show_limit} messages)\n")
-        self.success_count += 1
-        self.total_processed += 1
-        pass
+        key = (trade.exchange, trade.instrument, trade.symbol)
+        if len(self.segments[key]) == 0:
+            self.segments[key].append(MarketSegment.from_trade(trade))
+        elif self.segments[key][-1].current_id + 1 == trade.id:
+            self.segments[key][-1] += trade
+        else:
+            self.segments[key].append(MarketSegment.from_trade(trade))
+        self.n_total += 1
 
-    def replay_trade_messages(self, filename: str) -> Tuple[int, int]:
+    def replay_trade_messages(self, filename: str) -> int:
         """
         Replay trade messages from a binary file.
         
@@ -80,7 +95,7 @@ class TradeReplayer:
             filename: Path to the binary file containing serialized messages
             
         Returns:
-            Tuple of (success_count, total_processed)
+            Number of total messages processed
             
         Raises:
             FileNotFoundError: If the input file doesn't exist
@@ -113,7 +128,7 @@ class TradeReplayer:
         except IOError as e:
             raise IOError(f"Error reading file: {e}")
 
-        return self.success_count, self.total_processed
+        return self.n_total
 
     def _parse_next_message_fast(self, data: memoryview) -> Tuple[Optional[Trade], int, bool]:
         """
@@ -304,28 +319,20 @@ def main() -> int:
     print("Sequex Trade Message Replay Tool")
     print("=" * 40)
 
-    if args.verbose:
-        logger.info(f"Input file: {args.input}")
-        logger.info(f"Display limit: {args.limit}")
-        logger.info(f"Show summary: {args.summary}")
-
     try:
-        replay_parser = TradeReplayer(show_limit=args.limit)
-        success_count, total_processed = replay_parser.replay_trade_messages(args.input)
-
-        if args.summary:
-            print_summary(success_count, total_processed, args.input)
-
+        replay_parser = TradePlayer()
+        n_total = replay_parser.replay_trade_messages(args.input)
+        logger.info(f"Total messages processed: {n_total}")
         return 0
 
     except FileNotFoundError as e:
-        logger.error(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}", exc_info=True)
         return 1
     except IOError as e:
-        logger.error(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}", exc_info=True)
         return 1
     except Exception as e:
-        logger.error(f"Unexpected error: {e}", file=sys.stderr)
+        logger.error(f"Unexpected error: {e}", exc_info=True)
         return 1
 
 

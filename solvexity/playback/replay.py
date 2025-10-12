@@ -13,10 +13,8 @@ import logging
 from datetime import datetime
 from typing import Tuple, Optional
 from solvexity.logging import setup_logging
-from google.protobuf.message import DecodeError
 
-from solvexity.model.protobuf.trade_pb2 import Trade
-from solvexity.model.protobuf.shared_pb2 import Exchange, Instrument, Side, Symbol
+from solvexity.model import Trade, Exchange, Instrument, Side, Symbol
 
 setup_logging()
 
@@ -32,8 +30,8 @@ class MarketSummary:
         self.next_id = 0
         self.open_time = 0
         self.close_time = 0
-        self.total_volume = 0
-        self.total_quote_volume = 0
+        self.total_volume = 0.0
+        self.total_quote_volume = 0.0
         self.total_trades = 0
     
     @classmethod
@@ -121,7 +119,7 @@ class TradeReplayer:
         """
         Parse the next complete protobuf message from the data (optimized version).
         
-        Returns the parsed Trade object directly to avoid double parsing.
+        Returns the parsed Trade object directly using pydantic model.
         
         Args:
             data: Memoryview containing potential protobuf messages
@@ -183,18 +181,17 @@ class TradeReplayer:
 
             # Check if we have all expected fields
             if fields_seen == expected_mask:
-                # We've seen all expected fields, try to parse
+                # We've seen all expected fields, try to parse using pydantic model
                 candidate = bytes(data[:offset])
-                trade = Trade()
                 try:
-                    trade.ParseFromString(candidate)
-                    # Quick validation inline
+                    trade = Trade.from_protobuf_bytes(candidate)
+                    # Quick validation using pydantic model properties
                     if (trade.id > 0 and 
-                        1 <= trade.exchange <= 3 and 
-                        1 <= trade.instrument <= 6 and
-                        1 <= trade.side <= 2):
+                        trade.exchange != Exchange.EXCHANGE_UNSPECIFIED and 
+                        trade.instrument != Instrument.INSTRUMENT_UNSPECIFIED and
+                        trade.side != Side.SIDE_UNSPECIFIED):
                         return trade, offset, True
-                except DecodeError:
+                except Exception:  # Catch any parsing errors
                     pass
 
         return None, 0, False

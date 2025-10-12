@@ -16,11 +16,33 @@ from solvexity.logging import setup_logging
 from google.protobuf.message import DecodeError
 
 from solvexity.model.protobuf.trade_pb2 import Trade
-from solvexity.model.protobuf.shared_pb2 import Exchange, Instrument, Side
+from solvexity.model.protobuf.shared_pb2 import Exchange, Instrument, Side, Symbol
 
 setup_logging()
 
 logger = logging.getLogger(__name__)
+
+class MarketSummary:
+    def __init__(self, exchange: Exchange, instrument: Instrument, symbol: Symbol):
+        self.exchange = exchange
+        self.instrument = instrument
+        self.symbol = symbol
+
+        self.current_id = 0
+        self.next_id = 0
+        self.open_time = 0
+        self.close_time = 0
+        self.total_volume = 0
+        self.total_quote_volume = 0
+        self.total_trades = 0
+    
+    @classmethod
+    def from_trade(cls, trade: Trade) -> 'MarketSummary':
+        return cls(
+            exchange=trade.exchange,
+            instrument=trade.instrument,
+            symbol=trade.symbol
+        )
 
 
 class TradeReplayer:

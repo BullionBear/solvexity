@@ -9,40 +9,48 @@ and displays formatted output with summary statistics.
 
 import argparse
 import sys
+import logging
 from datetime import datetime
-from typing import Tuple, Optional, Dict
-
+from typing import Tuple, Optional
+from solvexity.logging import setup_logging
 from google.protobuf.message import DecodeError
 
 from solvexity.model.protobuf.trade_pb2 import Trade
 from solvexity.model.protobuf.shared_pb2 import Exchange, Instrument, Side
 
+setup_logging()
 
-class TradeReplayParser:
-    """Parses and replays protobuf Trade messages from binary data."""
+logger = logging.getLogger(__name__)
 
-    # Expected Trade message fields: id, exchange, instrument, symbol, side, price, quantity, timestamp
-    EXPECTED_FIELDS = {1, 2, 3, 4, 5, 7, 8, 9}
-    
-    # Validation constants
-    MIN_TIMESTAMP = 1577836800000  # 2020-01-01
-    MAX_TIMESTAMP = 1893456000000  # 2030-01-01
-    MIN_PRICE = 0.01
-    MAX_PRICE = 1000000.0
-    MIN_VALID_FIELDS = 6
 
-    def __init__(self, show_limit: int = 100, verbose: bool = False):
+class TradeReplayer:
+    """Replays protobuf Trade messages from binary data."""
+
+    def __init__(self, show_limit: int = 100):
         """
         Initialize the replay parser.
         
         Args:
             show_limit: Number of messages to display (0 for all)
-            verbose: Enable verbose output
         """
         self.show_limit = show_limit
-        self.verbose = verbose
         self.success_count = 0
         self.total_processed = 0
+
+    def on_trade(self, trade: Trade) -> None:
+        """
+        Callback for each trade message.
+        
+        Args:
+            trade: The Trade message
+        """
+        if self.show_limit == 0 or self.success_count <= self.show_limit:
+            logger.info(trade)
+        elif self.success_count == self.show_limit + 1:
+            logger.info(f"... (limiting output to first {self.show_limit} messages)\n")
+        self.success_count += 1
+        self.total_processed += 1
+        pass
 
     def replay_trade_messages(self, filename: str) -> Tuple[int, int]:
         """
@@ -76,18 +84,8 @@ class TradeReplayParser:
                         offset += 1
                         continue
 
-                    self.total_processed += 1
-
-                    # Validate trade message
-                    if self._is_valid_trade_message_fast(trade):
-                        self.success_count += 1
-
-                        # Display message if within limit
-                        if self.show_limit == 0 or self.success_count <= self.show_limit:
-                            self._display_trade_message(self.success_count, trade)
-                        elif self.success_count == self.show_limit + 1:
-                            print(f"... (limiting output to first {self.show_limit} messages)\n")
-
+                    self.on_trade(trade)
+                    
                     offset += consumed
 
         except FileNotFoundError:
@@ -210,81 +208,6 @@ class TradeReplayParser:
         
         return total_length
 
-    def _is_valid_trade_message_fast(self, trade: Trade) -> bool:
-        """
-        Optimized validation that a Trade message contains reasonable data.
-        
-        Args:
-            trade: The Trade message to validate
-            
-        Returns:
-            True if the trade message is valid
-        """
-        # Quick fail-fast checks for most common issues
-        if trade.id <= 0 or trade.quantity <= 0:
-            return False
-        
-        if not (1 <= trade.exchange <= 3):
-            return False
-            
-        if not (1 <= trade.instrument <= 6):
-            return False
-            
-        if not (1 <= trade.side <= 2):
-            return False
-
-        # Count remaining valid fields
-        valid_fields = 4  # Already validated: id, exchange, instrument, side
-
-        # Symbol validation
-        if trade.HasField('symbol') and len(trade.symbol.base) >= 2 and len(trade.symbol.quote) >= 3:
-            valid_fields += 1
-
-        # Price validation
-        if self.MIN_PRICE <= trade.price <= self.MAX_PRICE:
-            valid_fields += 1
-        
-        # Quantity already checked above
-        valid_fields += 1
-
-        # Timestamp validation
-        if self.MIN_TIMESTAMP <= trade.timestamp <= self.MAX_TIMESTAMP:
-            valid_fields += 1
-
-        # Require at least 6 out of 8 fields to be valid
-        return valid_fields >= self.MIN_VALID_FIELDS
-
-    def _display_trade_message(self, message_num: int, trade: Trade) -> None:
-        """
-        Display a formatted trade message.
-        
-        Args:
-            message_num: Sequential message number
-            trade: The Trade message to display
-        """
-        print(f"Trade {message_num}:")
-        print(f"  ID: {trade.id}")
-        print(f"  Exchange: {Exchange.Name(trade.exchange)} ({trade.exchange})")
-        print(f"  Instrument: {Instrument.Name(trade.instrument)} ({trade.instrument})")
-
-        if trade.HasField('symbol'):
-            print(f"  Symbol: {trade.symbol.base}/{trade.symbol.quote}")
-        else:
-            print("  Symbol: <nil>")
-
-        print(f"  Side: {Side.Name(trade.side)} ({trade.side})")
-        print(f"  Price: {trade.price:.8f}")
-        print(f"  Quantity: {trade.quantity:.8f}")
-
-        if trade.timestamp > 0:
-            dt = datetime.fromtimestamp(trade.timestamp / 1000.0)
-            print(f"  Timestamp: {trade.timestamp} ({dt.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]})")
-        else:
-            print(f"  Timestamp: {trade.timestamp}")
-
-        print()
-
-
 def print_summary(success_count: int, total_processed: int, input_file: str) -> None:
     """
     Display summary statistics.
@@ -294,21 +217,21 @@ def print_summary(success_count: int, total_processed: int, input_file: str) -> 
         total_processed: Total number of messages processed
         input_file: Name of the input file
     """
-    print("=" * 50)
-    print("Summary:")
-    print(f"Successfully deserialized: {success_count} complete messages")
-    print(f"Total messages processed: {total_processed}")
+    logger.info("=" * 50)
+    logger.info("Summary:")
+    logger.info(f"Successfully deserialized: {success_count} complete messages")
+    logger.info(f"Total messages processed: {total_processed}")
     
     if total_processed > 0:
         success_rate = (success_count / total_processed) * 100
-        print(f"Success rate: {success_rate:.2f}%")
+        logger.info(f"Success rate: {success_rate:.2f}%")
     
-    print(f"Input file: {input_file}")
+    logger.info(f"Input file: {input_file}")
 
     if success_count > 0:
-        print("\nReplay completed successfully!")
+        logger.info("\nReplay completed successfully!")
     else:
-        print("\nNo valid trade messages found. Check input file format.")
+        logger.info("\nNo valid trade messages found. Check input file format.")
 
 
 def main() -> int:
@@ -363,13 +286,12 @@ def main() -> int:
     print("=" * 40)
 
     if args.verbose:
-        print(f"Input file: {args.input}")
-        print(f"Display limit: {args.limit}")
-        print(f"Show summary: {args.summary}")
-        print()
+        logger.info(f"Input file: {args.input}")
+        logger.info(f"Display limit: {args.limit}")
+        logger.info(f"Show summary: {args.summary}")
 
     try:
-        replay_parser = TradeReplayParser(show_limit=args.limit, verbose=args.verbose)
+        replay_parser = TradeReplayer(show_limit=args.limit)
         success_count, total_processed = replay_parser.replay_trade_messages(args.input)
 
         if args.summary:
@@ -378,13 +300,13 @@ def main() -> int:
         return 0
 
     except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}", file=sys.stderr)
         return 1
     except IOError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
+        logger.error(f"Unexpected error: {e}", file=sys.stderr)
         return 1
 
 

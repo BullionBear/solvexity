@@ -10,11 +10,12 @@ and displays formatted output with summary statistics.
 import argparse
 import sys
 import logging
-from datetime import datetime
-from typing import Tuple, Optional
+from datetime import datetime, timezone
+from typing import Tuple, Optional, Iterator
 from solvexity.logging import setup_logging
 from collections import defaultdict
 from solvexity.model import Trade, Exchange, Instrument, Side, Symbol
+import json
 
 setup_logging()
 
@@ -33,6 +34,21 @@ class MarketSegment:
         self.total_volume = 0.0
         self.total_quote_volume = 0.0
         self.total_trades = 0
+
+    def summarize(self) -> str:     
+        data = {
+            "exchange": self.exchange.name if hasattr(self.exchange, 'name') else str(self.exchange),
+            "instrument": self.instrument.name if hasattr(self.instrument, 'name') else str(self.instrument),
+            "symbol": self.symbol.name if hasattr(self.symbol, 'name') else str(self.symbol),
+            "current_id": self.current_id,
+            "start_id": self.start_id,
+            "open_time": datetime.fromtimestamp(self.open_time / 1000, tz=timezone.utc).isoformat(),
+            "close_time": datetime.fromtimestamp(self.close_time / 1000, tz=timezone.utc).isoformat(),
+            "total_volume": self.total_volume,
+            "total_quote_volume": self.total_quote_volume,
+            "total_trades": self.total_trades,
+        }
+        return json.dumps(data, indent=2)
     
     @classmethod
     def from_trade(cls, trade: Trade) -> 'MarketSegment':
@@ -61,13 +77,8 @@ class MarketSegment:
         self.close_time = other.timestamp
         return self
 
-class TradePlayer:
-    """Replays protobuf Trade messages from binary data."""
-
+class MarketSummary:
     def __init__(self):
-        """
-        Initialize the trade player.
-        """
         self.segments: defaultdict = defaultdict(list)
         self.n_total = 0
 
@@ -87,12 +98,22 @@ class TradePlayer:
             self.segments[key].append(MarketSegment.from_trade(trade))
         self.n_total += 1
 
-    def replay_trade_messages(self, filename: str) -> int:
+    def summarize(self) -> str:
+        data = []
+        for segment_list in self.segments.values():
+            for segment in segment_list:
+                data.append(segment.summarize())
+        return "\n".join(data)
+
+class TradePlayer:
+    """Replays protobuf Trade messages from binary data."""
+
+    def replay_trade_messages(self, filenames: list[str]) -> Iterator[Trade]:
         """
         Replay trade messages from a binary file.
         
         Args:
-            filename: Path to the binary file containing serialized messages
+            filenames: List of paths to the binary files containing serialized messages
             
         Returns:
             Number of total messages processed
@@ -102,33 +123,32 @@ class TradePlayer:
             IOError: If there's an error reading the file
         """
         try:
-            with open(filename, 'rb') as f:
-                # Read entire file for better performance on small files
-                data = f.read()
-                accumulated = bytearray(data)
-                data_view = memoryview(accumulated)
-                offset = 0
-                data_len = len(accumulated)
+            for filename in filenames:
+                with open(filename, 'rb') as f:
+                    # Read entire file for better performance on small files
+                    data = f.read()
+                    accumulated = bytearray(data)
+                    data_view = memoryview(accumulated)
+                    offset = 0
+                    data_len = len(accumulated)
 
-                while offset < data_len - 10:  # Minimum viable message size
-                    # Parse next message and get the Trade object directly
-                    trade, consumed, found = self._parse_next_message_fast(data_view[offset:])
-                    
-                    if not found:
-                        # Skip one byte and try again
-                        offset += 1
-                        continue
+                    while offset < data_len - 10:  # Minimum viable message size
+                        # Parse next message and get the Trade object directly
+                        trade, consumed, found = self._parse_next_message_fast(data_view[offset:])
+                        if trade is not None:
+                            yield trade
 
-                    self.on_trade(trade)
-                    
-                    offset += consumed
-
+                        if not found:
+                            # Skip one byte and try again
+                            offset += 1
+                            continue
+                        offset += consumed
         except FileNotFoundError:
             raise FileNotFoundError(f"Failed to open file: {filename}")
         except IOError as e:
             raise IOError(f"Error reading file: {e}")
 
-        return self.n_total
+        return
 
     def _parse_next_message_fast(self, data: memoryview) -> Tuple[Optional[Trade], int, bool]:
         """
@@ -242,32 +262,6 @@ class TradePlayer:
         
         return total_length
 
-def print_summary(success_count: int, total_processed: int, input_file: str) -> None:
-    """
-    Display summary statistics.
-    
-    Args:
-        success_count: Number of successfully deserialized messages
-        total_processed: Total number of messages processed
-        input_file: Name of the input file
-    """
-    logger.info("=" * 50)
-    logger.info("Summary:")
-    logger.info(f"Successfully deserialized: {success_count} complete messages")
-    logger.info(f"Total messages processed: {total_processed}")
-    
-    if total_processed > 0:
-        success_rate = (success_count / total_processed) * 100
-        logger.info(f"Success rate: {success_rate:.2f}%")
-    
-    logger.info(f"Input file: {input_file}")
-
-    if success_count > 0:
-        logger.info("\nReplay completed successfully!")
-    else:
-        logger.info("\nNo valid trade messages found. Check input file format.")
-
-
 def main() -> int:
     """
     Main entry point for the trade replay tool.
@@ -281,48 +275,22 @@ def main() -> int:
     )
     
     parser.add_argument(
-        '-i', '--input',
+        '-i', '--inputs',
         type=str,
-        default='messages-20250915.raw',
+        nargs='+',
+        required=True,
         help='Input file containing serialized protobuf messages'
-    )
-    
-    parser.add_argument(
-        '-l', '--limit',
-        type=int,
-        default=100,
-        help='Number of messages to display (0 for all)'
-    )
-    
-    parser.add_argument(
-        '-s', '--summary',
-        action='store_true',
-        default=True,
-        help='Show summary statistics'
-    )
-    
-    parser.add_argument(
-        '--no-summary',
-        action='store_false',
-        dest='summary',
-        help='Disable summary statistics'
-    )
-    
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Show verbose output'
     )
 
     args = parser.parse_args()
 
-    print("Sequex Trade Message Replay Tool")
-    print("=" * 40)
-
     try:
         replay_parser = TradePlayer()
-        n_total = replay_parser.replay_trade_messages(args.input)
-        logger.info(f"Total messages processed: {n_total}")
+        market_summary = MarketSummary()
+        for trade in replay_parser.replay_trade_messages(args.inputs):
+            market_summary.on_trade(trade)
+        logger.info(market_summary.summarize())
+        # logger.info(f"Total messages processed: {n_total}")
         return 0
 
     except FileNotFoundError as e:

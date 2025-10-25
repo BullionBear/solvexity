@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from enum import IntEnum
 
 class Symbol(BaseModel):
+    model_config = {"frozen": True}
+    
     base: str
     quote: str
 

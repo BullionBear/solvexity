@@ -21,3 +21,4 @@ script/integration.sh
 artifacts/
 charts/
 notebooks/
+data/

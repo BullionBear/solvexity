@@ -1,8 +1,8 @@
 import argparse
 from solvexity.logging import setup_logging
 import logging
-from solvexity.playback.sanitizer.iterator import TradeIterator
-from solvexity.playback.sanitizer.metadata import MetadataWriter
+from solvexity.playback.serde.iterator import TradeIterator
+from solvexity.playback.serde.metadata import MetadataWriter
 
 setup_logging()
 logger = logging.getLogger(__name__)
